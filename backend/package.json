@@ -1,0 +1,28 @@
+{
+  "name": "homelab-portal-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Homelab Dashboard Portal",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [
+    "homelab",
+    "dashboard",
+    "monitoring"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "better-sqlite3": "^9.2.2",
+    "dockerode": "^4.0.2",
+    "systeminformation": "^5.21.20",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
