@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="frontend/public/LogoFull.png" alt="Homelab Portal Logo" width="400"/>
+</div>
+
 # Homelab Portal 🏠
 
 A lightweight, containerized dashboard for monitoring and managing your Raspberry Pi homelab. Built with React, Node.js, and Docker.
