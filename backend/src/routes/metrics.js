@@ -124,17 +124,32 @@ router.get("/disk/detailed", async (req, res) => {
 // Get network interfaces and statistics
 router.get("/network", async (req, res) => {
   try {
-    const [interfaces, stats, defaultInterface] = await Promise.all([
+    // Get all data in parallel
+    const [interfaces, defaultInterface] = await Promise.all([
       si.networkInterfaces(),
-      si.networkStats("*"),
       si.networkInterfaceDefault()
     ]);
+
+    // Get network stats with a specific call per interface for better accuracy
+    // Using '*' gets all interfaces at once which is more efficient
+    const stats = await si.networkStats('*');
 
     // Filter out loopback and inactive interfaces for cleaner display
     const activeInterfaces = interfaces.filter(
       iface => iface.iface !== 'lo' && 
                iface.iface !== 'lo0' && 
-               !iface.iface.startsWith('veth')
+               !iface.iface.startsWith('veth') &&
+               !iface.iface.startsWith('br-') &&
+               !iface.iface.startsWith('docker')
+    );
+
+    // Filter stats to match active interfaces
+    const activeStats = stats.filter(stat => 
+      stat.iface !== 'lo' && 
+      stat.iface !== 'lo0' && 
+      !stat.iface.startsWith('veth') &&
+      !stat.iface.startsWith('br-') &&
+      !stat.iface.startsWith('docker')
     );
 
     res.json({
@@ -148,25 +163,20 @@ router.get("/network", async (req, res) => {
         operstate: iface.operstate,
         isDefault: iface.iface === defaultInterface
       })),
-      stats: stats
-        .filter(stat => 
-          stat.iface !== 'lo' && 
-          stat.iface !== 'lo0' && 
-          !stat.iface.startsWith('veth')
-        )
-        .map(stat => ({
-          interface: stat.iface,
-          rx_bytes: stat.rx_bytes || 0,
-          tx_bytes: stat.tx_bytes || 0,
-          rx_sec: stat.rx_sec || 0,
-          tx_sec: stat.tx_sec || 0,
-          rx_dropped: stat.rx_dropped || 0,
-          tx_dropped: stat.tx_dropped || 0,
-          rx_errors: stat.rx_errors || 0,
-          tx_errors: stat.tx_errors || 0,
-          ms: stat.ms || 0
-        })),
-      defaultInterface: defaultInterface
+      stats: activeStats.map(stat => ({
+        interface: stat.iface,
+        rx_bytes: stat.rx_bytes || 0,
+        tx_bytes: stat.tx_bytes || 0,
+        rx_sec: stat.rx_sec || 0,
+        tx_sec: stat.tx_sec || 0,
+        rx_dropped: stat.rx_dropped || 0,
+        tx_dropped: stat.tx_dropped || 0,
+        rx_errors: stat.rx_errors || 0,
+        tx_errors: stat.tx_errors || 0,
+        ms: stat.ms || 0
+      })),
+      defaultInterface: defaultInterface,
+      timestamp: Date.now()
     });
   } catch (error) {
     console.error("Network metrics error:", error.message);

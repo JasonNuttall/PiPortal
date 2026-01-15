@@ -12,8 +12,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       # Mount thermal zone for temperature monitoring
       - /sys/class/thermal:/sys/class/thermal:ro
-      # Persist database
-      - ./backend/data:/app/data
+      # Mount network statistics for accurate monitoring
+      - /sys/class/net:/sys/class/net:ro
+      - /proc/net/dev:/proc/net/dev:ro
+      # Persist database using named volume (survives container rebuilds)
+      - backend-data:/app/data
     environment:
       - NODE_ENV=production
       - PORT=3001
