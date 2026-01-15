@@ -21,6 +21,7 @@ const Dashboard = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshInterval, setRefreshInterval] = useState(5000);
 
   const loadData = async () => {
     try {
@@ -50,9 +51,9 @@ const Dashboard = () => {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 5000); // Refresh every 5 seconds
+    const interval = setInterval(loadData, refreshInterval);
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshInterval]);
 
   const handleServicesUpdate = () => {
     fetchServices().then(setServices);

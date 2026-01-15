@@ -10,16 +10,16 @@ const MetricCard = ({
 }) => {
   // Determine bar color based on percentage
   const getBarColor = () => {
-    if (percentage === undefined) return 'bg-blue-500';
-    
+    if (percentage === undefined) return "bg-blue-500";
+
     if (percentage < 50) {
-      return 'bg-green-500';
+      return "bg-green-500";
     } else if (percentage < 75) {
-      return 'bg-yellow-500';
+      return "bg-yellow-500";
     } else if (percentage < 90) {
-      return 'bg-orange-500';
+      return "bg-orange-500";
     } else {
-      return 'bg-red-500';
+      return "bg-red-500";
     }
   };
 
