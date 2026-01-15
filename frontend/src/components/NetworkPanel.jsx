@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Network, Activity, Wifi, WifiOff, ArrowUp, ArrowDown } from "lucide-react";
 import { fetchNetworkMetrics } from "../api/api";
 
@@ -6,10 +6,41 @@ const NetworkPanel = ({ refreshInterval }) => {
   const [networkData, setNetworkData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [calculatedSpeeds, setCalculatedSpeeds] = useState({});
+  const previousDataRef = useRef(null);
+  const previousTimeRef = useRef(null);
 
   const fetchData = async () => {
     try {
       const data = await fetchNetworkMetrics();
+      
+      // Calculate speeds based on byte differences if we have previous data
+      if (previousDataRef.current && previousTimeRef.current) {
+        const currentTime = Date.now();
+        const timeDiff = (currentTime - previousTimeRef.current) / 1000; // seconds
+        
+        const speeds = {};
+        data.stats.forEach(stat => {
+          const prevStat = previousDataRef.current.stats.find(
+            s => s.interface === stat.interface
+          );
+          
+          if (prevStat && timeDiff > 0) {
+            const rxDiff = Math.max(0, stat.rx_bytes - prevStat.rx_bytes);
+            const txDiff = Math.max(0, stat.tx_bytes - prevStat.tx_bytes);
+            
+            speeds[stat.interface] = {
+              rx_speed: rxDiff / timeDiff,
+              tx_speed: txDiff / timeDiff
+            };
+          }
+        });
+        
+        setCalculatedSpeeds(speeds);
+      }
+      
+      previousDataRef.current = data;
+      previousTimeRef.current = Date.now();
       setNetworkData(data);
       setError(null);
     } catch (err) {
@@ -142,7 +173,13 @@ const NetworkPanel = ({ refreshInterval }) => {
           </h3>
           <div className="space-y-3">
             {networkData?.stats?.map((stat, index) => {
-              const hasTraffic = stat.rx_sec > 0 || stat.tx_sec > 0;
+              // Use calculated speeds if available, otherwise fall back to API data
+              const speed = calculatedSpeeds[stat.interface] || {
+                rx_speed: stat.rx_sec,
+                tx_speed: stat.tx_sec
+              };
+              const hasTraffic = speed.rx_speed > 0 || speed.tx_speed > 0;
+              
               return (
                 <div
                   key={index}
@@ -163,7 +200,7 @@ const NetworkPanel = ({ refreshInterval }) => {
                       <div className="space-y-1 text-xs text-slate-300">
                         <div className="flex justify-between">
                           <span className="text-slate-400">Speed:</span>
-                          <span className="font-mono">{formatSpeed(stat.rx_sec)}</span>
+                          <span className="font-mono">{formatSpeed(speed.rx_speed)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Total:</span>
@@ -187,7 +224,7 @@ const NetworkPanel = ({ refreshInterval }) => {
                       <div className="space-y-1 text-xs text-slate-300">
                         <div className="flex justify-between">
                           <span className="text-slate-400">Speed:</span>
-                          <span className="font-mono">{formatSpeed(stat.tx_sec)}</span>
+                          <span className="font-mono">{formatSpeed(speed.tx_speed)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Total:</span>

@@ -126,12 +126,19 @@ router.get("/network", async (req, res) => {
   try {
     const [interfaces, stats, defaultInterface] = await Promise.all([
       si.networkInterfaces(),
-      si.networkStats(),
+      si.networkStats("*"),
       si.networkInterfaceDefault()
     ]);
 
+    // Filter out loopback and inactive interfaces for cleaner display
+    const activeInterfaces = interfaces.filter(
+      iface => iface.iface !== 'lo' && 
+               iface.iface !== 'lo0' && 
+               !iface.iface.startsWith('veth')
+    );
+
     res.json({
-      interfaces: interfaces.map(iface => ({
+      interfaces: activeInterfaces.map(iface => ({
         name: iface.iface,
         ip4: iface.ip4,
         ip6: iface.ip6,
@@ -141,18 +148,24 @@ router.get("/network", async (req, res) => {
         operstate: iface.operstate,
         isDefault: iface.iface === defaultInterface
       })),
-      stats: stats.map(stat => ({
-        interface: stat.iface,
-        rx_bytes: stat.rx_bytes,
-        tx_bytes: stat.tx_bytes,
-        rx_sec: stat.rx_sec,
-        tx_sec: stat.tx_sec,
-        rx_dropped: stat.rx_dropped,
-        tx_dropped: stat.tx_dropped,
-        rx_errors: stat.rx_errors,
-        tx_errors: stat.tx_errors,
-        ms: stat.ms
-      })),
+      stats: stats
+        .filter(stat => 
+          stat.iface !== 'lo' && 
+          stat.iface !== 'lo0' && 
+          !stat.iface.startsWith('veth')
+        )
+        .map(stat => ({
+          interface: stat.iface,
+          rx_bytes: stat.rx_bytes || 0,
+          tx_bytes: stat.tx_bytes || 0,
+          rx_sec: stat.rx_sec || 0,
+          tx_sec: stat.tx_sec || 0,
+          rx_dropped: stat.rx_dropped || 0,
+          tx_dropped: stat.tx_dropped || 0,
+          rx_errors: stat.rx_errors || 0,
+          tx_errors: stat.tx_errors || 0,
+          ms: stat.ms || 0
+        })),
       defaultInterface: defaultInterface
     });
   } catch (error) {
