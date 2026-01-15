@@ -25,8 +25,9 @@ router.get("/system", async (req, res) => {
       memory: {
         total: mem.total,
         free: mem.free,
-        used: mem.used,
-        usedPercentage: ((mem.used / mem.total) * 100).toFixed(2),
+        used: mem.active || mem.used,
+        available: mem.available,
+        usedPercentage: ((mem.active || mem.used) / mem.total * 100).toFixed(2),
       },
       uptime: time.uptime,
     });

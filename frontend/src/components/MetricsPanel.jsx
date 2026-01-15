@@ -8,6 +8,21 @@ const MetricCard = ({
   color = "blue",
   percentage,
 }) => {
+  // Determine bar color based on percentage
+  const getBarColor = () => {
+    if (percentage === undefined) return 'bg-blue-500';
+    
+    if (percentage < 50) {
+      return 'bg-green-500';
+    } else if (percentage < 75) {
+      return 'bg-yellow-500';
+    } else if (percentage < 90) {
+      return 'bg-orange-500';
+    } else {
+      return 'bg-red-500';
+    }
+  };
+
   return (
     <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
       <div className="flex items-center justify-between mb-4">
@@ -22,7 +37,7 @@ const MetricCard = ({
         <div className="mt-3">
           <div className="w-full bg-slate-700 rounded-full h-2">
             <div
-              className={`bg-${color}-500 h-2 rounded-full transition-all duration-300`}
+              className={`${getBarColor()} h-2 rounded-full transition-all duration-300`}
               style={{ width: `${Math.min(percentage, 100)}%` }}
             />
           </div>
