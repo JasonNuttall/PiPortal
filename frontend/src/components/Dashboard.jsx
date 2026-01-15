@@ -3,6 +3,8 @@ import Header from "./Header";
 import MetricsPanel from "./MetricsPanel";
 import DockerPanel from "./DockerPanel";
 import ServicesPanel from "./ServicesPanel";
+import NetworkPanel from "./NetworkPanel";
+import DiskPanel from "./DiskPanel";
 import {
   fetchSystemMetrics,
   fetchTemperature,
@@ -101,6 +103,11 @@ const Dashboard = () => {
           diskMetrics={diskMetrics}
           dockerInfo={dockerInfo}
         />
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          <NetworkPanel refreshInterval={refreshInterval} />
+          <DiskPanel refreshInterval={refreshInterval} />
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           <DockerPanel containers={dockerContainers} />

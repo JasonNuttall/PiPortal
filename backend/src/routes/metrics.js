@@ -93,4 +93,75 @@ router.get("/disk", async (req, res) => {
   }
 });
 
+// Get detailed disk information for all mounts
+router.get("/disk/detailed", async (req, res) => {
+  try {
+    const fsSize = await si.fsSize();
+    
+    const diskInfo = fsSize.map(disk => ({
+      fs: disk.fs,
+      type: disk.type,
+      size: disk.size,
+      used: disk.used,
+      available: disk.available,
+      use: disk.use,
+      mount: disk.mount,
+      sizeGB: (disk.size / (1024 ** 3)).toFixed(2),
+      usedGB: (disk.used / (1024 ** 3)).toFixed(2),
+      availableGB: (disk.available / (1024 ** 3)).toFixed(2)
+    }));
+
+    res.json(diskInfo);
+  } catch (error) {
+    console.error("Detailed disk info error:", error.message);
+    res.status(500).json({
+      error: "Failed to fetch detailed disk information",
+      message: error.message,
+    });
+  }
+});
+
+// Get network interfaces and statistics
+router.get("/network", async (req, res) => {
+  try {
+    const [interfaces, stats, defaultInterface] = await Promise.all([
+      si.networkInterfaces(),
+      si.networkStats(),
+      si.networkInterfaceDefault()
+    ]);
+
+    res.json({
+      interfaces: interfaces.map(iface => ({
+        name: iface.iface,
+        ip4: iface.ip4,
+        ip6: iface.ip6,
+        mac: iface.mac,
+        type: iface.type,
+        speed: iface.speed,
+        operstate: iface.operstate,
+        isDefault: iface.iface === defaultInterface
+      })),
+      stats: stats.map(stat => ({
+        interface: stat.iface,
+        rx_bytes: stat.rx_bytes,
+        tx_bytes: stat.tx_bytes,
+        rx_sec: stat.rx_sec,
+        tx_sec: stat.tx_sec,
+        rx_dropped: stat.rx_dropped,
+        tx_dropped: stat.tx_dropped,
+        rx_errors: stat.rx_errors,
+        tx_errors: stat.tx_errors,
+        ms: stat.ms
+      })),
+      defaultInterface: defaultInterface
+    });
+  } catch (error) {
+    console.error("Network metrics error:", error.message);
+    res.status(500).json({
+      error: "Failed to fetch network metrics",
+      message: error.message,
+    });
+  }
+});
+
 module.exports = router;

@@ -62,3 +62,15 @@ export const deleteService = async (id) => {
   });
   if (!response.ok) throw new Error("Failed to delete service");
 };
+
+export const fetchDetailedDiskInfo = async () => {
+  const response = await fetch(`${API_BASE_URL}/metrics/disk/detailed`);
+  if (!response.ok) throw new Error("Failed to fetch detailed disk info");
+  return response.json();
+};
+
+export const fetchNetworkMetrics = async () => {
+  const response = await fetch(`${API_BASE_URL}/metrics/network`);
+  if (!response.ok) throw new Error("Failed to fetch network metrics");
+  return response.json();
+};
