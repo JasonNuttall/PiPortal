@@ -1,5 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { Network, Activity, Wifi, WifiOff, ArrowUp, ArrowDown } from "lucide-react";
+import {
+  Network,
+  Activity,
+  Wifi,
+  WifiOff,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 import { fetchNetworkMetrics } from "../api/api";
 
 const NetworkPanel = ({ refreshInterval }) => {
@@ -13,32 +20,32 @@ const NetworkPanel = ({ refreshInterval }) => {
   const fetchData = async () => {
     try {
       const data = await fetchNetworkMetrics();
-      
+
       // Calculate speeds based on byte differences if we have previous data
       if (previousDataRef.current && previousTimeRef.current) {
         const currentTime = Date.now();
         const timeDiff = (currentTime - previousTimeRef.current) / 1000; // seconds
-        
+
         const speeds = {};
-        data.stats.forEach(stat => {
+        data.stats.forEach((stat) => {
           const prevStat = previousDataRef.current.stats.find(
-            s => s.interface === stat.interface
+            (s) => s.interface === stat.interface
           );
-          
+
           if (prevStat && timeDiff > 0) {
             const rxDiff = Math.max(0, stat.rx_bytes - prevStat.rx_bytes);
             const txDiff = Math.max(0, stat.tx_bytes - prevStat.tx_bytes);
-            
+
             speeds[stat.interface] = {
               rx_speed: rxDiff / timeDiff,
-              tx_speed: txDiff / timeDiff
+              tx_speed: txDiff / timeDiff,
             };
           }
         });
-        
+
         setCalculatedSpeeds(speeds);
       }
-      
+
       previousDataRef.current = data;
       previousTimeRef.current = Date.now();
       setNetworkData(data);
@@ -72,7 +79,9 @@ const NetworkPanel = ({ refreshInterval }) => {
     const k = 1024;
     const sizes = ["B/s", "KB/s", "MB/s", "GB/s"];
     const i = Math.floor(Math.log(bytesPerSec) / Math.log(k));
-    return parseFloat((bytesPerSec / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    return (
+      parseFloat((bytesPerSec / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+    );
   };
 
   if (loading) {
@@ -90,7 +99,9 @@ const NetworkPanel = ({ refreshInterval }) => {
       <div className="bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-700">
         <div className="flex items-center mb-4">
           <Network className="w-6 h-6 text-blue-400 mr-2" />
-          <h2 className="text-xl font-semibold text-slate-100">Network Monitoring</h2>
+          <h2 className="text-xl font-semibold text-slate-100">
+            Network Monitoring
+          </h2>
         </div>
         <div className="flex items-center justify-center h-20">
           <div className="text-red-400">Error: {error}</div>
@@ -103,7 +114,9 @@ const NetworkPanel = ({ refreshInterval }) => {
     <div className="bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-700">
       <div className="flex items-center mb-6">
         <Network className="w-6 h-6 text-blue-400 mr-2" />
-        <h2 className="text-xl font-semibold text-slate-100">Network Monitoring</h2>
+        <h2 className="text-xl font-semibold text-slate-100">
+          Network Monitoring
+        </h2>
       </div>
 
       <div className="space-y-6">
@@ -130,7 +143,9 @@ const NetworkPanel = ({ refreshInterval }) => {
                     ) : (
                       <WifiOff className="w-4 h-4 text-red-400" />
                     )}
-                    <span className="font-semibold text-slate-100">{iface.name}</span>
+                    <span className="font-semibold text-slate-100">
+                      {iface.name}
+                    </span>
                   </div>
                   {iface.isDefault && (
                     <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
@@ -151,7 +166,8 @@ const NetworkPanel = ({ refreshInterval }) => {
                   )}
                   {iface.speed > 0 && (
                     <div>
-                      <span className="text-slate-400">Speed:</span> {iface.speed} Mbps
+                      <span className="text-slate-400">Speed:</span>{" "}
+                      {iface.speed} Mbps
                     </div>
                   )}
                   {iface.type && (
@@ -176,10 +192,10 @@ const NetworkPanel = ({ refreshInterval }) => {
               // Use calculated speeds if available, otherwise fall back to API data
               const speed = calculatedSpeeds[stat.interface] || {
                 rx_speed: stat.rx_sec,
-                tx_speed: stat.tx_sec
+                tx_speed: stat.tx_sec,
               };
               const hasTraffic = speed.rx_speed > 0 || speed.tx_speed > 0;
-              
+
               return (
                 <div
                   key={index}
@@ -189,7 +205,9 @@ const NetworkPanel = ({ refreshInterval }) => {
                       : "bg-slate-700/30 border-slate-600"
                   }`}
                 >
-                  <div className="font-semibold text-slate-100 mb-3">{stat.interface}</div>
+                  <div className="font-semibold text-slate-100 mb-3">
+                    {stat.interface}
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     {/* Download */}
                     <div>
@@ -200,11 +218,15 @@ const NetworkPanel = ({ refreshInterval }) => {
                       <div className="space-y-1 text-xs text-slate-300">
                         <div className="flex justify-between">
                           <span className="text-slate-400">Speed:</span>
-                          <span className="font-mono">{formatSpeed(speed.rx_speed)}</span>
+                          <span className="font-mono">
+                            {formatSpeed(speed.rx_speed)}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Total:</span>
-                          <span className="font-mono">{formatBytes(stat.rx_bytes)}</span>
+                          <span className="font-mono">
+                            {formatBytes(stat.rx_bytes)}
+                          </span>
                         </div>
                         {stat.rx_errors > 0 && (
                           <div className="flex justify-between text-red-400">
@@ -224,11 +246,15 @@ const NetworkPanel = ({ refreshInterval }) => {
                       <div className="space-y-1 text-xs text-slate-300">
                         <div className="flex justify-between">
                           <span className="text-slate-400">Speed:</span>
-                          <span className="font-mono">{formatSpeed(speed.tx_speed)}</span>
+                          <span className="font-mono">
+                            {formatSpeed(speed.tx_speed)}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Total:</span>
-                          <span className="font-mono">{formatBytes(stat.tx_bytes)}</span>
+                          <span className="font-mono">
+                            {formatBytes(stat.tx_bytes)}
+                          </span>
                         </div>
                         {stat.tx_errors > 0 && (
                           <div className="flex justify-between text-red-400">

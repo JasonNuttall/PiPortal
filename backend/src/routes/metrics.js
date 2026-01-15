@@ -97,8 +97,8 @@ router.get("/disk", async (req, res) => {
 router.get("/disk/detailed", async (req, res) => {
   try {
     const fsSize = await si.fsSize();
-    
-    const diskInfo = fsSize.map(disk => ({
+
+    const diskInfo = fsSize.map((disk) => ({
       fs: disk.fs,
       type: disk.type,
       size: disk.size,
@@ -106,9 +106,9 @@ router.get("/disk/detailed", async (req, res) => {
       available: disk.available,
       use: disk.use,
       mount: disk.mount,
-      sizeGB: (disk.size / (1024 ** 3)).toFixed(2),
-      usedGB: (disk.used / (1024 ** 3)).toFixed(2),
-      availableGB: (disk.available / (1024 ** 3)).toFixed(2)
+      sizeGB: (disk.size / 1024 ** 3).toFixed(2),
+      usedGB: (disk.used / 1024 ** 3).toFixed(2),
+      availableGB: (disk.available / 1024 ** 3).toFixed(2),
     }));
 
     res.json(diskInfo);
@@ -127,33 +127,35 @@ router.get("/network", async (req, res) => {
     // Get all data in parallel
     const [interfaces, defaultInterface] = await Promise.all([
       si.networkInterfaces(),
-      si.networkInterfaceDefault()
+      si.networkInterfaceDefault(),
     ]);
 
     // Get network stats with a specific call per interface for better accuracy
     // Using '*' gets all interfaces at once which is more efficient
-    const stats = await si.networkStats('*');
+    const stats = await si.networkStats("*");
 
     // Filter out loopback and inactive interfaces for cleaner display
     const activeInterfaces = interfaces.filter(
-      iface => iface.iface !== 'lo' && 
-               iface.iface !== 'lo0' && 
-               !iface.iface.startsWith('veth') &&
-               !iface.iface.startsWith('br-') &&
-               !iface.iface.startsWith('docker')
+      (iface) =>
+        iface.iface !== "lo" &&
+        iface.iface !== "lo0" &&
+        !iface.iface.startsWith("veth") &&
+        !iface.iface.startsWith("br-") &&
+        !iface.iface.startsWith("docker")
     );
 
     // Filter stats to match active interfaces
-    const activeStats = stats.filter(stat => 
-      stat.iface !== 'lo' && 
-      stat.iface !== 'lo0' && 
-      !stat.iface.startsWith('veth') &&
-      !stat.iface.startsWith('br-') &&
-      !stat.iface.startsWith('docker')
+    const activeStats = stats.filter(
+      (stat) =>
+        stat.iface !== "lo" &&
+        stat.iface !== "lo0" &&
+        !stat.iface.startsWith("veth") &&
+        !stat.iface.startsWith("br-") &&
+        !stat.iface.startsWith("docker")
     );
 
     res.json({
-      interfaces: activeInterfaces.map(iface => ({
+      interfaces: activeInterfaces.map((iface) => ({
         name: iface.iface,
         ip4: iface.ip4,
         ip6: iface.ip6,
@@ -161,9 +163,9 @@ router.get("/network", async (req, res) => {
         type: iface.type,
         speed: iface.speed,
         operstate: iface.operstate,
-        isDefault: iface.iface === defaultInterface
+        isDefault: iface.iface === defaultInterface,
       })),
-      stats: activeStats.map(stat => ({
+      stats: activeStats.map((stat) => ({
         interface: stat.iface,
         rx_bytes: stat.rx_bytes || 0,
         tx_bytes: stat.tx_bytes || 0,
@@ -173,10 +175,10 @@ router.get("/network", async (req, res) => {
         tx_dropped: stat.tx_dropped || 0,
         rx_errors: stat.rx_errors || 0,
         tx_errors: stat.tx_errors || 0,
-        ms: stat.ms || 0
+        ms: stat.ms || 0,
       })),
       defaultInterface: defaultInterface,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   } catch (error) {
     console.error("Network metrics error:", error.message);

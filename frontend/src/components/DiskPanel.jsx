@@ -84,13 +84,17 @@ const DiskPanel = ({ refreshInterval }) => {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <Database className="w-4 h-4 text-purple-400" />
-                  <span className="font-semibold text-slate-100">{disk.mount}</span>
+                  <span className="font-semibold text-slate-100">
+                    {disk.mount}
+                  </span>
                 </div>
                 <div className="text-xs text-slate-400">
                   {disk.fs} ({disk.type})
                 </div>
               </div>
-              <div className={`text-2xl font-bold ${getUsageTextColor(disk.use)}`}>
+              <div
+                className={`text-2xl font-bold ${getUsageTextColor(disk.use)}`}
+              >
                 {disk.use.toFixed(1)}%
               </div>
             </div>
@@ -99,7 +103,9 @@ const DiskPanel = ({ refreshInterval }) => {
             <div className="mb-3">
               <div className="w-full bg-slate-600 rounded-full h-3">
                 <div
-                  className={`${getUsageColor(disk.use)} h-3 rounded-full transition-all duration-300`}
+                  className={`${getUsageColor(
+                    disk.use
+                  )} h-3 rounded-full transition-all duration-300`}
                   style={{ width: `${Math.min(disk.use, 100)}%` }}
                 />
               </div>

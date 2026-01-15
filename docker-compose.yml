@@ -5,8 +5,7 @@ services:
     build: ./backend
     container_name: homelab-portal-backend
     restart: unless-stopped
-    ports:
-      - "3001:3001"
+    network_mode: host
     volumes:
       # Mount Docker socket for container monitoring
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -20,8 +19,6 @@ services:
       - NODE_ENV=production
       - PORT=3001
       - DB_PATH=/app/data/homelab.db
-    networks:
-      - homelab-network
     # Allow access to host system metrics
     privileged: false
     # Read-only root filesystem for security (except data volume)
