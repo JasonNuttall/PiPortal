@@ -14,7 +14,6 @@ services:
       - /sys/class/thermal:/sys/class/thermal:ro
       # Mount network statistics for accurate monitoring
       - /sys/class/net:/sys/class/net:ro
-      - /proc/net/dev:/proc/net/dev:ro
       # Persist database using named volume (survives container rebuilds)
       - backend-data:/app/data
     environment:
