@@ -72,6 +72,23 @@ const Dashboard = () => {
       <Header />
 
       <main className="container mx-auto px-4 py-8">
+        <div className="flex justify-end mb-4">
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-slate-400">Refresh Interval:</label>
+            <select
+              value={refreshInterval}
+              onChange={(e) => setRefreshInterval(Number(e.target.value))}
+              className="bg-slate-800 text-slate-100 border border-slate-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+            >
+              <option value={2000}>2 seconds</option>
+              <option value={5000}>5 seconds</option>
+              <option value={10000}>10 seconds</option>
+              <option value={30000}>30 seconds</option>
+              <option value={60000}>1 minute</option>
+            </select>
+          </div>
+        </div>
+
         {error && (
           <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded mb-6">
             Error loading data: {error}
