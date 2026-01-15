@@ -39,7 +39,7 @@ A lightweight, containerized dashboard for monitoring and managing your Raspberr
 
 - Docker and Docker Compose installed on your Raspberry Pi
 - Raspberry Pi running a Linux-based OS (Raspberry Pi OS recommended)
-- Port 8080 available for the frontend
+- Port 1781 available for the frontend
 - Port 3001 available for the backend API
 
 ## Quick Start
@@ -70,13 +70,13 @@ This will:
 Open your browser and navigate to:
 
 ```
-http://raspberrypi:8080
+http://raspberrypi:1781
 ```
 
 or
 
 ```
-http://<your-pi-ip-address>:8080
+http://<your-pi-ip-address>:1781
 ```
 
 ## Development
@@ -194,7 +194,7 @@ Change ports in `docker-compose.yml`:
 
 ```yaml
 ports:
-  - "8080:80" # Change 8080 to your preferred port
+  - "1781:80" # Change 1781 to your preferred port
 ```
 
 ## Project Structure
@@ -234,15 +234,8 @@ homelab-portal/
 ```
 
 ## Future Enhancements
-
-- [ ] WebSocket support for real-time updates
 - [ ] Container start/stop controls
-- [ ] Historical metrics and charts
-- [ ] Authentication and user management
-- [ ] Dark/light theme toggle
-- [ ] Custom dashboard widgets
-- [ ] Export system reports
-- [ ] Mobile app
+
 
 ## License
 
