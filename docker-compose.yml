@@ -30,6 +30,8 @@ services:
     restart: unless-stopped
     ports:
       - "1781:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - backend
     networks:
