@@ -67,8 +67,8 @@ A lightweight, containerized dashboard for monitoring and managing your Raspberr
 ### 1. Clone or Download
 
 ```bash
-git clone <your-repo-url> homelab-portal
-cd homelab-portal
+git clone https://github.com/JasonNuttall/PiPortal.git
+cd PiPortal
 ```
 
 ### 2. Build and Run with Docker Compose
@@ -106,7 +106,6 @@ http://<your-pi-ip-address>:1781
 ```bash
 cd backend
 npm install
-cp .env.example .env
 npm run dev
 ```
 
@@ -176,14 +175,6 @@ Edit `backend/src/db/database.js` to add default services that appear on first r
 insert.run("Service Name", "http://url", "🔗", "Category");
 ```
 
-### Changing Refresh Interval
-
-Edit `frontend/src/components/Dashboard.jsx`:
-
-```javascript
-const interval = setInterval(loadData, 5000); // 5000ms = 5 seconds
-```
-
 ### Modifying UI Colors
 
 The dashboard uses Tailwind CSS. Edit color schemes in component files or customize the theme in `tailwind.config.js`.
@@ -220,7 +211,7 @@ ports:
 ## Project Structure
 
 ```
-homelab-portal/
+PiPortal/
 ├── backend/
 │   ├── src/
 │   │   ├── db/
@@ -254,8 +245,8 @@ homelab-portal/
 ```
 
 ## Future Enhancements
-- [ ] Container start/stop controls
 
+- [ ] Container start/stop controls
 
 ## License
 
