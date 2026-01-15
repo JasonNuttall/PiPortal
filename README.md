@@ -6,7 +6,11 @@
 
 A lightweight, containerized dashboard for monitoring and managing your Raspberry Pi homelab. Built with React, Node.js, and Docker.
 
+<div align="center">
+
 ## Features
+
+</div>
 
 - **Real-time System Monitoring**
   - CPU load and usage
@@ -28,10 +32,14 @@ A lightweight, containerized dashboard for monitoring and managing your Raspberr
   - SQLite database for persistent storage
 
 - **Auto-refresh Dashboard**
-  - Data refreshes every 5 seconds
+  - Choose refresh interval for auto refresh dashboard
   - Responsive design for mobile and desktop
 
+<div align="center">
+
 ## Tech Stack
+
+</div>
 
 - **Frontend**: React 18 + Vite, Tailwind CSS, Recharts, Lucide Icons
 - **Backend**: Node.js + Express
@@ -39,14 +47,22 @@ A lightweight, containerized dashboard for monitoring and managing your Raspberr
 - **Monitoring**: systeminformation, dockerode
 - **Deployment**: Docker + Docker Compose
 
+<div align="center">
+
 ## Prerequisites
+
+</div>
 
 - Docker and Docker Compose installed on your Raspberry Pi
 - Raspberry Pi running a Linux-based OS (Raspberry Pi OS recommended)
 - Port 1781 available for the frontend
 - Port 3001 available for the backend API
 
+<div align="center">
+
 ## Quick Start
+
+</div>
 
 ### 1. Clone or Download
 
