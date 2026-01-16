@@ -298,9 +298,14 @@ let prevSystemTime = 0;
 router.get("/processes", async (req, res) => {
   console.log("=== Process endpoint called ===");
   try {
-    // Get total memory
+    // Get total memory - mem.total is in bytes
     const mem = await si.mem();
-    const totalMemKB = mem.total / 1024;
+    const totalMemBytes = mem.total;
+    const totalMemMB = totalMemBytes / (1024 * 1024);
+
+    console.log(
+      `Total RAM: ${totalMemBytes} bytes = ${totalMemMB.toFixed(0)} MB`
+    );
 
     // Read system CPU time from host's /proc
     const cpuStatRaw = fs.readFileSync(`${PROC_PATH}/stat`, "utf8");
@@ -343,10 +348,11 @@ router.get("/processes", async (req, res) => {
             ? (procTimeDelta / systemTimeDelta) * 100 * numCpus
             : 0;
 
-        // Memory percentage
-        const memPercent =
-          totalMemKB > 0 ? (proc.memRssKB / totalMemKB) * 100 : 0;
+        // Memory: memRssKB from /proc is in KB
+        // Convert to MB for display
         const memRssMB = proc.memRssKB / 1024;
+        // Calculate percentage: (MB / total MB) * 100
+        const memPercent = totalMemMB > 0 ? (memRssMB / totalMemMB) * 100 : 0;
 
         return {
           pid: proc.pid,
@@ -363,7 +369,7 @@ router.get("/processes", async (req, res) => {
         };
       })
       .filter((proc) => proc !== null && proc.name)
-      .sort((a, b) => b.memRss - a.memRss);
+      .sort((a, b) => b.memRssMB - a.memRssMB);
 
     // Update previous system time
     prevSystemTime = currentSystemTime;
@@ -377,9 +383,9 @@ router.get("/processes", async (req, res) => {
     });
 
     console.log(
-      `Read ${processList.length} processes from /proc, total RAM: ${(
-        totalMemKB / 1024
-      ).toFixed(0)} MB`
+      `Read ${
+        processList.length
+      } processes from /proc, total RAM: ${totalMemMB.toFixed(0)} MB`
     );
     console.log(
       `Top 3 by memory:`,
@@ -389,7 +395,7 @@ router.get("/processes", async (req, res) => {
           (p) =>
             `${p.name}: CPU ${p.cpu.toFixed(1)}%, MEM ${p.mem.toFixed(
               1
-            )}% (${p.memRssMB.toFixed(1)} MB)`
+            )}% (${p.memRssMB.toFixed(1)} MB, RSS=${p.memRss} KB)`
         )
     );
 
