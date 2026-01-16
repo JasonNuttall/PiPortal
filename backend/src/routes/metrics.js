@@ -221,42 +221,44 @@ router.get("/network", async (req, res) => {
 router.get("/processes", async (req, res) => {
   console.log("=== Process endpoint called ===");
   try {
-    // Get process list - systeminformation returns data with pcpu and pmem fields
-    console.log("Fetching process info...");
+    // Get total memory for calculating percentages
+    const mem = await si.mem();
+    const totalMemMB = mem.total / (1024 * 1024);
+    
+    // Get process list
     const processesData = await si.processes();
+    
+    console.log(`Returned ${processesData.list?.length || 0} processes, total RAM: ${totalMemMB.toFixed(0)} MB`);
 
-    console.log(`Returned ${processesData.list?.length || 0} processes`);
-
-    // Log first process with all its fields to see what's available
-    if (processesData.list && processesData.list.length > 0) {
-      console.log("First process fields:", Object.keys(processesData.list[0]));
-      console.log(
-        "First process sample:",
-        JSON.stringify(processesData.list[0], null, 2)
-      );
-    }
-
-    // Get top processes sorted by different criteria
+    // Get top processes - calculate memory % from memRss
     const processList = processesData.list
-      .map((proc) => ({
-        pid: proc.pid,
-        name: proc.name || "Unknown",
-        // Try different possible field names for CPU and memory percentages
-        cpu: proc.pcpu || proc.cpu_percent || proc.cpu || 0,
-        mem: proc.pmem || proc.mem_percent || proc.mem || 0,
-        memVsz: proc.memVsz || 0,
-        memRss: proc.memRss || 0,
-        command: proc.command || proc.name || "",
-        user: proc.user || "system",
-        state: proc.state || "",
-        started: proc.started || "",
-      }))
-      .filter((proc) => proc.name && proc.name !== "Unknown") // Filter out unknown processes
-      .sort((a, b) => b.cpu - a.cpu); // Default sort by CPU
+      .map((proc) => {
+        // memRss is in KB, convert to MB for display
+        const memRssMB = (proc.memRss || 0) / 1024;
+        // Calculate memory percentage from RSS / total memory
+        const memPercent = totalMemMB > 0 ? (memRssMB / totalMemMB) * 100 : 0;
+        
+        return {
+          pid: proc.pid,
+          name: proc.name || "Unknown",
+          // CPU fields - cpuu (user) + cpus (system) might have values
+          cpu: (proc.cpu || 0) + (proc.cpuu || 0) + (proc.cpus || 0),
+          mem: memPercent,
+          memVsz: proc.memVsz || 0,
+          memRss: proc.memRss || 0, // in KB
+          memRssMB: memRssMB,
+          command: proc.command || proc.name || "",
+          user: proc.user || "system",
+          state: proc.state || "",
+          started: proc.started || "",
+        };
+      })
+      .filter((proc) => proc.name && proc.name !== "Unknown")
+      .sort((a, b) => b.memRss - a.memRss); // Sort by memory usage
 
     console.log(
-      `Returning ${processList.length} processes, top 3 CPUs:`,
-      processList.slice(0, 3).map((p) => `${p.name}:${p.cpu}%`)
+      `Top 3 by memory:`,
+      processList.slice(0, 3).map((p) => `${p.name}: ${p.mem.toFixed(1)}% (${p.memRssMB.toFixed(1)} MB)`)
     );
 
     res.json({
@@ -264,7 +266,7 @@ router.get("/processes", async (req, res) => {
       running: processesData.running || 0,
       blocked: processesData.blocked || 0,
       sleeping: processesData.sleeping || 0,
-      list: processList.slice(0, 150), // Limit to top 150 processes
+      list: processList.slice(0, 150),
     });
   } catch (error) {
     console.error("Processes error:", error);

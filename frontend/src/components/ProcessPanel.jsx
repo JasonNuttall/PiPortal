@@ -50,11 +50,10 @@ const ProcessPanel = ({ refreshInterval }) => {
     }
   };
 
-  const formatMem = (bytes) => {
-    if (!bytes) return "0 MB";
-    const mb = bytes / (1024 * 1024);
-    if (mb < 1024) return `${mb.toFixed(1)} MB`;
-    const gb = mb / 1024;
+  const formatMem = (memRssMB) => {
+    if (!memRssMB || memRssMB === 0) return "0 MB";
+    if (memRssMB < 1024) return `${memRssMB.toFixed(1)} MB`;
+    const gb = memRssMB / 1024;
     return `${gb.toFixed(2)} GB`;
   };
 
@@ -272,7 +271,7 @@ const ProcessPanel = ({ refreshInterval }) => {
                         </span>
                       </td>
                       <td className="py-2 px-2 text-right text-slate-300 font-mono text-xs hidden lg:table-cell">
-                        {formatMem(proc.memRss)}
+                        {formatMem(proc.memRssMB)}
                       </td>
                       <td className="py-2 px-2 text-center text-slate-400 font-mono text-xs hidden sm:table-cell">
                         {proc.pid}
