@@ -1,4 +1,11 @@
-import { Cpu, HardDrive, Thermometer, Package } from "lucide-react";
+import {
+  Cpu,
+  HardDrive,
+  Thermometer,
+  Package,
+  ArrowDown,
+  ArrowUp,
+} from "lucide-react";
 
 const MetricCard = ({
   title,
@@ -58,9 +65,24 @@ const MetricsPanel = ({
   temperature,
   diskMetrics,
   dockerInfo,
+  networkStats,
 }) => {
+  // Calculate network speed as percentage of 1000 Mb/s (125 MB/s)
+  const downloadMbps = networkStats?.downloadSpeed
+    ? ((networkStats.downloadSpeed * 8) / 1000000).toFixed(1)
+    : "0";
+  const uploadMbps = networkStats?.uploadSpeed
+    ? ((networkStats.uploadSpeed * 8) / 1000000).toFixed(1)
+    : "0";
+  const downloadPercent = networkStats?.downloadSpeed
+    ? (parseFloat(downloadMbps) / 1000) * 100
+    : 0;
+  const uploadPercent = networkStats?.uploadSpeed
+    ? (parseFloat(uploadMbps) / 1000) * 100
+    : 0;
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
       <MetricCard
         title="CPU Load"
         value={systemMetrics?.cpu?.currentLoad || "0"}
@@ -98,6 +120,24 @@ const MetricsPanel = ({
         }`}
         icon={Package}
         color="purple"
+      />
+
+      <MetricCard
+        title="Download"
+        value={downloadMbps}
+        unit="Mb/s"
+        icon={ArrowDown}
+        color="green"
+        percentage={downloadPercent}
+      />
+
+      <MetricCard
+        title="Upload"
+        value={uploadMbps}
+        unit="Mb/s"
+        icon={ArrowUp}
+        color="blue"
+        percentage={uploadPercent}
       />
     </div>
   );
