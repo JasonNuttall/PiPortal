@@ -74,3 +74,9 @@ export const fetchNetworkMetrics = async () => {
   if (!response.ok) throw new Error("Failed to fetch network metrics");
   return response.json();
 };
+
+export const fetchProcesses = async () => {
+  const response = await fetch(`${API_BASE_URL}/metrics/processes`);
+  if (!response.ok) throw new Error("Failed to fetch processes");
+  return response.json();
+};

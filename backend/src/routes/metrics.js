@@ -98,7 +98,35 @@ router.get("/disk/detailed", async (req, res) => {
   try {
     const fsSize = await si.fsSize();
 
-    const diskInfo = fsSize.map((disk) => ({
+    // Filter to show unique physical drives (avoid duplicate mounts)
+    // Group by filesystem device (fs field) and keep only primary mounts
+    const seenFilesystems = new Set();
+    const uniqueDisks = fsSize.filter((disk) => {
+      // Skip if we've already seen this filesystem device
+      if (seenFilesystems.has(disk.fs)) {
+        return false;
+      }
+
+      // Skip overlay, tmpfs, devtmpfs, and other virtual filesystems
+      if (
+        disk.type === "overlay" ||
+        disk.type === "tmpfs" ||
+        disk.type === "devtmpfs" ||
+        disk.fs.startsWith("overlay") ||
+        disk.fs.startsWith("tmpfs") ||
+        disk.mount.startsWith("/dev") ||
+        disk.mount.startsWith("/sys") ||
+        disk.mount.startsWith("/proc") ||
+        disk.mount.startsWith("/run")
+      ) {
+        return false;
+      }
+
+      seenFilesystems.add(disk.fs);
+      return true;
+    });
+
+    const diskInfo = uniqueDisks.map((disk) => ({
       fs: disk.fs,
       type: disk.type,
       size: disk.size,
@@ -184,6 +212,44 @@ router.get("/network", async (req, res) => {
     console.error("Network metrics error:", error.message);
     res.status(500).json({
       error: "Failed to fetch network metrics",
+      message: error.message,
+    });
+  }
+});
+
+// Get running processes with resource usage
+router.get("/processes", async (req, res) => {
+  try {
+    const processes = await si.processes();
+
+    // Get top processes sorted by different criteria
+    const processList = processes.list
+      .filter((proc) => proc.cpu > 0 || proc.mem > 0) // Filter out idle processes
+      .map((proc) => ({
+        pid: proc.pid,
+        name: proc.name,
+        cpu: proc.cpu,
+        mem: proc.mem,
+        memVsz: proc.memVsz,
+        memRss: proc.memRss,
+        command: proc.command,
+        user: proc.user,
+        state: proc.state,
+        started: proc.started,
+      }))
+      .sort((a, b) => b.cpu - a.cpu); // Default sort by CPU
+
+    res.json({
+      all: processList.length,
+      running: processes.running,
+      blocked: processes.blocked,
+      sleeping: processes.sleeping,
+      list: processList.slice(0, 100), // Limit to top 100 processes
+    });
+  } catch (error) {
+    console.error("Processes error:", error.message);
+    res.status(500).json({
+      error: "Failed to fetch processes",
       message: error.message,
     });
   }

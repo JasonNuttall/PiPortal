@@ -5,6 +5,7 @@ import DockerPanel from "./DockerPanel";
 import ServicesPanel from "./ServicesPanel";
 import NetworkPanel from "./NetworkPanel";
 import DiskPanel from "./DiskPanel";
+import ProcessPanel from "./ProcessPanel";
 import {
   fetchSystemMetrics,
   fetchTemperature,
@@ -112,6 +113,11 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           <DockerPanel containers={dockerContainers} />
           <ServicesPanel services={services} onUpdate={handleServicesUpdate} />
+        </div>
+
+        {/* Process Monitor - Full Width */}
+        <div className="mt-6">
+          <ProcessPanel refreshInterval={refreshInterval} />
         </div>
       </main>
     </div>

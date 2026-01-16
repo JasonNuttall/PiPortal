@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import {
   Network,
   Activity,
-  Wifi,
-  WifiOff,
   ArrowUp,
   ArrowDown,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { fetchNetworkMetrics } from "../api/api";
 
@@ -13,6 +13,7 @@ const NetworkPanel = ({ refreshInterval }) => {
   const [networkData, setNetworkData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [calculatedSpeeds, setCalculatedSpeeds] = useState({});
   const previousDataRef = useRef(null);
   const previousTimeRef = useRef(null);
@@ -86,9 +87,11 @@ const NetworkPanel = ({ refreshInterval }) => {
 
   if (loading) {
     return (
-      <div className="bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-700">
-        <div className="flex items-center justify-center h-32">
-          <div className="text-slate-400">Loading network data...</div>
+      <div className="bg-slate-800 rounded-lg border border-slate-700">
+        <div className="p-6">
+          <div className="text-slate-400 text-center">
+            Loading network data...
+          </div>
         </div>
       </div>
     );
@@ -96,97 +99,37 @@ const NetworkPanel = ({ refreshInterval }) => {
 
   if (error) {
     return (
-      <div className="bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-700">
-        <div className="flex items-center mb-4">
-          <Network className="w-6 h-6 text-blue-400 mr-2" />
-          <h2 className="text-xl font-semibold text-slate-100">
-            Network Monitoring
-          </h2>
-        </div>
-        <div className="flex items-center justify-center h-20">
-          <div className="text-red-400">Error: {error}</div>
+      <div className="bg-slate-800 rounded-lg border border-slate-700">
+        <div className="p-6">
+          <div className="text-red-400 text-center">Error: {error}</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-700">
-      <div className="flex items-center mb-6">
-        <Network className="w-6 h-6 text-blue-400 mr-2" />
-        <h2 className="text-xl font-semibold text-slate-100">
-          Network Monitoring
-        </h2>
+    <div className="bg-slate-800 rounded-lg border border-slate-700">
+      <div
+        className="p-6 border-b border-slate-700 cursor-pointer hover:bg-slate-700/50 transition-colors"
+        onClick={() => setIsCollapsed(!isCollapsed)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Activity className="w-5 h-5 text-blue-400" />
+            <h2 className="text-xl font-bold text-slate-100">
+              Live Network Traffic
+            </h2>
+          </div>
+          {isCollapsed ? (
+            <ChevronDown className="w-5 h-5 text-slate-400" />
+          ) : (
+            <ChevronUp className="w-5 h-5 text-slate-400" />
+          )}
+        </div>
       </div>
 
-      <div className="space-y-6">
-        {/* Network Interfaces */}
-        <div>
-          <h3 className="text-sm font-semibold text-slate-400 mb-3 flex items-center">
-            <Wifi className="w-4 h-4 mr-1" />
-            Network Interfaces
-          </h3>
-          <div className="grid grid-cols-1 gap-3">
-            {networkData?.interfaces?.map((iface, index) => (
-              <div
-                key={index}
-                className={`p-4 rounded-lg border ${
-                  iface.isDefault
-                    ? "bg-blue-900/30 border-blue-700"
-                    : "bg-slate-700/50 border-slate-600"
-                }`}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-2">
-                    {iface.operstate === "up" ? (
-                      <Wifi className="w-4 h-4 text-green-400" />
-                    ) : (
-                      <WifiOff className="w-4 h-4 text-red-400" />
-                    )}
-                    <span className="font-semibold text-slate-100">
-                      {iface.name}
-                    </span>
-                  </div>
-                  {iface.isDefault && (
-                    <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
-                      Default
-                    </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-300">
-                  {iface.ip4 && (
-                    <div>
-                      <span className="text-slate-400">IPv4:</span> {iface.ip4}
-                    </div>
-                  )}
-                  {iface.mac && (
-                    <div>
-                      <span className="text-slate-400">MAC:</span> {iface.mac}
-                    </div>
-                  )}
-                  {iface.speed > 0 && (
-                    <div>
-                      <span className="text-slate-400">Speed:</span>{" "}
-                      {iface.speed} Mbps
-                    </div>
-                  )}
-                  {iface.type && (
-                    <div>
-                      <span className="text-slate-400">Type:</span> {iface.type}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Network Statistics */}
-        <div>
-          <h3 className="text-sm font-semibold text-slate-400 mb-3 flex items-center">
-            <Activity className="w-4 h-4 mr-1" />
-            Live Traffic
-          </h3>
+      {!isCollapsed && (
+        <div className="p-6">
           <div className="space-y-3">
             {networkData?.stats?.map((stat, index) => {
               // Use calculated speeds if available, otherwise fall back to API data
@@ -270,7 +213,7 @@ const NetworkPanel = ({ refreshInterval }) => {
             })}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
