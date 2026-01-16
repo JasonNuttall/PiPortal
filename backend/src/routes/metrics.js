@@ -221,33 +221,24 @@ router.get("/network", async (req, res) => {
 router.get("/processes", async (req, res) => {
   console.log("=== Process endpoint called ===");
   try {
-    console.log("Fetching processes (first call)...");
-    // Use a longer delay and get full process details
-    const processes = await si.processes();
-    console.log(`First call returned ${processes.list?.length || 0} processes`);
+    // systeminformation calculates CPU based on differences between calls
+    // We need to call it with 'all' to get all processes and their stats
+    console.log("Fetching detailed process info...");
+    const processesData = await si.processes("all");
 
-    // Wait 1 second for more accurate measurements
-    console.log("Waiting 1 second...");
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    console.log("Fetching processes (second call)...");
-    const processesUpdate = await si.processes();
+    console.log(`Returned ${processesData.list?.length || 0} processes`);
     console.log(
-      `Second call returned ${processesUpdate.list?.length || 0} processes`
-    );
-
-    console.log(
-      "Sample process data:",
-      JSON.stringify(processesUpdate.list.slice(0, 2), null, 2)
+      "Sample raw data:",
+      JSON.stringify(processesData.list.slice(0, 2), null, 2)
     );
 
     // Get top processes sorted by different criteria
-    const processList = processesUpdate.list
+    const processList = processesData.list
       .map((proc) => ({
         pid: proc.pid,
         name: proc.name || "Unknown",
-        cpu: proc.cpu !== undefined && proc.cpu !== null ? Number(proc.cpu) : 0,
-        mem: proc.mem !== undefined && proc.mem !== null ? Number(proc.mem) : 0,
+        cpu: proc.pcpu || proc.cpu || 0, // pcpu is the percentage CPU
+        mem: proc.pmem || proc.mem || 0, // pmem is the percentage memory
         memVsz: proc.memVsz || 0,
         memRss: proc.memRss || 0,
         command: proc.command || proc.name || "",
@@ -264,10 +255,10 @@ router.get("/processes", async (req, res) => {
     );
 
     res.json({
-      all: processesUpdate.all || processList.length,
-      running: processesUpdate.running || 0,
-      blocked: processesUpdate.blocked || 0,
-      sleeping: processesUpdate.sleeping || 0,
+      all: processesData.all || processList.length,
+      running: processesData.running || 0,
+      blocked: processesData.blocked || 0,
+      sleeping: processesData.sleeping || 0,
       list: processList.slice(0, 150), // Limit to top 150 processes
     });
   } catch (error) {
