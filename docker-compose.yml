@@ -14,12 +14,17 @@ services:
       - /sys/class/thermal:/sys/class/thermal:ro
       # Mount network statistics for accurate monitoring
       - /sys/class/net:/sys/class/net:ro
+      # Mount /proc for process monitoring (read memory/CPU from host)
+      - /proc:/host/proc:ro
+      # Mount /etc/passwd to resolve usernames
+      - /etc/passwd:/etc/passwd:ro
       # Persist database using named volume (survives container rebuilds)
       - backend-data:/app/data
     environment:
       - NODE_ENV=production
       - PORT=3001
       - DB_PATH=/app/data/homelab.db
+      - HOST_PROC=/host/proc
     # Allow access to host system metrics
     privileged: false
     # Read-only root filesystem for security (except data volume)

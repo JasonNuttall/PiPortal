@@ -217,55 +217,187 @@ router.get("/network", async (req, res) => {
   }
 });
 
+// Use HOST_PROC env var if set (for Docker), otherwise use /proc
+const PROC_PATH = process.env.HOST_PROC || "/proc";
+
+// Helper to read process info directly from /proc
+const readProcessFromProc = (pid) => {
+  try {
+    // Read process status
+    const statusPath = `${PROC_PATH}/${pid}/status`;
+    const statPath = `${PROC_PATH}/${pid}/stat`;
+    const cmdlinePath = `${PROC_PATH}/${pid}/cmdline`;
+
+    if (!fs.existsSync(statusPath)) return null;
+
+    const status = fs.readFileSync(statusPath, "utf8");
+    const stat = fs.readFileSync(statPath, "utf8");
+
+    // Parse status file
+    const nameMatch = status.match(/^Name:\s+(.+)$/m);
+    const vmRssMatch = status.match(/^VmRSS:\s+(\d+)\s+kB$/m);
+    const vmSizeMatch = status.match(/^VmSize:\s+(\d+)\s+kB$/m);
+    const uidMatch = status.match(/^Uid:\s+(\d+)/m);
+    const stateMatch = status.match(/^State:\s+(\S)/m);
+
+    const name = nameMatch ? nameMatch[1] : "unknown";
+    const memRssKB = vmRssMatch ? parseInt(vmRssMatch[1], 10) : 0;
+    const memVszKB = vmSizeMatch ? parseInt(vmSizeMatch[1], 10) : 0;
+    const uid = uidMatch ? uidMatch[1] : "0";
+    const state = stateMatch ? stateMatch[1] : "S";
+
+    // Parse stat file for CPU times
+    const statParts = stat.split(" ");
+    const utime = parseInt(statParts[13], 10) || 0; // User mode jiffies
+    const stime = parseInt(statParts[14], 10) || 0; // Kernel mode jiffies
+
+    // Try to get command
+    let command = name;
+    try {
+      if (fs.existsSync(cmdlinePath)) {
+        const cmdline = fs.readFileSync(cmdlinePath, "utf8");
+        command = cmdline.replace(/\0/g, " ").trim() || name;
+      }
+    } catch (e) {
+      // Ignore cmdline read errors
+    }
+
+    // Get username from uid
+    let user = uid;
+    try {
+      const passwd = fs.readFileSync("/etc/passwd", "utf8");
+      const userMatch = passwd
+        .split("\n")
+        .find((line) => line.split(":")[2] === uid);
+      if (userMatch) user = userMatch.split(":")[0];
+    } catch (e) {
+      // Keep uid as fallback
+    }
+
+    return {
+      pid: parseInt(pid, 10),
+      name,
+      memRssKB,
+      memVszKB,
+      utime,
+      stime,
+      command: command.substring(0, 100),
+      user,
+      state,
+    };
+  } catch (e) {
+    return null;
+  }
+};
+
+// Store previous CPU times for calculating usage
+let prevCpuTimes = {};
+let prevSystemTime = 0;
+
 // Get running processes with resource usage
 router.get("/processes", async (req, res) => {
   console.log("=== Process endpoint called ===");
   try {
-    // Get total memory for calculating percentages
+    // Get total memory
     const mem = await si.mem();
-    const totalMemMB = mem.total / (1024 * 1024);
-    
-    // Get process list
-    const processesData = await si.processes();
-    
-    console.log(`Returned ${processesData.list?.length || 0} processes, total RAM: ${totalMemMB.toFixed(0)} MB`);
+    const totalMemKB = mem.total / 1024;
 
-    // Get top processes - calculate memory % from memRss
-    const processList = processesData.list
-      .map((proc) => {
-        // memRss is in KB, convert to MB for display
-        const memRssMB = (proc.memRss || 0) / 1024;
-        // Calculate memory percentage from RSS / total memory
-        const memPercent = totalMemMB > 0 ? (memRssMB / totalMemMB) * 100 : 0;
-        
+    // Read system CPU time from host's /proc
+    const cpuStatRaw = fs.readFileSync(`${PROC_PATH}/stat`, "utf8");
+    const cpuLine = cpuStatRaw.split("\n")[0];
+    const cpuParts = cpuLine.split(/\s+/).slice(1).map(Number);
+    const currentSystemTime = cpuParts.reduce((a, b) => a + b, 0);
+    const systemTimeDelta = currentSystemTime - prevSystemTime;
+
+    // Get all PIDs from host's /proc
+    const procDirs = fs
+      .readdirSync(PROC_PATH)
+      .filter((dir) => /^\d+$/.test(dir));
+
+    let running = 0;
+    let sleeping = 0;
+    let blocked = 0;
+
+    const processList = procDirs
+      .map((pid) => {
+        const proc = readProcessFromProc(pid);
+        if (!proc) return null;
+
+        // Count states
+        if (proc.state === "R") running++;
+        else if (proc.state === "S" || proc.state === "I") sleeping++;
+        else if (proc.state === "D") blocked++;
+
+        // Calculate CPU percentage
+        const totalProcTime = proc.utime + proc.stime;
+        const prevTime = prevCpuTimes[proc.pid] || totalProcTime;
+        const procTimeDelta = totalProcTime - prevTime;
+
+        // Store current time for next calculation
+        prevCpuTimes[proc.pid] = totalProcTime;
+
+        // CPU percentage = (process time delta / system time delta) * 100 * num_cpus
+        const numCpus = require("os").cpus().length;
+        const cpuPercent =
+          systemTimeDelta > 0
+            ? (procTimeDelta / systemTimeDelta) * 100 * numCpus
+            : 0;
+
+        // Memory percentage
+        const memPercent =
+          totalMemKB > 0 ? (proc.memRssKB / totalMemKB) * 100 : 0;
+        const memRssMB = proc.memRssKB / 1024;
+
         return {
           pid: proc.pid,
-          name: proc.name || "Unknown",
-          // CPU fields - cpuu (user) + cpus (system) might have values
-          cpu: (proc.cpu || 0) + (proc.cpuu || 0) + (proc.cpus || 0),
+          name: proc.name,
+          cpu: Math.min(cpuPercent, 100), // Cap at 100%
           mem: memPercent,
-          memVsz: proc.memVsz || 0,
-          memRss: proc.memRss || 0, // in KB
+          memVsz: proc.memVszKB,
+          memRss: proc.memRssKB,
           memRssMB: memRssMB,
-          command: proc.command || proc.name || "",
-          user: proc.user || "system",
-          state: proc.state || "",
-          started: proc.started || "",
+          command: proc.command,
+          user: proc.user,
+          state: proc.state,
+          started: "",
         };
       })
-      .filter((proc) => proc.name && proc.name !== "Unknown")
-      .sort((a, b) => b.memRss - a.memRss); // Sort by memory usage
+      .filter((proc) => proc !== null && proc.name)
+      .sort((a, b) => b.memRss - a.memRss);
+
+    // Update previous system time
+    prevSystemTime = currentSystemTime;
+
+    // Clean up old PIDs from prevCpuTimes
+    const currentPids = new Set(processList.map((p) => p.pid));
+    Object.keys(prevCpuTimes).forEach((pid) => {
+      if (!currentPids.has(parseInt(pid, 10))) {
+        delete prevCpuTimes[pid];
+      }
+    });
 
     console.log(
+      `Read ${processList.length} processes from /proc, total RAM: ${(
+        totalMemKB / 1024
+      ).toFixed(0)} MB`
+    );
+    console.log(
       `Top 3 by memory:`,
-      processList.slice(0, 3).map((p) => `${p.name}: ${p.mem.toFixed(1)}% (${p.memRssMB.toFixed(1)} MB)`)
+      processList
+        .slice(0, 3)
+        .map(
+          (p) =>
+            `${p.name}: CPU ${p.cpu.toFixed(1)}%, MEM ${p.mem.toFixed(
+              1
+            )}% (${p.memRssMB.toFixed(1)} MB)`
+        )
     );
 
     res.json({
-      all: processesData.all || processList.length,
-      running: processesData.running || 0,
-      blocked: processesData.blocked || 0,
-      sleeping: processesData.sleeping || 0,
+      all: processList.length,
+      running,
+      blocked,
+      sleeping,
       list: processList.slice(0, 150),
     });
   } catch (error) {
