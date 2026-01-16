@@ -11,7 +11,7 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import Header from "./Header";
 import MetricsPanel from "./MetricsPanel";
@@ -233,21 +233,20 @@ const Dashboard = () => {
         />
 
         {/* Draggable Panels */}
-        <div className="mt-6 space-y-6 pl-8">
+        <div className="mt-6 pl-0 md:pl-8">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
-            <SortableContext
-              items={panelOrder}
-              strategy={verticalListSortingStrategy}
-            >
-              {panelOrder.map((panelId) => (
-                <SortablePanel key={panelId} id={panelId}>
-                  {panelComponents[panelId]}
-                </SortablePanel>
-              ))}
+            <SortableContext items={panelOrder} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {panelOrder.map((panelId) => (
+                  <SortablePanel key={panelId} id={panelId}>
+                    {panelComponents[panelId]}
+                  </SortablePanel>
+                ))}
+              </div>
             </SortableContext>
           </DndContext>
         </div>

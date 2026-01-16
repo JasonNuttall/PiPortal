@@ -19,19 +19,20 @@ const SortablePanel = ({ id, children }) => {
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="relative group">
+    <div ref={setNodeRef} style={style} className="relative group h-full">
       {/* Drag Handle */}
       <div
         {...attributes}
         {...listeners}
-        className="absolute -left-8 top-4 p-2 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity z-10"
+        className="absolute -left-8 top-4 p-2 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity z-10 hidden md:block"
         title="Drag to reorder"
       >
         <GripVertical className="w-5 h-5 text-slate-400 hover:text-slate-200" />
       </div>
-
-      {children}
-    </div>
+      
+      <div className="h-full">
+        {children}
+      </div>
   );
 };
 
