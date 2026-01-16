@@ -24,7 +24,6 @@ const DiskPanel = ({ refreshInterval }) => {
       iconColor="text-purple-400"
       fetchData={fetchDetailedDiskInfo}
       refreshInterval={refreshInterval}
-      collapsible={false}
     >
       {(diskData) => (
         <div className="space-y-4">
