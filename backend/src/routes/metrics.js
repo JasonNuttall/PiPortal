@@ -224,27 +224,26 @@ router.get("/processes", async (req, res) => {
 
     // Get top processes sorted by different criteria
     const processList = processes.list
-      .filter((proc) => proc.cpu > 0 || proc.mem > 0) // Filter out idle processes
       .map((proc) => ({
         pid: proc.pid,
-        name: proc.name,
-        cpu: proc.cpu,
-        mem: proc.mem,
-        memVsz: proc.memVsz,
-        memRss: proc.memRss,
-        command: proc.command,
-        user: proc.user,
-        state: proc.state,
-        started: proc.started,
+        name: proc.name || "Unknown",
+        cpu: proc.cpu || 0,
+        mem: proc.mem || 0,
+        memVsz: proc.memVsz || 0,
+        memRss: proc.memRss || 0,
+        command: proc.command || "",
+        user: proc.user || "system",
+        state: proc.state || "",
+        started: proc.started || "",
       }))
       .sort((a, b) => b.cpu - a.cpu); // Default sort by CPU
 
     res.json({
-      all: processList.length,
-      running: processes.running,
-      blocked: processes.blocked,
-      sleeping: processes.sleeping,
-      list: processList.slice(0, 100), // Limit to top 100 processes
+      all: processes.all || processList.length,
+      running: processes.running || 0,
+      blocked: processes.blocked || 0,
+      sleeping: processes.sleeping || 0,
+      list: processList.slice(0, 150), // Limit to top 150 processes
     });
   } catch (error) {
     console.error("Processes error:", error.message);
