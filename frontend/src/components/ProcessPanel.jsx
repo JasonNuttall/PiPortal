@@ -1,45 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Activity,
-  ChevronDown,
-  ChevronUp,
   Search,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
 import { fetchProcesses } from "../api/api";
+import BasePanel from "./BasePanel";
 
 const ProcessPanel = ({ refreshInterval }) => {
-  const [processData, setProcessData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("cpu"); // cpu, mem, name
+  const [sortBy, setSortBy] = useState("mem"); // cpu, mem, name
   const [sortDirection, setSortDirection] = useState("desc");
   const [displayLimit, setDisplayLimit] = useState(20);
-
-  const fetchData = async () => {
-    try {
-      const data = await fetchProcesses();
-      setProcessData(data);
-      setError(null);
-    } catch (err) {
-      setError(err.message);
-      console.error("Error fetching process data:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-    if (refreshInterval > 0) {
-      const interval = setInterval(fetchData, refreshInterval);
-      return () => clearInterval(interval);
-    }
-  }, [refreshInterval]);
 
   const handleSort = (column) => {
     if (sortBy === column) {
@@ -67,173 +41,130 @@ const ProcessPanel = ({ refreshInterval }) => {
     );
   };
 
-  if (loading) {
-    return (
-      <div className="bg-slate-800 rounded-lg border border-slate-700">
-        <div className="p-6">
-          <div className="text-slate-400 text-center">Loading processes...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-slate-800 rounded-lg border border-slate-700">
-        <div className="p-6">
-          <div className="text-red-400 text-center">Error: {error}</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Filter and sort processes
-  let filteredProcesses = processData?.list || [];
-
-  // Apply search filter
-  if (searchTerm) {
-    filteredProcesses = filteredProcesses.filter(
-      (proc) =>
-        proc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        proc.command.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        proc.user.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }
-
-  // Apply sorting
-  filteredProcesses = [...filteredProcesses].sort((a, b) => {
-    let comparison = 0;
-    switch (sortBy) {
-      case "cpu":
-        comparison = b.cpu - a.cpu;
-        break;
-      case "mem":
-        comparison = b.mem - a.mem;
-        break;
-      case "name":
-        comparison = a.name.localeCompare(b.name);
-        break;
-      default:
-        comparison = 0;
-    }
-    return sortDirection === "asc" ? -comparison : comparison;
-  });
-
-  // Limit display
-  const displayedProcesses = filteredProcesses.slice(0, displayLimit);
-
   return (
-    <div className="bg-slate-800 rounded-lg border border-slate-700">
-      <div
-        className="p-6 border-b border-slate-700 cursor-pointer hover:bg-slate-700/50 transition-colors"
-        onClick={() => setIsCollapsed(!isCollapsed)}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Activity className="w-5 h-5 text-blue-400" />
-            <h2 className="text-xl font-bold text-slate-100">
-              Process Monitor
-            </h2>
-            <span className="text-sm text-slate-400">
-              ({processData?.running || 0} running / {processData?.all || 0}{" "}
-              total)
-            </span>
-          </div>
-          {isCollapsed ? (
-            <ChevronDown className="w-5 h-5 text-slate-400" />
-          ) : (
-            <ChevronUp className="w-5 h-5 text-slate-400" />
-          )}
-        </div>
-      </div>
+    <BasePanel
+      title="Process Monitor"
+      icon={Activity}
+      iconColor="text-cyan-400"
+      fetchData={fetchProcesses}
+      refreshInterval={refreshInterval}
+      subtitle={(data) =>
+        data ? `(${data.running} running / ${data.all} total)` : ""
+      }
+    >
+      {(processData) => {
+        // Filter and sort processes
+        let filteredProcesses = processData?.list || [];
 
-      {!isCollapsed && (
-        <div className="p-6">
-          {/* Controls */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search processes..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-700 text-slate-100 pl-10 pr-4 py-2 rounded border border-slate-600 focus:outline-none focus:border-blue-500 text-sm"
-              />
+        // Apply search filter
+        if (searchTerm) {
+          filteredProcesses = filteredProcesses.filter(
+            (proc) =>
+              proc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              proc.command.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              proc.user.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        }
+
+        // Apply sorting
+        filteredProcesses = [...filteredProcesses].sort((a, b) => {
+          let comparison = 0;
+          switch (sortBy) {
+            case "cpu":
+              comparison = b.cpu - a.cpu;
+              break;
+            case "mem":
+              comparison = b.mem - a.mem;
+              break;
+            case "name":
+              comparison = a.name.localeCompare(b.name);
+              break;
+            default:
+              comparison = 0;
+          }
+          return sortDirection === "asc" ? -comparison : comparison;
+        });
+
+        // Limit display
+        const displayedProcesses = filteredProcesses.slice(0, displayLimit);
+
+        return (
+          <>
+            {/* Search and Controls */}
+            <div className="flex gap-3 mb-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search processes..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-slate-700 text-slate-100 rounded-lg border border-slate-600 focus:border-blue-500 outline-none"
+                />
+              </div>
+              <select
+                value={displayLimit}
+                onChange={(e) => setDisplayLimit(Number(e.target.value))}
+                className="px-3 py-2 bg-slate-700 text-slate-100 rounded-lg border border-slate-600 focus:border-blue-500 outline-none"
+              >
+                <option value={10}>Top 10</option>
+                <option value={20}>Top 20</option>
+                <option value={50}>Top 50</option>
+                <option value={100}>Top 100</option>
+              </select>
             </div>
 
-            {/* Display Limit */}
-            <select
-              value={displayLimit}
-              onChange={(e) => setDisplayLimit(Number(e.target.value))}
-              className="bg-slate-700 text-slate-100 px-3 py-2 rounded border border-slate-600 focus:outline-none focus:border-blue-500 text-sm"
-            >
-              <option value={10}>Top 10</option>
-              <option value={20}>Top 20</option>
-              <option value={50}>Top 50</option>
-              <option value={100}>Top 100</option>
-            </select>
-          </div>
-
-          {/* Process Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-700">
-                  <th
-                    className="text-left py-3 px-2 text-slate-400 font-medium cursor-pointer hover:text-slate-300"
-                    onClick={() => handleSort("name")}
-                  >
-                    <div className="flex items-center gap-1">
-                      Process {getSortIcon("name")}
-                    </div>
-                  </th>
-                  <th className="text-left py-3 px-2 text-slate-400 font-medium hidden md:table-cell">
-                    User
-                  </th>
-                  <th
-                    className="text-right py-3 px-2 text-slate-400 font-medium cursor-pointer hover:text-slate-300"
-                    onClick={() => handleSort("cpu")}
-                  >
-                    <div className="flex items-center justify-end gap-1">
-                      CPU % {getSortIcon("cpu")}
-                    </div>
-                  </th>
-                  <th
-                    className="text-right py-3 px-2 text-slate-400 font-medium cursor-pointer hover:text-slate-300"
-                    onClick={() => handleSort("mem")}
-                  >
-                    <div className="flex items-center justify-end gap-1">
-                      Memory % {getSortIcon("mem")}
-                    </div>
-                  </th>
-                  <th className="text-right py-3 px-2 text-slate-400 font-medium hidden lg:table-cell">
-                    RAM
-                  </th>
-                  <th className="text-center py-3 px-2 text-slate-400 font-medium hidden sm:table-cell">
-                    PID
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {displayedProcesses.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="text-center py-8 text-slate-400">
-                      No processes found
-                    </td>
+            {/* Process Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b border-slate-700">
+                  <tr className="text-left text-slate-400">
+                    <th className="pb-3 font-medium">
+                      <button
+                        onClick={() => handleSort("name")}
+                        className="flex items-center gap-1 hover:text-slate-200"
+                      >
+                        Process {getSortIcon("name")}
+                      </button>
+                    </th>
+                    <th className="pb-3 font-medium hidden md:table-cell">
+                      User
+                    </th>
+                    <th className="pb-3 font-medium text-right">
+                      <button
+                        onClick={() => handleSort("cpu")}
+                        className="flex items-center gap-1 hover:text-slate-200 ml-auto"
+                      >
+                        CPU % {getSortIcon("cpu")}
+                      </button>
+                    </th>
+                    <th className="pb-3 font-medium text-right">
+                      <button
+                        onClick={() => handleSort("mem")}
+                        className="flex items-center gap-1 hover:text-slate-200 ml-auto"
+                      >
+                        Memory % {getSortIcon("mem")}
+                      </button>
+                    </th>
+                    <th className="pb-3 font-medium text-right hidden lg:table-cell">
+                      RAM
+                    </th>
+                    <th className="pb-3 font-medium text-center hidden sm:table-cell">
+                      PID
+                    </th>
                   </tr>
-                ) : (
-                  displayedProcesses.map((proc) => (
+                </thead>
+                <tbody>
+                  {displayedProcesses.map((proc) => (
                     <tr
                       key={proc.pid}
-                      className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors"
+                      className="border-b border-slate-700/50 hover:bg-slate-700/30"
                     >
                       <td className="py-2 px-2">
-                        <div className="text-slate-100 font-medium truncate max-w-[200px]">
+                        <div className="font-medium text-slate-100 truncate max-w-xs">
                           {proc.name}
                         </div>
-                        <div className="text-xs text-slate-500 truncate max-w-[200px] md:hidden">
+                        <div className="text-xs text-slate-500 truncate max-w-xs hidden xl:block">
                           {proc.command}
                         </div>
                       </td>
@@ -277,21 +208,20 @@ const ProcessPanel = ({ refreshInterval }) => {
                         {proc.pid}
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Footer Info */}
-          {filteredProcesses.length > displayLimit && (
-            <div className="mt-4 text-center text-sm text-slate-400">
-              Showing {displayLimit} of {filteredProcesses.length} processes
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
-      )}
-    </div>
+
+            {/* Footer */}
+            <div className="mt-4 text-center text-sm text-slate-400">
+              Showing {displayedProcesses.length} of{" "}
+              {filteredProcesses.length} processes
+            </div>
+          </>
+        );
+      }}
+    </BasePanel>
   );
 };
 

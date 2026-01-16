@@ -1,9 +1,7 @@
-import { useState } from "react";
-import { Container, Circle, ChevronDown, ChevronUp } from "lucide-react";
+import { Container, Circle } from "lucide-react";
+import BasePanel from "./BasePanel";
 
 const DockerPanel = ({ containers }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
   const getStatusColor = (state) => {
     switch (state.toLowerCase()) {
       case "running":
@@ -18,38 +16,22 @@ const DockerPanel = ({ containers }) => {
   };
 
   return (
-    <div className="bg-slate-800 rounded-lg border border-slate-700">
-      <div
-        className="p-6 border-b border-slate-700 cursor-pointer hover:bg-slate-700/50 transition-colors"
-        onClick={() => setIsCollapsed(!isCollapsed)}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Container className="w-5 h-5 text-blue-400" />
-            <h2 className="text-xl font-bold text-slate-100">
-              Docker Containers
-            </h2>
-            <span className="text-sm text-slate-400">
-              ({containers.length})
-            </span>
-          </div>
-          {isCollapsed ? (
-            <ChevronDown className="w-5 h-5 text-slate-400" />
-          ) : (
-            <ChevronUp className="w-5 h-5 text-slate-400" />
-          )}
-        </div>
-      </div>
-
-      {!isCollapsed && (
-        <div className="p-6">
-          {containers.length === 0 ? (
+    <BasePanel
+      title="Docker Containers"
+      icon={Container}
+      iconColor="text-blue-400"
+      data={containers}
+      subtitle={`(${containers?.length || 0})`}
+    >
+      {(data) => (
+        <>
+          {data.length === 0 ? (
             <p className="text-slate-400 text-center py-8">
               No containers found
             </p>
           ) : (
             <div className="space-y-3">
-              {containers.map((container) => (
+              {data.map((container) => (
                 <div
                   key={container.id}
                   className="bg-slate-700/50 rounded-lg p-4 hover:bg-slate-700 transition-colors"
@@ -101,9 +83,9 @@ const DockerPanel = ({ containers }) => {
               ))}
             </div>
           )}
-        </div>
+        </>
       )}
-    </div>
+    </BasePanel>
   );
 };
 

@@ -6,15 +6,13 @@ import {
   Trash2,
   X,
   Save,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 import { createService, updateService, deleteService } from "../api/api";
+import BasePanel from "./BasePanel";
 
 const ServicesPanel = ({ services, onUpdate }) => {
   const [editingService, setEditingService] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     url: "",
@@ -74,37 +72,27 @@ const ServicesPanel = ({ services, onUpdate }) => {
     return acc;
   }, {});
 
-  return (
-    <div className="bg-slate-800 rounded-lg border border-slate-700">
-      <div className="p-6 border-b border-slate-700">
-        <div className="flex items-center justify-between">
-          <div
-            className="flex items-center gap-2 cursor-pointer hover:text-slate-300"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-          >
-            <Link className="w-5 h-5 text-blue-400" />
-            <h2 className="text-xl font-bold text-slate-100">Quick Links</h2>
-            <span className="text-sm text-slate-400">({services.length})</span>
-            {isCollapsed ? (
-              <ChevronDown className="w-5 h-5 text-slate-400" />
-            ) : (
-              <ChevronUp className="w-5 h-5 text-slate-400" />
-            )}
-          </div>
-          {!isCollapsed && (
-            <button
-              onClick={handleAdd}
-              className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Service
-            </button>
-          )}
-        </div>
-      </div>
+  const addButton = (
+    <button
+      onClick={handleAdd}
+      className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
+    >
+      <Plus className="w-4 h-4" />
+      Add Service
+    </button>
+  );
 
-      {!isCollapsed && (
-        <div className="p-6">
+  return (
+    <BasePanel
+      title="Quick Links"
+      icon={Link}
+      iconColor="text-blue-400"
+      data={services}
+      subtitle={`(${services?.length || 0})`}
+      headerActions={addButton}
+    >
+      {(data) => (
+        <>
           {isAdding && (
             <div className="bg-slate-700/50 rounded-lg p-4 mb-4">
               <div className="space-y-3">
@@ -200,18 +188,44 @@ const ServicesPanel = ({ services, onUpdate }) => {
                               }
                               className="w-full bg-slate-600 text-slate-100 px-2 py-1 rounded text-sm border border-slate-500 outline-none"
                             />
+                            <div className="grid grid-cols-2 gap-2">
+                              <input
+                                type="text"
+                                value={formData.icon}
+                                onChange={(e) =>
+                                  setFormData({
+                                    ...formData,
+                                    icon: e.target.value,
+                                  })
+                                }
+                                className="bg-slate-600 text-slate-100 px-2 py-1 rounded text-sm border border-slate-500 outline-none"
+                              />
+                              <input
+                                type="text"
+                                value={formData.category}
+                                onChange={(e) =>
+                                  setFormData({
+                                    ...formData,
+                                    category: e.target.value,
+                                  })
+                                }
+                                className="bg-slate-600 text-slate-100 px-2 py-1 rounded text-sm border border-slate-500 outline-none"
+                              />
+                            </div>
                             <div className="flex gap-2">
                               <button
                                 onClick={handleSave}
                                 className="flex items-center gap-1 px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs"
                               >
                                 <Save className="w-3 h-3" />
+                                Save
                               </button>
                               <button
                                 onClick={handleCancel}
                                 className="flex items-center gap-1 px-2 py-1 bg-slate-600 hover:bg-slate-500 text-white rounded text-xs"
                               >
                                 <X className="w-3 h-3" />
+                                Cancel
                               </button>
                             </div>
                           </div>
@@ -221,21 +235,16 @@ const ServicesPanel = ({ services, onUpdate }) => {
                           href={service.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="block bg-slate-700/50 hover:bg-slate-700 rounded-lg p-4 transition-colors group"
+                          className="block bg-slate-700/50 hover:bg-slate-700 rounded-lg p-3 transition-colors group"
                         >
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <span className="text-2xl">
+                            <div className="flex items-center gap-2 flex-1">
+                              <span className="text-xl">
                                 {service.icon || "🔗"}
                               </span>
-                              <div>
-                                <h4 className="font-semibold text-slate-100 group-hover:text-blue-400 transition-colors">
-                                  {service.name}
-                                </h4>
-                                <p className="text-xs text-slate-400">
-                                  {service.url}
-                                </p>
-                              </div>
+                              <span className="text-slate-100 font-medium group-hover:text-blue-300 transition-colors">
+                                {service.name}
+                              </span>
                             </div>
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
@@ -243,18 +252,18 @@ const ServicesPanel = ({ services, onUpdate }) => {
                                   e.preventDefault();
                                   handleEdit(service);
                                 }}
-                                className="p-1.5 bg-slate-600 hover:bg-slate-500 rounded text-slate-300"
+                                className="p-1 hover:bg-slate-600 rounded"
                               >
-                                <Pencil className="w-3 h-3" />
+                                <Pencil className="w-3 h-3 text-blue-400" />
                               </button>
                               <button
                                 onClick={(e) => {
                                   e.preventDefault();
                                   handleDelete(service.id);
                                 }}
-                                className="p-1.5 bg-red-600 hover:bg-red-700 rounded text-white"
+                                className="p-1 hover:bg-slate-600 rounded"
                               >
-                                <Trash2 className="w-3 h-3" />
+                                <Trash2 className="w-3 h-3 text-red-400" />
                               </button>
                             </div>
                           </div>
@@ -266,15 +275,9 @@ const ServicesPanel = ({ services, onUpdate }) => {
               </div>
             )
           )}
-
-          {services.length === 0 && !isAdding && (
-            <p className="text-slate-400 text-center py-8">
-              No services configured. Click "Add Service" to get started.
-            </p>
-          )}
-        </div>
+        </>
       )}
-    </div>
+    </BasePanel>
   );
 };
 
