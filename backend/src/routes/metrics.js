@@ -219,41 +219,60 @@ router.get("/network", async (req, res) => {
 
 // Get running processes with resource usage
 router.get("/processes", async (req, res) => {
+  console.log("=== Process endpoint called ===");
   try {
-    // Call processes twice with a small delay to get accurate CPU usage
-    // First call initializes the measurement
-    await si.processes();
-    
-    // Wait 500ms then get processes again for accurate CPU percentages
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    console.log("Fetching processes (first call)...");
+    // Use a longer delay and get full process details
     const processes = await si.processes();
+    console.log(`First call returned ${processes.list?.length || 0} processes`);
+
+    // Wait 1 second for more accurate measurements
+    console.log("Waiting 1 second...");
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    console.log("Fetching processes (second call)...");
+    const processesUpdate = await si.processes();
+    console.log(
+      `Second call returned ${processesUpdate.list?.length || 0} processes`
+    );
+
+    console.log(
+      "Sample process data:",
+      JSON.stringify(processesUpdate.list.slice(0, 2), null, 2)
+    );
 
     // Get top processes sorted by different criteria
-    const processList = processes.list
+    const processList = processesUpdate.list
       .map((proc) => ({
         pid: proc.pid,
         name: proc.name || "Unknown",
-        cpu: parseFloat(proc.cpu) || 0,
-        mem: parseFloat(proc.mem) || 0,
+        cpu: proc.cpu !== undefined && proc.cpu !== null ? Number(proc.cpu) : 0,
+        mem: proc.mem !== undefined && proc.mem !== null ? Number(proc.mem) : 0,
         memVsz: proc.memVsz || 0,
         memRss: proc.memRss || 0,
-        command: proc.command || "",
+        command: proc.command || proc.name || "",
         user: proc.user || "system",
         state: proc.state || "",
         started: proc.started || "",
       }))
+      .filter((proc) => proc.name && proc.name !== "Unknown") // Filter out unknown processes
       .sort((a, b) => b.cpu - a.cpu); // Default sort by CPU
 
+    console.log(
+      `Returning ${processList.length} processes, top 3 CPUs:`,
+      processList.slice(0, 3).map((p) => `${p.name}:${p.cpu}%`)
+    );
+
     res.json({
-      all: processes.all || processList.length,
-      running: processes.running || 0,
-      blocked: processes.blocked || 0,
-      sleeping: processes.sleeping || 0,
+      all: processesUpdate.all || processList.length,
+      running: processesUpdate.running || 0,
+      blocked: processesUpdate.blocked || 0,
+      sleeping: processesUpdate.sleeping || 0,
       list: processList.slice(0, 150), // Limit to top 150 processes
     });
   } catch (error) {
-    console.error("Processes error:", error.message);
+    console.error("Processes error:", error);
+    console.error("Error stack:", error.stack);
     res.status(500).json({
       error: "Failed to fetch processes",
       message: error.message,
