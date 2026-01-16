@@ -221,24 +221,29 @@ router.get("/network", async (req, res) => {
 router.get("/processes", async (req, res) => {
   console.log("=== Process endpoint called ===");
   try {
-    // systeminformation calculates CPU based on differences between calls
-    // We need to call it with 'all' to get all processes and their stats
-    console.log("Fetching detailed process info...");
-    const processesData = await si.processes("all");
+    // Get process list - systeminformation returns data with pcpu and pmem fields
+    console.log("Fetching process info...");
+    const processesData = await si.processes();
 
     console.log(`Returned ${processesData.list?.length || 0} processes`);
-    console.log(
-      "Sample raw data:",
-      JSON.stringify(processesData.list.slice(0, 2), null, 2)
-    );
+
+    // Log first process with all its fields to see what's available
+    if (processesData.list && processesData.list.length > 0) {
+      console.log("First process fields:", Object.keys(processesData.list[0]));
+      console.log(
+        "First process sample:",
+        JSON.stringify(processesData.list[0], null, 2)
+      );
+    }
 
     // Get top processes sorted by different criteria
     const processList = processesData.list
       .map((proc) => ({
         pid: proc.pid,
         name: proc.name || "Unknown",
-        cpu: proc.pcpu || proc.cpu || 0, // pcpu is the percentage CPU
-        mem: proc.pmem || proc.mem || 0, // pmem is the percentage memory
+        // Try different possible field names for CPU and memory percentages
+        cpu: proc.pcpu || proc.cpu_percent || proc.cpu || 0,
+        mem: proc.pmem || proc.mem_percent || proc.mem || 0,
         memVsz: proc.memVsz || 0,
         memRss: proc.memRss || 0,
         command: proc.command || proc.name || "",
