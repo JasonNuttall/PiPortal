@@ -220,6 +220,13 @@ router.get("/network", async (req, res) => {
 // Get running processes with resource usage
 router.get("/processes", async (req, res) => {
   try {
+    // Call processes twice with a small delay to get accurate CPU usage
+    // First call initializes the measurement
+    await si.processes();
+    
+    // Wait 500ms then get processes again for accurate CPU percentages
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     const processes = await si.processes();
 
     // Get top processes sorted by different criteria
@@ -227,8 +234,8 @@ router.get("/processes", async (req, res) => {
       .map((proc) => ({
         pid: proc.pid,
         name: proc.name || "Unknown",
-        cpu: proc.cpu || 0,
-        mem: proc.mem || 0,
+        cpu: parseFloat(proc.cpu) || 0,
+        mem: parseFloat(proc.mem) || 0,
         memVsz: proc.memVsz || 0,
         memRss: proc.memRss || 0,
         command: proc.command || "",
