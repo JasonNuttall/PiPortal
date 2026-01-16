@@ -29,10 +29,9 @@ const SortablePanel = ({ id, children }) => {
       >
         <GripVertical className="w-5 h-5 text-slate-400 hover:text-slate-200" />
       </div>
-      
-      <div className="h-full">
-        {children}
-      </div>
+
+      <div className="h-full">{children}</div>
+    </div>
   );
 };
 
