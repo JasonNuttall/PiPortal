@@ -6,6 +6,7 @@ services:
     container_name: homelab-portal-backend
     restart: unless-stopped
     network_mode: host
+    pid: "host" # Share host's process namespace to see all Pi processes
     volumes:
       # Mount Docker socket for container monitoring
       - /var/run/docker.sock:/var/run/docker.sock:ro
