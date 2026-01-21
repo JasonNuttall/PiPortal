@@ -27,9 +27,9 @@ const DiskPanel = ({ refreshInterval }) => {
     >
       {(diskData) => (
         <div className="space-y-4">
-          {diskData?.map((disk, index) => (
+          {diskData?.map((disk) => (
             <div
-              key={index}
+              key={disk.mount}
               className="p-4 rounded-lg bg-slate-700/50 border border-slate-600"
             >
               <div className="flex items-center justify-between mb-3">

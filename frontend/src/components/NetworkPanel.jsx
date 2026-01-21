@@ -69,7 +69,7 @@ const NetworkPanel = ({ refreshInterval }) => {
     >
       {(data) => (
         <div className="space-y-3">
-          {data?.stats?.map((stat, index) => {
+          {data?.stats?.map((stat) => {
             const speed = calculatedSpeeds[stat.interface] || {
               rx_speed: stat.rx_sec,
               tx_speed: stat.tx_sec,
@@ -78,7 +78,7 @@ const NetworkPanel = ({ refreshInterval }) => {
 
             return (
               <div
-                key={index}
+                key={stat.interface}
                 className={`p-4 rounded-lg border ${
                   hasTraffic
                     ? "bg-green-900/20 border-green-700"

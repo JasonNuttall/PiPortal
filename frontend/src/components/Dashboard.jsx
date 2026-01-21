@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   DndContext,
   closestCenter,
@@ -70,8 +70,8 @@ const Dashboard = () => {
     })
   );
 
-  // Handle drag end
-  const handleDragEnd = (event) => {
+  // Handle drag end - memoized to prevent recreation on every render
+  const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
 
     if (active.id !== over.id) {
@@ -119,7 +119,7 @@ const Dashboard = () => {
         }
       });
     }
-  };
+  }, []);
 
   // Track network speeds for metrics
   let previousNetworkData = null;
@@ -197,12 +197,12 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, [refreshInterval]);
 
-  const handleServicesUpdate = () => {
+  const handleServicesUpdate = useCallback(() => {
     fetchServices().then(setServices);
-  };
+  }, []);
 
-  // Panel components mapping
-  const panelComponents = {
+  // Panel components mapping - memoized to prevent child remounts
+  const panelComponents = useMemo(() => ({
     network: <NetworkPanel key="network" refreshInterval={refreshInterval} />,
     disk: <DiskPanel key="disk" refreshInterval={refreshInterval} />,
     docker: <DockerPanel key="docker" containers={dockerContainers} />,
@@ -216,7 +216,7 @@ const Dashboard = () => {
     processes: (
       <ProcessPanel key="processes" refreshInterval={refreshInterval} />
     ),
-  };
+  }), [refreshInterval, dockerContainers, services, handleServicesUpdate]);
 
   if (loading) {
     return (
