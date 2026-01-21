@@ -46,14 +46,11 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [refreshInterval, setRefreshInterval] = useState(5000);
 
-  // Default panel order
-  const defaultPanelOrder = [
-    "network",
-    "disk",
-    "docker",
-    "services",
-    "processes",
-  ];
+  // Default panel order - organized by columns
+  const defaultPanelOrder = {
+    left: ["services", "network"],
+    right: ["disk", "processes", "docker"],
+  };
 
   // Load panel order from localStorage or use default
   const [panelOrder, setPanelOrder] = useState(() => {
@@ -78,15 +75,48 @@ const Dashboard = () => {
     const { active, over } = event;
 
     if (active.id !== over.id) {
-      setPanelOrder((items) => {
-        const oldIndex = items.indexOf(active.id);
-        const newIndex = items.indexOf(over.id);
-        const newOrder = arrayMove(items, oldIndex, newIndex);
+      setPanelOrder((panelOrder) => {
+        // Determine which column each panel is in
+        const activeColumn = panelOrder.left.includes(active.id) ? 'left' : 'right';
+        const overColumn = panelOrder.left.includes(over.id) ? 'left' : 'right';
 
-        // Save to localStorage
-        localStorage.setItem("panelOrder", JSON.stringify(newOrder));
+        // If moving within the same column
+        if (activeColumn === overColumn) {
+          const columnItems = [...panelOrder[activeColumn]];
+          const oldIndex = columnItems.indexOf(active.id);
+          const newIndex = columnItems.indexOf(over.id);
+          const newColumnOrder = arrayMove(columnItems, oldIndex, newIndex);
 
-        return newOrder;
+          const newOrder = {
+            ...panelOrder,
+            [activeColumn]: newColumnOrder,
+          };
+
+          // Save to localStorage
+          localStorage.setItem("panelOrder", JSON.stringify(newOrder));
+          return newOrder;
+        } else {
+          // Moving between columns
+          const sourceColumn = [...panelOrder[activeColumn]];
+          const destColumn = [...panelOrder[overColumn]];
+
+          // Remove from source column
+          const itemIndex = sourceColumn.indexOf(active.id);
+          sourceColumn.splice(itemIndex, 1);
+
+          // Add to destination column at the position of the over item
+          const overIndex = destColumn.indexOf(over.id);
+          destColumn.splice(overIndex, 0, active.id);
+
+          const newOrder = {
+            left: activeColumn === 'left' ? sourceColumn : destColumn,
+            right: activeColumn === 'right' ? sourceColumn : destColumn,
+          };
+
+          // Save to localStorage
+          localStorage.setItem("panelOrder", JSON.stringify(newOrder));
+          return newOrder;
+        }
       });
     }
   };
@@ -239,13 +269,28 @@ const Dashboard = () => {
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
-            <SortableContext items={panelOrder} strategy={rectSortingStrategy}>
+            <SortableContext
+              items={[...panelOrder.left, ...panelOrder.right]}
+              strategy={rectSortingStrategy}
+            >
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {panelOrder.map((panelId) => (
-                  <SortablePanel key={panelId} id={panelId}>
-                    {panelComponents[panelId]}
-                  </SortablePanel>
-                ))}
+                {/* Left Column */}
+                <div className="flex flex-col gap-6">
+                  {panelOrder.left.map((panelId) => (
+                    <SortablePanel key={panelId} id={panelId}>
+                      {panelComponents[panelId]}
+                    </SortablePanel>
+                  ))}
+                </div>
+
+                {/* Right Column */}
+                <div className="flex flex-col gap-6">
+                  {panelOrder.right.map((panelId) => (
+                    <SortablePanel key={panelId} id={panelId}>
+                      {panelComponents[panelId]}
+                    </SortablePanel>
+                  ))}
+                </div>
               </div>
             </SortableContext>
           </DndContext>
