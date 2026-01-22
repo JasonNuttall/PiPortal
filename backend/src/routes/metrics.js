@@ -3,9 +3,39 @@ const si = require("systeminformation");
 const fs = require("fs");
 const router = express.Router();
 
+// Simple cache for expensive endpoints
+const cache = {
+  data: {},
+  timestamps: {},
+  ttl: {
+    processes: 1000,  // 1 second cache for processes
+    network: 500,     // 0.5 second cache for network
+    system: 1000,     // 1 second cache for system metrics
+  },
+};
+
+const getCached = (key) => {
+  const ttl = cache.ttl[key] || 1000;
+  if (cache.data[key] && Date.now() - cache.timestamps[key] < ttl) {
+    return cache.data[key];
+  }
+  return null;
+};
+
+const setCache = (key, data) => {
+  cache.data[key] = data;
+  cache.timestamps[key] = Date.now();
+};
+
 // Get system metrics (CPU, RAM, etc.)
 router.get("/system", async (req, res) => {
   try {
+    // Check cache first
+    const cached = getCached("system");
+    if (cached) {
+      return res.json(cached);
+    }
+
     const [cpu, mem, currentLoad, time] = await Promise.all([
       si.cpu(),
       si.mem(),
@@ -13,7 +43,7 @@ router.get("/system", async (req, res) => {
       si.time(),
     ]);
 
-    res.json({
+    const result = {
       cpu: {
         manufacturer: cpu.manufacturer,
         brand: cpu.brand,
@@ -32,7 +62,10 @@ router.get("/system", async (req, res) => {
         ),
       },
       uptime: time.uptime,
-    });
+    };
+
+    setCache("system", result);
+    res.json(result);
   } catch (error) {
     console.error("System metrics error:", error.message);
     res.status(500).json({
@@ -220,6 +253,31 @@ router.get("/network", async (req, res) => {
 // Use HOST_PROC env var if set (for Docker), otherwise use /proc
 const PROC_PATH = process.env.HOST_PROC || "/proc";
 
+// Cache for uid to username mapping - refreshed every 60 seconds
+let uidCache = {};
+let uidCacheTime = 0;
+const UID_CACHE_TTL = 60000;
+
+const refreshUidCache = () => {
+  const now = Date.now();
+  if (now - uidCacheTime < UID_CACHE_TTL && Object.keys(uidCache).length > 0) {
+    return;
+  }
+  try {
+    const passwd = fs.readFileSync("/etc/passwd", "utf8");
+    uidCache = {};
+    passwd.split("\n").forEach((line) => {
+      const parts = line.split(":");
+      if (parts.length >= 3) {
+        uidCache[parts[2]] = parts[0];
+      }
+    });
+    uidCacheTime = now;
+  } catch (e) {
+    // Keep existing cache on error
+  }
+};
+
 // Helper to read process info directly from /proc
 const readProcessFromProc = (pid) => {
   try {
@@ -262,17 +320,8 @@ const readProcessFromProc = (pid) => {
       // Ignore cmdline read errors
     }
 
-    // Get username from uid
-    let user = uid;
-    try {
-      const passwd = fs.readFileSync("/etc/passwd", "utf8");
-      const userMatch = passwd
-        .split("\n")
-        .find((line) => line.split(":")[2] === uid);
-      if (userMatch) user = userMatch.split(":")[0];
-    } catch (e) {
-      // Keep uid as fallback
-    }
+    // Get username from cached uid map
+    const user = uidCache[uid] || uid;
 
     return {
       pid: parseInt(pid, 10),
@@ -294,18 +343,19 @@ const readProcessFromProc = (pid) => {
 let prevCpuTimes = {};
 let prevSystemTime = 0;
 
+// Cache CPU count since it doesn't change
+const numCpus = require("os").cpus().length;
+
 // Get running processes with resource usage
 router.get("/processes", async (req, res) => {
-  console.log("=== Process endpoint called ===");
   try {
+    // Refresh uid cache (reads /etc/passwd once, then caches for 60s)
+    refreshUidCache();
+
     // Get total memory - mem.total is in bytes
     const mem = await si.mem();
     const totalMemBytes = mem.total;
     const totalMemMB = totalMemBytes / (1024 * 1024);
-
-    console.log(
-      `Total RAM: ${totalMemBytes} bytes = ${totalMemMB.toFixed(0)} MB`
-    );
 
     // Read system CPU time from host's /proc
     const cpuStatRaw = fs.readFileSync(`${PROC_PATH}/stat`, "utf8");
@@ -342,7 +392,6 @@ router.get("/processes", async (req, res) => {
         prevCpuTimes[proc.pid] = totalProcTime;
 
         // CPU percentage = (process time delta / system time delta) * 100 * num_cpus
-        const numCpus = require("os").cpus().length;
         const cpuPercent =
           systemTimeDelta > 0
             ? (procTimeDelta / systemTimeDelta) * 100 * numCpus
@@ -381,23 +430,6 @@ router.get("/processes", async (req, res) => {
         delete prevCpuTimes[pid];
       }
     });
-
-    console.log(
-      `Read ${
-        processList.length
-      } processes from /proc, total RAM: ${totalMemMB.toFixed(0)} MB`
-    );
-    console.log(
-      `Top 3 by memory:`,
-      processList
-        .slice(0, 3)
-        .map(
-          (p) =>
-            `${p.name}: CPU ${p.cpu.toFixed(1)}%, MEM ${p.mem.toFixed(
-              1
-            )}% (${p.memRssMB.toFixed(1)} MB, RSS=${p.memRss} KB)`
-        )
-    );
 
     res.json({
       all: processList.length,
