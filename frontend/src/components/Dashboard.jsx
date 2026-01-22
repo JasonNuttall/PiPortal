@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -29,22 +29,37 @@ import {
   fetchDockerInfo,
   fetchServices,
   fetchNetworkMetrics,
+  fetchDetailedDiskInfo,
+  fetchProcesses,
 } from "../api/api";
 
 const Dashboard = () => {
+  // Core metrics state (always fetched for MetricsPanel)
   const [systemMetrics, setSystemMetrics] = useState(null);
   const [temperature, setTemperature] = useState(null);
   const [diskMetrics, setDiskMetrics] = useState(null);
-  const [dockerContainers, setDockerContainers] = useState([]);
   const [dockerInfo, setDockerInfo] = useState(null);
-  const [services, setServices] = useState([]);
   const [networkStats, setNetworkStats] = useState({
     downloadSpeed: 0,
     uploadSpeed: 0,
   });
+
+  // Panel-specific data (centralized)
+  const [dockerContainers, setDockerContainers] = useState([]);
+  const [services, setServices] = useState([]);
+  const [networkData, setNetworkData] = useState(null);
+  const [detailedDiskData, setDetailedDiskData] = useState(null);
+  const [processData, setProcessData] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshInterval, setRefreshInterval] = useState(5000);
+
+  // Track collapsed state for each panel (lazy loading)
+  const [collapsedPanels, setCollapsedPanels] = useState(() => {
+    const saved = localStorage.getItem("collapsedPanels");
+    return saved ? JSON.parse(saved) : {};
+  });
 
   // Default panel order - organized by columns
   const defaultPanelOrder = {
@@ -58,6 +73,10 @@ const Dashboard = () => {
     return saved ? JSON.parse(saved) : defaultPanelOrder;
   });
 
+  // Track network data for speed calculation
+  const previousNetworkDataRef = useRef(null);
+  const previousNetworkTimeRef = useRef(null);
+
   // Setup drag sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -70,17 +89,24 @@ const Dashboard = () => {
     })
   );
 
+  // Handle panel collapse change
+  const handleCollapseChange = useCallback((panelId, isCollapsed) => {
+    setCollapsedPanels((prev) => {
+      const newState = { ...prev, [panelId]: isCollapsed };
+      localStorage.setItem("collapsedPanels", JSON.stringify(newState));
+      return newState;
+    });
+  }, []);
+
   // Handle drag end - memoized to prevent recreation on every render
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
 
     if (active.id !== over.id) {
       setPanelOrder((panelOrder) => {
-        // Determine which column each panel is in
         const activeColumn = panelOrder.left.includes(active.id) ? 'left' : 'right';
         const overColumn = panelOrder.left.includes(over.id) ? 'left' : 'right';
 
-        // If moving within the same column
         if (activeColumn === overColumn) {
           const columnItems = [...panelOrder[activeColumn]];
           const oldIndex = columnItems.indexOf(active.id);
@@ -92,19 +118,15 @@ const Dashboard = () => {
             [activeColumn]: newColumnOrder,
           };
 
-          // Save to localStorage
           localStorage.setItem("panelOrder", JSON.stringify(newOrder));
           return newOrder;
         } else {
-          // Moving between columns
           const sourceColumn = [...panelOrder[activeColumn]];
           const destColumn = [...panelOrder[overColumn]];
 
-          // Remove from source column
           const itemIndex = sourceColumn.indexOf(active.id);
           sourceColumn.splice(itemIndex, 1);
 
-          // Add to destination column at the position of the over item
           const overIndex = destColumn.indexOf(over.id);
           destColumn.splice(overIndex, 0, active.id);
 
@@ -113,7 +135,6 @@ const Dashboard = () => {
             right: activeColumn === 'right' ? sourceColumn : destColumn,
           };
 
-          // Save to localStorage
           localStorage.setItem("panelOrder", JSON.stringify(newOrder));
           return newOrder;
         }
@@ -121,81 +142,120 @@ const Dashboard = () => {
     }
   }, []);
 
-  // Track network speeds for metrics
-  let previousNetworkData = null;
-  let previousNetworkTime = null;
-
-  const loadNetworkSpeed = async () => {
-    try {
-      const data = await fetchNetworkMetrics();
-
-      if (previousNetworkData && previousNetworkTime) {
-        const currentTime = Date.now();
-        const timeDiff = (currentTime - previousNetworkTime) / 1000;
-
-        // Get default interface stats
-        const currentStats = data.stats[0];
-        const prevStats = previousNetworkData.stats[0];
-
-        if (currentStats && prevStats && timeDiff > 0) {
-          const rxDiff = Math.max(
-            0,
-            currentStats.rx_bytes - prevStats.rx_bytes
-          );
-          const txDiff = Math.max(
-            0,
-            currentStats.tx_bytes - prevStats.tx_bytes
-          );
-
-          setNetworkStats({
-            downloadSpeed: rxDiff / timeDiff,
-            uploadSpeed: txDiff / timeDiff,
-          });
-        }
-      }
-
-      previousNetworkData = data;
-      previousNetworkTime = Date.now();
-    } catch (err) {
-      console.error("Error fetching network speed:", err);
-    }
-  };
-
-  const loadData = async () => {
+  // Centralized data loading - only fetches data for expanded panels
+  const loadData = useCallback(async () => {
     try {
       setError(null);
-      const [system, temp, disk, containers, dockerInf, svcs] =
-        await Promise.all([
-          fetchSystemMetrics().catch((err) => ({ error: err.message })),
-          fetchTemperature().catch((err) => ({ error: err.message })),
-          fetchDiskMetrics().catch((err) => ({ error: err.message })),
-          fetchDockerContainers().catch((err) => []),
-          fetchDockerInfo().catch((err) => ({ error: err.message })),
-          fetchServices().catch((err) => []),
-        ]);
 
+      // Always fetch core metrics for the top MetricsPanel
+      const corePromises = [
+        fetchSystemMetrics().catch((err) => ({ error: err.message })),
+        fetchTemperature().catch((err) => ({ error: err.message })),
+        fetchDiskMetrics().catch((err) => ({ error: err.message })),
+        fetchDockerInfo().catch((err) => ({ error: err.message })),
+      ];
+
+      // Conditionally fetch panel data based on collapse state
+      const panelPromises = [];
+      const panelKeys = [];
+
+      // Docker containers (for DockerPanel)
+      if (!collapsedPanels.docker) {
+        panelPromises.push(fetchDockerContainers().catch((err) => []));
+        panelKeys.push('docker');
+      }
+
+      // Services (for ServicesPanel)
+      if (!collapsedPanels.services) {
+        panelPromises.push(fetchServices().catch((err) => []));
+        panelKeys.push('services');
+      }
+
+      // Network data (for NetworkPanel)
+      if (!collapsedPanels.network) {
+        panelPromises.push(fetchNetworkMetrics().catch((err) => null));
+        panelKeys.push('network');
+      }
+
+      // Disk data (for DiskPanel)
+      if (!collapsedPanels.disk) {
+        panelPromises.push(fetchDetailedDiskInfo().catch((err) => null));
+        panelKeys.push('disk');
+      }
+
+      // Process data (for ProcessPanel)
+      if (!collapsedPanels.processes) {
+        panelPromises.push(fetchProcesses().catch((err) => null));
+        panelKeys.push('processes');
+      }
+
+      // Execute all fetches in parallel
+      const [coreResults, panelResults] = await Promise.all([
+        Promise.all(corePromises),
+        Promise.all(panelPromises),
+      ]);
+
+      // Update core metrics
+      const [system, temp, disk, dockerInf] = coreResults;
       setSystemMetrics(system);
       setTemperature(temp);
       setDiskMetrics(disk);
-      setDockerContainers(containers);
       setDockerInfo(dockerInf);
-      setServices(svcs);
 
-      // Also load network speed
-      loadNetworkSpeed();
+      // Update panel data based on what was fetched
+      panelKeys.forEach((key, index) => {
+        const data = panelResults[index];
+        switch (key) {
+          case 'docker':
+            setDockerContainers(data);
+            break;
+          case 'services':
+            setServices(data);
+            break;
+          case 'network':
+            if (data) {
+              setNetworkData(data);
+              // Calculate network speed for MetricsPanel
+              if (previousNetworkDataRef.current && previousNetworkTimeRef.current) {
+                const currentTime = Date.now();
+                const timeDiff = (currentTime - previousNetworkTimeRef.current) / 1000;
+                const currentStats = data.stats[0];
+                const prevStats = previousNetworkDataRef.current.stats[0];
+
+                if (currentStats && prevStats && timeDiff > 0) {
+                  const rxDiff = Math.max(0, currentStats.rx_bytes - prevStats.rx_bytes);
+                  const txDiff = Math.max(0, currentStats.tx_bytes - prevStats.tx_bytes);
+                  setNetworkStats({
+                    downloadSpeed: rxDiff / timeDiff,
+                    uploadSpeed: txDiff / timeDiff,
+                  });
+                }
+              }
+              previousNetworkDataRef.current = data;
+              previousNetworkTimeRef.current = Date.now();
+            }
+            break;
+          case 'disk':
+            setDetailedDiskData(data);
+            break;
+          case 'processes':
+            setProcessData(data);
+            break;
+        }
+      });
 
       setLoading(false);
     } catch (err) {
       setError(err.message);
       setLoading(false);
     }
-  };
+  }, [collapsedPanels]);
 
   useEffect(() => {
     loadData();
     const interval = setInterval(loadData, refreshInterval);
     return () => clearInterval(interval);
-  }, [refreshInterval]);
+  }, [refreshInterval, loadData]);
 
   const handleServicesUpdate = useCallback(() => {
     fetchServices().then(setServices);
@@ -203,20 +263,57 @@ const Dashboard = () => {
 
   // Panel components mapping - memoized to prevent child remounts
   const panelComponents = useMemo(() => ({
-    network: <NetworkPanel key="network" refreshInterval={refreshInterval} />,
-    disk: <DiskPanel key="disk" refreshInterval={refreshInterval} />,
-    docker: <DockerPanel key="docker" containers={dockerContainers} />,
+    network: (
+      <NetworkPanel
+        key="network"
+        data={networkData}
+        isCollapsed={collapsedPanels.network}
+        onCollapseChange={(collapsed) => handleCollapseChange('network', collapsed)}
+      />
+    ),
+    disk: (
+      <DiskPanel
+        key="disk"
+        data={detailedDiskData}
+        isCollapsed={collapsedPanels.disk}
+        onCollapseChange={(collapsed) => handleCollapseChange('disk', collapsed)}
+      />
+    ),
+    docker: (
+      <DockerPanel
+        key="docker"
+        containers={dockerContainers}
+        isCollapsed={collapsedPanels.docker}
+        onCollapseChange={(collapsed) => handleCollapseChange('docker', collapsed)}
+      />
+    ),
     services: (
       <ServicesPanel
         key="services"
         services={services}
         onUpdate={handleServicesUpdate}
+        isCollapsed={collapsedPanels.services}
+        onCollapseChange={(collapsed) => handleCollapseChange('services', collapsed)}
       />
     ),
     processes: (
-      <ProcessPanel key="processes" refreshInterval={refreshInterval} />
+      <ProcessPanel
+        key="processes"
+        data={processData}
+        isCollapsed={collapsedPanels.processes}
+        onCollapseChange={(collapsed) => handleCollapseChange('processes', collapsed)}
+      />
     ),
-  }), [refreshInterval, dockerContainers, services, handleServicesUpdate]);
+  }), [
+    networkData,
+    detailedDiskData,
+    dockerContainers,
+    services,
+    processData,
+    collapsedPanels,
+    handleServicesUpdate,
+    handleCollapseChange,
+  ]);
 
   if (loading) {
     return (

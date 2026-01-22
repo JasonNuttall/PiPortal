@@ -1,8 +1,7 @@
 import { HardDrive } from "lucide-react";
-import { fetchDetailedDiskInfo } from "../api/api";
 import BasePanel from "./BasePanel";
 
-const DiskPanel = ({ refreshInterval }) => {
+const DiskPanel = ({ data, isCollapsed, onCollapseChange }) => {
   const getUsageColor = (percentage) => {
     if (percentage < 50) return "bg-green-500";
     if (percentage < 75) return "bg-yellow-500";
@@ -22,8 +21,9 @@ const DiskPanel = ({ refreshInterval }) => {
       title="Disk Storage"
       icon={HardDrive}
       iconColor="text-purple-400"
-      fetchData={fetchDetailedDiskInfo}
-      refreshInterval={refreshInterval}
+      data={data}
+      isCollapsed={isCollapsed}
+      onCollapseChange={onCollapseChange}
     >
       {(diskData) => (
         <div className="space-y-4">

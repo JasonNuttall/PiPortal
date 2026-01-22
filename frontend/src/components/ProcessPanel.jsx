@@ -6,7 +6,6 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
-import { fetchProcesses } from "../api/api";
 import BasePanel from "./BasePanel";
 
 const formatMem = (memRssMB) => {
@@ -201,7 +200,7 @@ const ProcessList = ({ processData, searchTerm, sortBy, sortDirection, displayLi
   );
 };
 
-const ProcessPanel = ({ refreshInterval }) => {
+const ProcessPanel = ({ data, isCollapsed, onCollapseChange }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("mem");
   const [sortDirection, setSortDirection] = useState("desc");
@@ -221,10 +220,11 @@ const ProcessPanel = ({ refreshInterval }) => {
       title="Process Monitor"
       icon={Activity}
       iconColor="text-cyan-400"
-      fetchData={fetchProcesses}
-      refreshInterval={refreshInterval}
-      subtitle={(data) =>
-        data ? `(${data.running} running / ${data.all} total)` : ""
+      data={data}
+      isCollapsed={isCollapsed}
+      onCollapseChange={onCollapseChange}
+      subtitle={(processData) =>
+        processData ? `(${processData.running} running / ${processData.all} total)` : ""
       }
     >
       {(processData) => (

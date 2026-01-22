@@ -1,17 +1,16 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Activity, ArrowUp, ArrowDown } from "lucide-react";
-import { fetchNetworkMetrics } from "../api/api";
 import BasePanel from "./BasePanel";
 
-const NetworkPanel = ({ refreshInterval }) => {
+const NetworkPanel = ({ data, isCollapsed, onCollapseChange }) => {
   const [calculatedSpeeds, setCalculatedSpeeds] = useState({});
   const previousDataRef = useRef(null);
   const previousTimeRef = useRef(null);
 
-  const fetchDataWithCalculation = async () => {
-    const data = await fetchNetworkMetrics();
+  // Calculate speeds when data changes
+  useEffect(() => {
+    if (!data) return;
 
-    // Calculate speeds based on byte differences if we have previous data
     if (previousDataRef.current && previousTimeRef.current) {
       const currentTime = Date.now();
       const timeDiff = (currentTime - previousTimeRef.current) / 1000;
@@ -38,8 +37,7 @@ const NetworkPanel = ({ refreshInterval }) => {
 
     previousDataRef.current = data;
     previousTimeRef.current = Date.now();
-    return data;
-  };
+  }, [data]);
 
   const formatBytes = (bytes) => {
     if (!bytes || bytes === 0) return "0 B";
@@ -64,12 +62,13 @@ const NetworkPanel = ({ refreshInterval }) => {
       title="Live Network Traffic"
       icon={Activity}
       iconColor="text-blue-400"
-      fetchData={fetchDataWithCalculation}
-      refreshInterval={refreshInterval}
+      data={data}
+      isCollapsed={isCollapsed}
+      onCollapseChange={onCollapseChange}
     >
-      {(data) => (
+      {(networkData) => (
         <div className="space-y-3">
-          {data?.stats?.map((stat) => {
+          {networkData?.stats?.map((stat) => {
             const speed = calculatedSpeeds[stat.interface] || {
               rx_speed: stat.rx_sec,
               tx_speed: stat.tx_sec,
