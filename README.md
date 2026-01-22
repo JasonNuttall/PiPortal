@@ -16,7 +16,9 @@ A lightweight, containerized dashboard for monitoring and managing your Raspberr
   - CPU load and usage
   - Memory (RAM) usage
   - CPU temperature
-  - Disk usage
+  - Disk usage per mount point
+  - Process monitor with search, sort, and filtering
+  - Live network traffic (upload/download speeds per interface)
 - **Docker Container Management**
 
   - View all containers (running and stopped)
@@ -35,14 +37,34 @@ A lightweight, containerized dashboard for monitoring and managing your Raspberr
   - Choose refresh interval for auto refresh dashboard
   - Responsive design for mobile and desktop
 
+- **Customizable Dashboard Layout**
+
+  - Drag-and-drop panel reordering
+  - Collapsible panels with state persistence
+  - Two-column layout with independent organization
+  - User preferences saved to localStorage
+
+- **Performance Optimizations**
+  - Lazy loading: collapsed panels skip data fetching
+  - Centralized data fetching to minimize API calls
+  - Memoized components and calculations
+  - Backend response caching for system metrics
+  - Efficient process monitoring with UID caching
+
+- **Real-time WebSocket Support**
+  - Per-panel toggle between polling and real-time mode
+  - WebSocket server with change detection (only pushes significant changes)
+  - Auto-reconnection with exponential backoff
+  - User preferences persist in localStorage
+
 <div align="center">
 
 ## Tech Stack
 
 </div>
 
-- **Frontend**: React 18 + Vite, Tailwind CSS, Recharts, Lucide Icons
-- **Backend**: Node.js + Express
+- **Frontend**: React 18 + Vite, Tailwind CSS, Recharts, Lucide Icons, dnd-kit
+- **Backend**: Node.js + Express + ws (WebSocket)
 - **Database**: SQLite (better-sqlite3)
 - **Monitoring**: systeminformation, dockerode
 - **Deployment**: Docker + Docker Compose
@@ -113,15 +135,20 @@ Backend will run on `http://localhost:3001`
 
 **Available API Endpoints:**
 
-- `GET /api/metrics/system` - System CPU and memory metrics
+- `GET /api/metrics/system` - System CPU and memory metrics (cached)
 - `GET /api/metrics/temperature` - CPU temperature
-- `GET /api/metrics/disk` - Disk usage
+- `GET /api/metrics/disk` - Disk usage summary
+- `GET /api/metrics/disk/detailed` - Detailed disk usage per mount
+- `GET /api/metrics/network` - Network interface statistics
+- `GET /api/metrics/processes` - Running processes with CPU/memory usage
 - `GET /api/docker/containers` - List all Docker containers
 - `GET /api/docker/info` - Docker system info
 - `GET /api/services` - Get all service links
 - `POST /api/services` - Create new service link
 - `PUT /api/services/:id` - Update service link
 - `DELETE /api/services/:id` - Delete service link
+- `GET /api/ws/stats` - WebSocket connection statistics
+- `ws://host:3001` - WebSocket endpoint for real-time data
 
 ### Frontend Development
 
@@ -219,19 +246,30 @@ PiPortal/
 │   │   │   └── models.js      # Service model
 │   │   ├── routes/
 │   │   │   ├── docker.js      # Docker monitoring endpoints
-│   │   │   ├── metrics.js     # System metrics endpoints
+│   │   │   ├── metrics.js     # System metrics endpoints (with caching)
 │   │   │   └── services.js    # Service CRUD endpoints
-│   │   └── index.js           # Express server
+│   │   ├── websocket/
+│   │   │   ├── WebSocketServer.js  # WebSocket server & subscriptions
+│   │   │   ├── ChangeDetector.js   # Change detection for smart pushing
+│   │   │   └── channels.js         # Channel config & data fetchers
+│   │   └── index.js           # Express + WebSocket server
 │   ├── Dockerfile
 │   └── package.json
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── Dashboard.jsx
+│   │   │   ├── Dashboard.jsx    # Central data fetching & layout
 │   │   │   ├── Header.jsx
+│   │   │   ├── BasePanel.jsx    # Reusable collapsible panel with mode toggle
 │   │   │   ├── MetricsPanel.jsx
 │   │   │   ├── DockerPanel.jsx
-│   │   │   └── ServicesPanel.jsx
+│   │   │   ├── ServicesPanel.jsx
+│   │   │   ├── ProcessPanel.jsx
+│   │   │   ├── DiskPanel.jsx
+│   │   │   └── NetworkPanel.jsx
+│   │   ├── hooks/
+│   │   │   ├── useWebSocket.js  # WebSocket connection & subscriptions
+│   │   │   └── usePanelData.js  # Unified polling/WebSocket data hook
 │   │   ├── api/
 │   │   │   └── api.js         # API client
 │   │   ├── App.jsx
@@ -247,6 +285,11 @@ PiPortal/
 ## Future Enhancements
 
 - [ ] Container start/stop controls
+- [ ] Per-panel configurable refresh intervals
+- [ ] Threshold-based alerts (CPU > 90%, disk > 95%, etc.)
+- [ ] Historical data with mini charts
+- [ ] Request deduplication with SWR or React Query
+- [ ] Dark/light theme toggle
 
 ## License
 

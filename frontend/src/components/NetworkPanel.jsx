@@ -2,7 +2,15 @@ import { useState, useRef, useEffect } from "react";
 import { Activity, ArrowUp, ArrowDown } from "lucide-react";
 import BasePanel from "./BasePanel";
 
-const NetworkPanel = ({ data, isCollapsed, onCollapseChange }) => {
+const NetworkPanel = ({
+  data,
+  isCollapsed,
+  onCollapseChange,
+  panelId,
+  dataMode,
+  onModeChange,
+  wsConnected,
+}) => {
   const [calculatedSpeeds, setCalculatedSpeeds] = useState({});
   const previousDataRef = useRef(null);
   const previousTimeRef = useRef(null);
@@ -65,6 +73,10 @@ const NetworkPanel = ({ data, isCollapsed, onCollapseChange }) => {
       data={data}
       isCollapsed={isCollapsed}
       onCollapseChange={onCollapseChange}
+      panelId={panelId}
+      dataMode={dataMode}
+      onModeChange={onModeChange}
+      wsConnected={wsConnected}
     >
       {(networkData) => (
         <div className="space-y-3">

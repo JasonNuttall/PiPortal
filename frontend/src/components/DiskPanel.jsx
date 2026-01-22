@@ -1,7 +1,15 @@
 import { HardDrive } from "lucide-react";
 import BasePanel from "./BasePanel";
 
-const DiskPanel = ({ data, isCollapsed, onCollapseChange }) => {
+const DiskPanel = ({
+  data,
+  isCollapsed,
+  onCollapseChange,
+  panelId,
+  dataMode,
+  onModeChange,
+  wsConnected,
+}) => {
   const getUsageColor = (percentage) => {
     if (percentage < 50) return "bg-green-500";
     if (percentage < 75) return "bg-yellow-500";
@@ -24,6 +32,10 @@ const DiskPanel = ({ data, isCollapsed, onCollapseChange }) => {
       data={data}
       isCollapsed={isCollapsed}
       onCollapseChange={onCollapseChange}
+      panelId={panelId}
+      dataMode={dataMode}
+      onModeChange={onModeChange}
+      wsConnected={wsConnected}
     >
       {(diskData) => (
         <div className="space-y-4">

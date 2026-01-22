@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 
 /**
  * Base Panel Component
@@ -15,6 +15,10 @@ import { ChevronDown, ChevronUp } from "lucide-react";
  * @param {React.ReactNode} headerActions - Optional actions to render in header (e.g., buttons)
  * @param {string} iconColor - Tailwind color class for icon (default: "text-blue-400")
  * @param {string|function} subtitle - Optional subtitle (e.g., count badge) or function receiving data
+ * @param {string} panelId - Unique panel identifier (for mode toggle)
+ * @param {string} dataMode - Data fetching mode: 'polling' or 'websocket'
+ * @param {function} onModeChange - Callback when data mode changes
+ * @param {boolean} wsConnected - Whether WebSocket is connected
  */
 const BasePanel = ({
   title,
@@ -27,6 +31,10 @@ const BasePanel = ({
   headerActions = null,
   iconColor = "text-blue-400",
   subtitle = null,
+  panelId = null,
+  dataMode = "polling",
+  onModeChange = null,
+  wsConnected = false,
 }) => {
   // Use controlled state if provided, otherwise use internal state
   const [internalCollapsed, setInternalCollapsed] = useState(false);
@@ -45,6 +53,54 @@ const BasePanel = ({
   // Compute subtitle value (can be string or function)
   const subtitleValue =
     typeof subtitle === "function" ? subtitle(data) : subtitle;
+
+  // Mode toggle button component
+  const ModeToggle = () => {
+    if (!panelId || !onModeChange) return null;
+
+    const isWebSocket = dataMode === "websocket";
+    const isLive = isWebSocket && wsConnected;
+    const isConnecting = isWebSocket && !wsConnected;
+
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onModeChange(isWebSocket ? "polling" : "websocket");
+        }}
+        className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-all ${
+          isWebSocket
+            ? isLive
+              ? "bg-green-500/20 text-green-400 border border-green-500/50 hover:bg-green-500/30"
+              : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 hover:bg-yellow-500/30"
+            : "bg-slate-600/50 text-slate-400 border border-slate-500/50 hover:bg-slate-600 hover:text-slate-300"
+        }`}
+        title={
+          isWebSocket
+            ? isLive
+              ? "Real-time mode (WebSocket connected) - Click for polling"
+              : "Connecting to WebSocket... - Click for polling"
+            : "Polling mode - Click for real-time"
+        }
+      >
+        {isWebSocket ? (
+          <>
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isLive ? "bg-green-400" : "bg-yellow-400 animate-pulse"
+              }`}
+            />
+            <span>Live</span>
+          </>
+        ) : (
+          <>
+            <RefreshCw className="w-3 h-3" />
+            <span>Poll</span>
+          </>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div className="bg-slate-800 rounded-lg border border-slate-700">
@@ -66,6 +122,9 @@ const BasePanel = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Mode toggle (Poll/Live) */}
+          <ModeToggle />
+
           {/* Custom header actions (e.g., Add Service button) */}
           {headerActions && !isCollapsed && (
             <div onClick={(e) => e.stopPropagation()}>{headerActions}</div>

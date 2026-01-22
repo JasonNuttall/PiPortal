@@ -200,7 +200,15 @@ const ProcessList = ({ processData, searchTerm, sortBy, sortDirection, displayLi
   );
 };
 
-const ProcessPanel = ({ data, isCollapsed, onCollapseChange }) => {
+const ProcessPanel = ({
+  data,
+  isCollapsed,
+  onCollapseChange,
+  panelId,
+  dataMode,
+  onModeChange,
+  wsConnected,
+}) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("mem");
   const [sortDirection, setSortDirection] = useState("desc");
@@ -224,8 +232,14 @@ const ProcessPanel = ({ data, isCollapsed, onCollapseChange }) => {
       isCollapsed={isCollapsed}
       onCollapseChange={onCollapseChange}
       subtitle={(processData) =>
-        processData ? `(${processData.running} running / ${processData.all} total)` : ""
+        processData
+          ? `(${processData.running} running / ${processData.all} total)`
+          : ""
       }
+      panelId={panelId}
+      dataMode={dataMode}
+      onModeChange={onModeChange}
+      wsConnected={wsConnected}
     >
       {(processData) => (
         <ProcessList

@@ -32,8 +32,12 @@ import {
   fetchDetailedDiskInfo,
   fetchProcesses,
 } from "../api/api";
+import { useWebSocket } from "../hooks/useWebSocket";
 
 const Dashboard = () => {
+  // WebSocket connection status
+  const { isConnected: wsConnected } = useWebSocket();
+
   // Core metrics state (always fetched for MetricsPanel)
   const [systemMetrics, setSystemMetrics] = useState(null);
   const [temperature, setTemperature] = useState(null);
@@ -59,6 +63,20 @@ const Dashboard = () => {
   const [collapsedPanels, setCollapsedPanels] = useState(() => {
     const saved = localStorage.getItem("collapsedPanels");
     return saved ? JSON.parse(saved) : {};
+  });
+
+  // Track data mode for each panel (polling vs websocket)
+  const [panelModes, setPanelModes] = useState(() => {
+    const saved = localStorage.getItem("panelModes");
+    return saved
+      ? JSON.parse(saved)
+      : {
+          network: "polling",
+          disk: "polling",
+          docker: "polling",
+          services: "polling",
+          processes: "polling",
+        };
   });
 
   // Default panel order - organized by columns
@@ -94,6 +112,15 @@ const Dashboard = () => {
     setCollapsedPanels((prev) => {
       const newState = { ...prev, [panelId]: isCollapsed };
       localStorage.setItem("collapsedPanels", JSON.stringify(newState));
+      return newState;
+    });
+  }, []);
+
+  // Handle panel mode change (polling vs websocket)
+  const handleModeChange = useCallback((panelId, mode) => {
+    setPanelModes((prev) => {
+      const newState = { ...prev, [panelId]: mode };
+      localStorage.setItem("panelModes", JSON.stringify(newState));
       return newState;
     });
   }, []);
@@ -155,38 +182,43 @@ const Dashboard = () => {
         fetchDockerInfo().catch((err) => ({ error: err.message })),
       ];
 
-      // Conditionally fetch panel data based on collapse state
+      // Conditionally fetch panel data based on collapse state AND mode
+      // Skip fetching if panel is collapsed OR if panel is in websocket mode (WebSocket handles it)
       const panelPromises = [];
       const panelKeys = [];
 
+      // Helper to check if panel should be polled
+      const shouldPoll = (panelId) =>
+        !collapsedPanels[panelId] && panelModes[panelId] !== "websocket";
+
       // Docker containers (for DockerPanel)
-      if (!collapsedPanels.docker) {
+      if (shouldPoll("docker")) {
         panelPromises.push(fetchDockerContainers().catch((err) => []));
-        panelKeys.push('docker');
+        panelKeys.push("docker");
       }
 
       // Services (for ServicesPanel)
-      if (!collapsedPanels.services) {
+      if (shouldPoll("services")) {
         panelPromises.push(fetchServices().catch((err) => []));
-        panelKeys.push('services');
+        panelKeys.push("services");
       }
 
       // Network data (for NetworkPanel)
-      if (!collapsedPanels.network) {
+      if (shouldPoll("network")) {
         panelPromises.push(fetchNetworkMetrics().catch((err) => null));
-        panelKeys.push('network');
+        panelKeys.push("network");
       }
 
       // Disk data (for DiskPanel)
-      if (!collapsedPanels.disk) {
+      if (shouldPoll("disk")) {
         panelPromises.push(fetchDetailedDiskInfo().catch((err) => null));
-        panelKeys.push('disk');
+        panelKeys.push("disk");
       }
 
       // Process data (for ProcessPanel)
-      if (!collapsedPanels.processes) {
+      if (shouldPoll("processes")) {
         panelPromises.push(fetchProcesses().catch((err) => null));
-        panelKeys.push('processes');
+        panelKeys.push("processes");
       }
 
       // Execute all fetches in parallel
@@ -249,7 +281,7 @@ const Dashboard = () => {
       setError(err.message);
       setLoading(false);
     }
-  }, [collapsedPanels]);
+  }, [collapsedPanels, panelModes]);
 
   useEffect(() => {
     loadData();
@@ -262,58 +294,94 @@ const Dashboard = () => {
   }, []);
 
   // Panel components mapping - memoized to prevent child remounts
-  const panelComponents = useMemo(() => ({
-    network: (
-      <NetworkPanel
-        key="network"
-        data={networkData}
-        isCollapsed={collapsedPanels.network}
-        onCollapseChange={(collapsed) => handleCollapseChange('network', collapsed)}
-      />
-    ),
-    disk: (
-      <DiskPanel
-        key="disk"
-        data={detailedDiskData}
-        isCollapsed={collapsedPanels.disk}
-        onCollapseChange={(collapsed) => handleCollapseChange('disk', collapsed)}
-      />
-    ),
-    docker: (
-      <DockerPanel
-        key="docker"
-        containers={dockerContainers}
-        isCollapsed={collapsedPanels.docker}
-        onCollapseChange={(collapsed) => handleCollapseChange('docker', collapsed)}
-      />
-    ),
-    services: (
-      <ServicesPanel
-        key="services"
-        services={services}
-        onUpdate={handleServicesUpdate}
-        isCollapsed={collapsedPanels.services}
-        onCollapseChange={(collapsed) => handleCollapseChange('services', collapsed)}
-      />
-    ),
-    processes: (
-      <ProcessPanel
-        key="processes"
-        data={processData}
-        isCollapsed={collapsedPanels.processes}
-        onCollapseChange={(collapsed) => handleCollapseChange('processes', collapsed)}
-      />
-    ),
-  }), [
-    networkData,
-    detailedDiskData,
-    dockerContainers,
-    services,
-    processData,
-    collapsedPanels,
-    handleServicesUpdate,
-    handleCollapseChange,
-  ]);
+  const panelComponents = useMemo(
+    () => ({
+      network: (
+        <NetworkPanel
+          key="network"
+          data={networkData}
+          isCollapsed={collapsedPanels.network}
+          onCollapseChange={(collapsed) =>
+            handleCollapseChange("network", collapsed)
+          }
+          panelId="network"
+          dataMode={panelModes.network}
+          onModeChange={(mode) => handleModeChange("network", mode)}
+          wsConnected={wsConnected}
+        />
+      ),
+      disk: (
+        <DiskPanel
+          key="disk"
+          data={detailedDiskData}
+          isCollapsed={collapsedPanels.disk}
+          onCollapseChange={(collapsed) =>
+            handleCollapseChange("disk", collapsed)
+          }
+          panelId="disk"
+          dataMode={panelModes.disk}
+          onModeChange={(mode) => handleModeChange("disk", mode)}
+          wsConnected={wsConnected}
+        />
+      ),
+      docker: (
+        <DockerPanel
+          key="docker"
+          containers={dockerContainers}
+          isCollapsed={collapsedPanels.docker}
+          onCollapseChange={(collapsed) =>
+            handleCollapseChange("docker", collapsed)
+          }
+          panelId="docker"
+          dataMode={panelModes.docker}
+          onModeChange={(mode) => handleModeChange("docker", mode)}
+          wsConnected={wsConnected}
+        />
+      ),
+      services: (
+        <ServicesPanel
+          key="services"
+          services={services}
+          onUpdate={handleServicesUpdate}
+          isCollapsed={collapsedPanels.services}
+          onCollapseChange={(collapsed) =>
+            handleCollapseChange("services", collapsed)
+          }
+          panelId="services"
+          dataMode={panelModes.services}
+          onModeChange={(mode) => handleModeChange("services", mode)}
+          wsConnected={wsConnected}
+        />
+      ),
+      processes: (
+        <ProcessPanel
+          key="processes"
+          data={processData}
+          isCollapsed={collapsedPanels.processes}
+          onCollapseChange={(collapsed) =>
+            handleCollapseChange("processes", collapsed)
+          }
+          panelId="processes"
+          dataMode={panelModes.processes}
+          onModeChange={(mode) => handleModeChange("processes", mode)}
+          wsConnected={wsConnected}
+        />
+      ),
+    }),
+    [
+      networkData,
+      detailedDiskData,
+      dockerContainers,
+      services,
+      processData,
+      collapsedPanels,
+      panelModes,
+      wsConnected,
+      handleServicesUpdate,
+      handleCollapseChange,
+      handleModeChange,
+    ]
+  );
 
   if (loading) {
     return (

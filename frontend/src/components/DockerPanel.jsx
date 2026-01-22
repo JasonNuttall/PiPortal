@@ -1,7 +1,15 @@
 import { Container, Circle } from "lucide-react";
 import BasePanel from "./BasePanel";
 
-const DockerPanel = ({ containers, isCollapsed, onCollapseChange }) => {
+const DockerPanel = ({
+  containers,
+  isCollapsed,
+  onCollapseChange,
+  panelId,
+  dataMode,
+  onModeChange,
+  wsConnected,
+}) => {
   const getStatusColor = (state) => {
     switch (state.toLowerCase()) {
       case "running":
@@ -24,6 +32,10 @@ const DockerPanel = ({ containers, isCollapsed, onCollapseChange }) => {
       isCollapsed={isCollapsed}
       onCollapseChange={onCollapseChange}
       subtitle={`(${containers?.length || 0})`}
+      panelId={panelId}
+      dataMode={dataMode}
+      onModeChange={onModeChange}
+      wsConnected={wsConnected}
     >
       {(data) => (
         <>

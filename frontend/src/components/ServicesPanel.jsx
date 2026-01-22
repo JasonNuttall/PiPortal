@@ -10,7 +10,16 @@ import {
 import { createService, updateService, deleteService } from "../api/api";
 import BasePanel from "./BasePanel";
 
-const ServicesPanel = ({ services, onUpdate, isCollapsed, onCollapseChange }) => {
+const ServicesPanel = ({
+  services,
+  onUpdate,
+  isCollapsed,
+  onCollapseChange,
+  panelId,
+  dataMode,
+  onModeChange,
+  wsConnected,
+}) => {
   const [editingService, setEditingService] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({
@@ -92,6 +101,10 @@ const ServicesPanel = ({ services, onUpdate, isCollapsed, onCollapseChange }) =>
       onCollapseChange={onCollapseChange}
       subtitle={`(${services?.length || 0})`}
       headerActions={addButton}
+      panelId={panelId}
+      dataMode={dataMode}
+      onModeChange={onModeChange}
+      wsConnected={wsConnected}
     >
       {(data) => (
         <>
