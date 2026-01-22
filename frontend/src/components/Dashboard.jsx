@@ -33,10 +33,11 @@ import {
   fetchProcesses,
 } from "../api/api";
 import { useWebSocket } from "../hooks/useWebSocket";
+import { PANEL_TO_CHANNEL } from "../hooks/usePanelData";
 
 const Dashboard = () => {
-  // WebSocket connection status
-  const { isConnected: wsConnected } = useWebSocket();
+  // WebSocket connection status and subscribe function
+  const { isConnected: wsConnected, subscribe } = useWebSocket();
 
   // Core metrics state (always fetched for MetricsPanel)
   const [systemMetrics, setSystemMetrics] = useState(null);
@@ -104,7 +105,7 @@ const Dashboard = () => {
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   // Handle panel collapse change
@@ -131,8 +132,10 @@ const Dashboard = () => {
 
     if (active.id !== over.id) {
       setPanelOrder((panelOrder) => {
-        const activeColumn = panelOrder.left.includes(active.id) ? 'left' : 'right';
-        const overColumn = panelOrder.left.includes(over.id) ? 'left' : 'right';
+        const activeColumn = panelOrder.left.includes(active.id)
+          ? "left"
+          : "right";
+        const overColumn = panelOrder.left.includes(over.id) ? "left" : "right";
 
         if (activeColumn === overColumn) {
           const columnItems = [...panelOrder[activeColumn]];
@@ -158,8 +161,8 @@ const Dashboard = () => {
           destColumn.splice(overIndex, 0, active.id);
 
           const newOrder = {
-            left: activeColumn === 'left' ? sourceColumn : destColumn,
-            right: activeColumn === 'right' ? sourceColumn : destColumn,
+            left: activeColumn === "left" ? sourceColumn : destColumn,
+            right: activeColumn === "right" ? sourceColumn : destColumn,
           };
 
           localStorage.setItem("panelOrder", JSON.stringify(newOrder));
@@ -238,25 +241,35 @@ const Dashboard = () => {
       panelKeys.forEach((key, index) => {
         const data = panelResults[index];
         switch (key) {
-          case 'docker':
+          case "docker":
             setDockerContainers(data);
             break;
-          case 'services':
+          case "services":
             setServices(data);
             break;
-          case 'network':
+          case "network":
             if (data) {
               setNetworkData(data);
               // Calculate network speed for MetricsPanel
-              if (previousNetworkDataRef.current && previousNetworkTimeRef.current) {
+              if (
+                previousNetworkDataRef.current &&
+                previousNetworkTimeRef.current
+              ) {
                 const currentTime = Date.now();
-                const timeDiff = (currentTime - previousNetworkTimeRef.current) / 1000;
+                const timeDiff =
+                  (currentTime - previousNetworkTimeRef.current) / 1000;
                 const currentStats = data.stats[0];
                 const prevStats = previousNetworkDataRef.current.stats[0];
 
                 if (currentStats && prevStats && timeDiff > 0) {
-                  const rxDiff = Math.max(0, currentStats.rx_bytes - prevStats.rx_bytes);
-                  const txDiff = Math.max(0, currentStats.tx_bytes - prevStats.tx_bytes);
+                  const rxDiff = Math.max(
+                    0,
+                    currentStats.rx_bytes - prevStats.rx_bytes,
+                  );
+                  const txDiff = Math.max(
+                    0,
+                    currentStats.tx_bytes - prevStats.tx_bytes,
+                  );
                   setNetworkStats({
                     downloadSpeed: rxDiff / timeDiff,
                     uploadSpeed: txDiff / timeDiff,
@@ -267,10 +280,10 @@ const Dashboard = () => {
               previousNetworkTimeRef.current = Date.now();
             }
             break;
-          case 'disk':
+          case "disk":
             setDetailedDiskData(data);
             break;
-          case 'processes':
+          case "processes":
             setProcessData(data);
             break;
         }
@@ -288,6 +301,78 @@ const Dashboard = () => {
     const interval = setInterval(loadData, refreshInterval);
     return () => clearInterval(interval);
   }, [refreshInterval, loadData]);
+
+  // WebSocket subscriptions for panels in websocket mode
+  useEffect(() => {
+    if (!wsConnected) return;
+
+    const unsubscribers = [];
+
+    // Map panel IDs to their state setters and data transformers
+    const panelConfig = {
+      network: {
+        setter: setNetworkData,
+        transform: (data) => {
+          // Also update network stats for MetricsPanel
+          if (
+            previousNetworkDataRef.current &&
+            previousNetworkTimeRef.current
+          ) {
+            const currentTime = Date.now();
+            const timeDiff =
+              (currentTime - previousNetworkTimeRef.current) / 1000;
+            const currentStats = data.stats?.[0];
+            const prevStats = previousNetworkDataRef.current.stats?.[0];
+
+            if (currentStats && prevStats && timeDiff > 0) {
+              const rxDiff = Math.max(
+                0,
+                currentStats.rx_bytes - prevStats.rx_bytes,
+              );
+              const txDiff = Math.max(
+                0,
+                currentStats.tx_bytes - prevStats.tx_bytes,
+              );
+              setNetworkStats({
+                downloadSpeed: rxDiff / timeDiff,
+                uploadSpeed: txDiff / timeDiff,
+              });
+            }
+          }
+          previousNetworkDataRef.current = data;
+          previousNetworkTimeRef.current = Date.now();
+          return data;
+        },
+      },
+      disk: { setter: setDetailedDiskData },
+      docker: { setter: setDockerContainers },
+      services: { setter: setServices },
+      processes: { setter: setProcessData },
+    };
+
+    // Subscribe to channels for panels in websocket mode
+    Object.entries(panelModes).forEach(([panelId, mode]) => {
+      if (mode === "websocket" && !collapsedPanels[panelId]) {
+        const channel = PANEL_TO_CHANNEL[panelId];
+        const config = panelConfig[panelId];
+
+        if (channel && config) {
+          const unsubscribe = subscribe(channel, (data) => {
+            if (config.transform) {
+              config.setter(config.transform(data));
+            } else {
+              config.setter(data);
+            }
+          });
+          unsubscribers.push(unsubscribe);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+    };
+  }, [wsConnected, panelModes, collapsedPanels, subscribe]);
 
   const handleServicesUpdate = useCallback(() => {
     fetchServices().then(setServices);
@@ -380,7 +465,7 @@ const Dashboard = () => {
       handleServicesUpdate,
       handleCollapseChange,
       handleModeChange,
-    ]
+    ],
   );
 
   if (loading) {

@@ -17,19 +17,30 @@ const NetworkPanel = ({
 
   // Calculate speeds when data changes
   useEffect(() => {
-    if (!data) return;
+    if (!data || !data.stats) return;
 
-    if (previousDataRef.current && previousTimeRef.current) {
-      const currentTime = Date.now();
-      const timeDiff = (currentTime - previousTimeRef.current) / 1000;
+    const currentTime = Date.now();
+    const speeds = {};
 
-      const speeds = {};
-      data.stats.forEach((stat) => {
-        const prevStat = previousDataRef.current.stats.find(
-          (s) => s.interface === stat.interface
+    data.stats.forEach((stat) => {
+      // First check if the backend provided valid speed values
+      const hasBackendSpeed = stat.rx_sec > 0 || stat.tx_sec > 0;
+
+      if (hasBackendSpeed) {
+        // Use backend-calculated speeds when available
+        speeds[stat.interface] = {
+          rx_speed: stat.rx_sec,
+          tx_speed: stat.tx_sec,
+        };
+      } else if (previousDataRef.current && previousTimeRef.current) {
+        // Fall back to calculating from byte differences
+        const timeDiff = (currentTime - previousTimeRef.current) / 1000;
+        const prevStat = previousDataRef.current.stats?.find(
+          (s) => s.interface === stat.interface,
         );
 
-        if (prevStat && timeDiff > 0) {
+        if (prevStat && timeDiff > 0 && timeDiff < 10) {
+          // Only use if time diff is reasonable (< 10 seconds)
           const rxDiff = Math.max(0, stat.rx_bytes - prevStat.rx_bytes);
           const txDiff = Math.max(0, stat.tx_bytes - prevStat.tx_bytes);
 
@@ -38,13 +49,15 @@ const NetworkPanel = ({
             tx_speed: txDiff / timeDiff,
           };
         }
-      });
+      }
+    });
 
+    if (Object.keys(speeds).length > 0) {
       setCalculatedSpeeds(speeds);
     }
 
     previousDataRef.current = data;
-    previousTimeRef.current = Date.now();
+    previousTimeRef.current = currentTime;
   }, [data]);
 
   const formatBytes = (bytes) => {
