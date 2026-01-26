@@ -80,6 +80,12 @@ const Dashboard = () => {
         };
   });
 
+  // Track hidden partitions for DiskPanel
+  const [hiddenPartitions, setHiddenPartitions] = useState(() => {
+    const saved = localStorage.getItem("hiddenPartitions");
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Default panel order - organized by columns
   const defaultPanelOrder = {
     left: ["services", "network"],
@@ -124,6 +130,12 @@ const Dashboard = () => {
       localStorage.setItem("panelModes", JSON.stringify(newState));
       return newState;
     });
+  }, []);
+
+  // Handle hidden partitions change for DiskPanel
+  const handleHiddenPartitionsChange = useCallback((partitions) => {
+    setHiddenPartitions(partitions);
+    localStorage.setItem("hiddenPartitions", JSON.stringify(partitions));
   }, []);
 
   // Handle drag end - memoized to prevent recreation on every render
@@ -407,6 +419,8 @@ const Dashboard = () => {
           dataMode={panelModes.disk}
           onModeChange={(mode) => handleModeChange("disk", mode)}
           wsConnected={wsConnected}
+          hiddenPartitions={hiddenPartitions}
+          onHiddenPartitionsChange={handleHiddenPartitionsChange}
         />
       ),
       docker: (
@@ -462,9 +476,11 @@ const Dashboard = () => {
       collapsedPanels,
       panelModes,
       wsConnected,
+      hiddenPartitions,
       handleServicesUpdate,
       handleCollapseChange,
       handleModeChange,
+      handleHiddenPartitionsChange,
     ],
   );
 
