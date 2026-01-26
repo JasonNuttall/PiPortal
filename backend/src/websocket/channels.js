@@ -5,6 +5,7 @@ const si = require("systeminformation");
 const fs = require("fs");
 const Docker = require("dockerode");
 const ServiceModel = require("../db/models");
+const { getHostDiskInfo } = require("../utils/hostDiskInfo");
 
 // Initialize Docker client
 const docker = new Docker({ socketPath: "/var/run/docker.sock" });
@@ -221,42 +222,7 @@ const dataFetchers = {
   },
 
   "metrics:disk:detailed": async () => {
-    const fsSize = await si.fsSize();
-
-    const seenFilesystems = new Set();
-    const uniqueDisks = fsSize.filter((disk) => {
-      if (seenFilesystems.has(disk.fs)) return false;
-
-      if (
-        disk.type === "overlay" ||
-        disk.type === "tmpfs" ||
-        disk.type === "devtmpfs" ||
-        disk.fs.startsWith("overlay") ||
-        disk.fs.startsWith("tmpfs") ||
-        disk.mount.startsWith("/dev") ||
-        disk.mount.startsWith("/sys") ||
-        disk.mount.startsWith("/proc") ||
-        disk.mount.startsWith("/run")
-      ) {
-        return false;
-      }
-
-      seenFilesystems.add(disk.fs);
-      return true;
-    });
-
-    return uniqueDisks.map((disk) => ({
-      fs: disk.fs,
-      type: disk.type,
-      size: disk.size,
-      used: disk.used,
-      available: disk.available,
-      use: disk.use,
-      mount: disk.mount,
-      sizeGB: (disk.size / 1024 ** 3).toFixed(2),
-      usedGB: (disk.used / 1024 ** 3).toFixed(2),
-      availableGB: (disk.available / 1024 ** 3).toFixed(2),
-    }));
+    return await getHostDiskInfo();
   },
 
   "metrics:processes": async () => {

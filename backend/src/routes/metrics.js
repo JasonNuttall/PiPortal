@@ -1,6 +1,7 @@
 const express = require("express");
 const si = require("systeminformation");
 const fs = require("fs");
+const { getHostDiskInfo } = require("../utils/hostDiskInfo");
 const router = express.Router();
 
 // Simple cache for expensive endpoints
@@ -107,8 +108,8 @@ router.get("/temperature", async (req, res) => {
 // Get disk usage
 router.get("/disk", async (req, res) => {
   try {
-    const fsSize = await si.fsSize();
-    const mainDisk = fsSize[0] || fsSize.find((fs) => fs.mount === "/");
+    const disks = await getHostDiskInfo();
+    const mainDisk = disks.find((d) => d.mount === "/") || disks[0];
 
     res.json({
       total: mainDisk.size,
@@ -129,49 +130,7 @@ router.get("/disk", async (req, res) => {
 // Get detailed disk information for all mounts
 router.get("/disk/detailed", async (req, res) => {
   try {
-    const fsSize = await si.fsSize();
-
-    // Filter to show unique physical drives (avoid duplicate mounts)
-    // Group by filesystem device (fs field) and keep only primary mounts
-    const seenFilesystems = new Set();
-    const uniqueDisks = fsSize.filter((disk) => {
-      // Skip if we've already seen this filesystem device
-      if (seenFilesystems.has(disk.fs)) {
-        return false;
-      }
-
-      // Skip overlay, tmpfs, devtmpfs, and other virtual filesystems
-      if (
-        disk.type === "overlay" ||
-        disk.type === "tmpfs" ||
-        disk.type === "devtmpfs" ||
-        disk.fs.startsWith("overlay") ||
-        disk.fs.startsWith("tmpfs") ||
-        disk.mount.startsWith("/dev") ||
-        disk.mount.startsWith("/sys") ||
-        disk.mount.startsWith("/proc") ||
-        disk.mount.startsWith("/run")
-      ) {
-        return false;
-      }
-
-      seenFilesystems.add(disk.fs);
-      return true;
-    });
-
-    const diskInfo = uniqueDisks.map((disk) => ({
-      fs: disk.fs,
-      type: disk.type,
-      size: disk.size,
-      used: disk.used,
-      available: disk.available,
-      use: disk.use,
-      mount: disk.mount,
-      sizeGB: (disk.size / 1024 ** 3).toFixed(2),
-      usedGB: (disk.used / 1024 ** 3).toFixed(2),
-      availableGB: (disk.available / 1024 ** 3).toFixed(2),
-    }));
-
+    const diskInfo = await getHostDiskInfo();
     res.json(diskInfo);
   } catch (error) {
     console.error("Detailed disk info error:", error.message);
