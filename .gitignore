@@ -6,3 +6,5 @@ dist/
 backend/data/*.db
 backend/data/*.db-*
 .claude/
+IMPROVEMENTS.md
+CLAUDE.md
