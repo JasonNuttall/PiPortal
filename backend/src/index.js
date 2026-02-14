@@ -1,6 +1,8 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 const http = require("http");
 
 // Initialize database
@@ -23,9 +25,35 @@ const server = http.createServer(app);
 // Initialize WebSocket server
 const wsManager = new WebSocketManager(server);
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Security middleware
+app.use(helmet());
+
+// CORS - restrict to known origins if CORS_ORIGIN is set
+const corsOrigin = process.env.CORS_ORIGIN;
+app.use(cors(corsOrigin ? { origin: corsOrigin.split(",") } : undefined));
+
+// Body size limits
+app.use(express.json({ limit: "1mb" }));
+
+// Rate limiting for expensive endpoints
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later" },
+});
+
+const processesLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later" },
+});
+
+app.use("/api", apiLimiter);
+app.use("/api/metrics/processes", processesLimiter);
 
 // Routes
 app.use("/api/docker", dockerRoutes);

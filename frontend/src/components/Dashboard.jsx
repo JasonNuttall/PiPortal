@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   DndContext,
   closestCenter,
@@ -21,6 +21,7 @@ import NetworkPanel from "./NetworkPanel";
 import DiskPanel from "./DiskPanel";
 import ProcessPanel from "./ProcessPanel";
 import SortablePanel from "./SortablePanel";
+import ErrorBoundary from "./ErrorBoundary";
 import {
   fetchSystemMetrics,
   fetchTemperature,
@@ -33,11 +34,28 @@ import {
   fetchProcesses,
 } from "../api/api";
 import { useWebSocket } from "../hooks/useWebSocket";
+import { usePanelState } from "../hooks/usePanelState";
+import { useWebSocketSubscriptions } from "../hooks/useWebSocketSubscriptions";
+import { useNetworkSpeed } from "../hooks/useNetworkSpeed";
 import { PANEL_TO_CHANNEL } from "../hooks/usePanelData";
 
 const Dashboard = () => {
-  // WebSocket connection status and subscribe function
   const { isConnected: wsConnected, subscribe } = useWebSocket();
+
+  // Panel state management (extracted hook)
+  const {
+    collapsedPanels,
+    panelModes,
+    hiddenPartitions,
+    panelOrder,
+    setPanelOrder,
+    handleCollapseChange,
+    handleModeChange,
+    handleHiddenPartitionsChange,
+  } = usePanelState();
+
+  // Network speed calculation (extracted hook)
+  const { calculateSpeed } = useNetworkSpeed();
 
   // Core metrics state (always fetched for MetricsPanel)
   const [systemMetrics, setSystemMetrics] = useState(null);
@@ -60,47 +78,19 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [refreshInterval, setRefreshInterval] = useState(5000);
 
-  // Track collapsed state for each panel (lazy loading)
-  const [collapsedPanels, setCollapsedPanels] = useState(() => {
-    const saved = localStorage.getItem("collapsedPanels");
-    return saved ? JSON.parse(saved) : {};
+  // WebSocket subscriptions (extracted hook)
+  useWebSocketSubscriptions({
+    wsConnected,
+    subscribe,
+    panelModes,
+    collapsedPanels,
+    setNetworkData,
+    setDetailedDiskData,
+    setDockerContainers,
+    setServices,
+    setProcessData,
+    setNetworkStats,
   });
-
-  // Track data mode for each panel (polling vs websocket)
-  const [panelModes, setPanelModes] = useState(() => {
-    const saved = localStorage.getItem("panelModes");
-    return saved
-      ? JSON.parse(saved)
-      : {
-          network: "polling",
-          disk: "polling",
-          docker: "polling",
-          services: "polling",
-          processes: "polling",
-        };
-  });
-
-  // Track hidden partitions for DiskPanel
-  const [hiddenPartitions, setHiddenPartitions] = useState(() => {
-    const saved = localStorage.getItem("hiddenPartitions");
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Default panel order - organized by columns
-  const defaultPanelOrder = {
-    left: ["services", "network"],
-    right: ["disk", "processes", "docker"],
-  };
-
-  // Load panel order from localStorage or use default
-  const [panelOrder, setPanelOrder] = useState(() => {
-    const saved = localStorage.getItem("panelOrder");
-    return saved ? JSON.parse(saved) : defaultPanelOrder;
-  });
-
-  // Track network data for speed calculation
-  const previousNetworkDataRef = useRef(null);
-  const previousNetworkTimeRef = useRef(null);
 
   // Setup drag sensors
   const sensors = useSensors(
@@ -114,31 +104,7 @@ const Dashboard = () => {
     }),
   );
 
-  // Handle panel collapse change
-  const handleCollapseChange = useCallback((panelId, isCollapsed) => {
-    setCollapsedPanels((prev) => {
-      const newState = { ...prev, [panelId]: isCollapsed };
-      localStorage.setItem("collapsedPanels", JSON.stringify(newState));
-      return newState;
-    });
-  }, []);
-
-  // Handle panel mode change (polling vs websocket)
-  const handleModeChange = useCallback((panelId, mode) => {
-    setPanelModes((prev) => {
-      const newState = { ...prev, [panelId]: mode };
-      localStorage.setItem("panelModes", JSON.stringify(newState));
-      return newState;
-    });
-  }, []);
-
-  // Handle hidden partitions change for DiskPanel
-  const handleHiddenPartitionsChange = useCallback((partitions) => {
-    setHiddenPartitions(partitions);
-    localStorage.setItem("hiddenPartitions", JSON.stringify(partitions));
-  }, []);
-
-  // Handle drag end - memoized to prevent recreation on every render
+  // Handle drag end
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
 
@@ -182,14 +148,13 @@ const Dashboard = () => {
         }
       });
     }
-  }, []);
+  }, [setPanelOrder]);
 
   // Centralized data loading - only fetches data for expanded panels
   const loadData = useCallback(async () => {
     try {
       setError(null);
 
-      // Always fetch core metrics for the top MetricsPanel
       const corePromises = [
         fetchSystemMetrics().catch((err) => ({ error: err.message })),
         fetchTemperature().catch((err) => ({ error: err.message })),
@@ -197,59 +162,48 @@ const Dashboard = () => {
         fetchDockerInfo().catch((err) => ({ error: err.message })),
       ];
 
-      // Conditionally fetch panel data based on collapse state AND mode
-      // Skip fetching if panel is collapsed OR if panel is in websocket mode (WebSocket handles it)
       const panelPromises = [];
       const panelKeys = [];
 
-      // Helper to check if panel should be polled
       const shouldPoll = (panelId) =>
         !collapsedPanels[panelId] && panelModes[panelId] !== "websocket";
 
-      // Docker containers (for DockerPanel)
       if (shouldPoll("docker")) {
-        panelPromises.push(fetchDockerContainers().catch((err) => []));
+        panelPromises.push(fetchDockerContainers().catch(() => []));
         panelKeys.push("docker");
       }
 
-      // Services (for ServicesPanel)
       if (shouldPoll("services")) {
-        panelPromises.push(fetchServices().catch((err) => []));
+        panelPromises.push(fetchServices().catch(() => []));
         panelKeys.push("services");
       }
 
-      // Network data (for NetworkPanel)
       if (shouldPoll("network")) {
-        panelPromises.push(fetchNetworkMetrics().catch((err) => null));
+        panelPromises.push(fetchNetworkMetrics().catch(() => null));
         panelKeys.push("network");
       }
 
-      // Disk data (for DiskPanel)
       if (shouldPoll("disk")) {
-        panelPromises.push(fetchDetailedDiskInfo().catch((err) => null));
+        panelPromises.push(fetchDetailedDiskInfo().catch(() => null));
         panelKeys.push("disk");
       }
 
-      // Process data (for ProcessPanel)
       if (shouldPoll("processes")) {
-        panelPromises.push(fetchProcesses().catch((err) => null));
+        panelPromises.push(fetchProcesses().catch(() => null));
         panelKeys.push("processes");
       }
 
-      // Execute all fetches in parallel
       const [coreResults, panelResults] = await Promise.all([
         Promise.all(corePromises),
         Promise.all(panelPromises),
       ]);
 
-      // Update core metrics
       const [system, temp, disk, dockerInf] = coreResults;
       setSystemMetrics(system);
       setTemperature(temp);
       setDiskMetrics(disk);
       setDockerInfo(dockerInf);
 
-      // Update panel data based on what was fetched
       panelKeys.forEach((key, index) => {
         const data = panelResults[index];
         switch (key) {
@@ -262,34 +216,8 @@ const Dashboard = () => {
           case "network":
             if (data) {
               setNetworkData(data);
-              // Calculate network speed for MetricsPanel
-              if (
-                previousNetworkDataRef.current &&
-                previousNetworkTimeRef.current
-              ) {
-                const currentTime = Date.now();
-                const timeDiff =
-                  (currentTime - previousNetworkTimeRef.current) / 1000;
-                const currentStats = data.stats[0];
-                const prevStats = previousNetworkDataRef.current.stats[0];
-
-                if (currentStats && prevStats && timeDiff > 0) {
-                  const rxDiff = Math.max(
-                    0,
-                    currentStats.rx_bytes - prevStats.rx_bytes,
-                  );
-                  const txDiff = Math.max(
-                    0,
-                    currentStats.tx_bytes - prevStats.tx_bytes,
-                  );
-                  setNetworkStats({
-                    downloadSpeed: rxDiff / timeDiff,
-                    uploadSpeed: txDiff / timeDiff,
-                  });
-                }
-              }
-              previousNetworkDataRef.current = data;
-              previousNetworkTimeRef.current = Date.now();
+              const speeds = calculateSpeed(data);
+              if (speeds) setNetworkStats(speeds);
             }
             break;
           case "disk":
@@ -306,7 +234,7 @@ const Dashboard = () => {
       setError(err.message);
       setLoading(false);
     }
-  }, [collapsedPanels, panelModes]);
+  }, [collapsedPanels, panelModes, calculateSpeed]);
 
   useEffect(() => {
     loadData();
@@ -314,157 +242,95 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, [refreshInterval, loadData]);
 
-  // WebSocket subscriptions for panels in websocket mode
-  useEffect(() => {
-    if (!wsConnected) return;
-
-    const unsubscribers = [];
-
-    // Map panel IDs to their state setters and data transformers
-    const panelConfig = {
-      network: {
-        setter: setNetworkData,
-        transform: (data) => {
-          // Also update network stats for MetricsPanel
-          if (
-            previousNetworkDataRef.current &&
-            previousNetworkTimeRef.current
-          ) {
-            const currentTime = Date.now();
-            const timeDiff =
-              (currentTime - previousNetworkTimeRef.current) / 1000;
-            const currentStats = data.stats?.[0];
-            const prevStats = previousNetworkDataRef.current.stats?.[0];
-
-            if (currentStats && prevStats && timeDiff > 0) {
-              const rxDiff = Math.max(
-                0,
-                currentStats.rx_bytes - prevStats.rx_bytes,
-              );
-              const txDiff = Math.max(
-                0,
-                currentStats.tx_bytes - prevStats.tx_bytes,
-              );
-              setNetworkStats({
-                downloadSpeed: rxDiff / timeDiff,
-                uploadSpeed: txDiff / timeDiff,
-              });
-            }
-          }
-          previousNetworkDataRef.current = data;
-          previousNetworkTimeRef.current = Date.now();
-          return data;
-        },
-      },
-      disk: { setter: setDetailedDiskData },
-      docker: { setter: setDockerContainers },
-      services: { setter: setServices },
-      processes: { setter: setProcessData },
-    };
-
-    // Subscribe to channels for panels in websocket mode
-    Object.entries(panelModes).forEach(([panelId, mode]) => {
-      if (mode === "websocket" && !collapsedPanels[panelId]) {
-        const channel = PANEL_TO_CHANNEL[panelId];
-        const config = panelConfig[panelId];
-
-        if (channel && config) {
-          const unsubscribe = subscribe(channel, (data) => {
-            if (config.transform) {
-              config.setter(config.transform(data));
-            } else {
-              config.setter(data);
-            }
-          });
-          unsubscribers.push(unsubscribe);
-        }
-      }
-    });
-
-    return () => {
-      unsubscribers.forEach((unsub) => unsub());
-    };
-  }, [wsConnected, panelModes, collapsedPanels, subscribe]);
-
   const handleServicesUpdate = useCallback(() => {
     fetchServices().then(setServices);
   }, []);
 
-  // Panel components mapping - memoized to prevent child remounts
+  // Panel components mapping
   const panelComponents = useMemo(
     () => ({
       network: (
-        <NetworkPanel
-          key="network"
-          data={networkData}
-          isCollapsed={collapsedPanels.network}
-          onCollapseChange={(collapsed) =>
-            handleCollapseChange("network", collapsed)
-          }
-          panelId="network"
-          dataMode={panelModes.network}
-          onModeChange={(mode) => handleModeChange("network", mode)}
-          wsConnected={wsConnected}
-        />
+        <ErrorBoundary panelName="Network">
+          <NetworkPanel
+            key="network"
+            data={networkData}
+            isCollapsed={collapsedPanels.network}
+            onCollapseChange={(collapsed) =>
+              handleCollapseChange("network", collapsed)
+            }
+            panelId="network"
+            dataMode={panelModes.network}
+            onModeChange={(mode) => handleModeChange("network", mode)}
+            wsConnected={wsConnected}
+          />
+        </ErrorBoundary>
       ),
       disk: (
-        <DiskPanel
-          key="disk"
-          data={detailedDiskData}
-          isCollapsed={collapsedPanels.disk}
-          onCollapseChange={(collapsed) =>
-            handleCollapseChange("disk", collapsed)
-          }
-          panelId="disk"
-          dataMode={panelModes.disk}
-          onModeChange={(mode) => handleModeChange("disk", mode)}
-          wsConnected={wsConnected}
-          hiddenPartitions={hiddenPartitions}
-          onHiddenPartitionsChange={handleHiddenPartitionsChange}
-        />
+        <ErrorBoundary panelName="Disk">
+          <DiskPanel
+            key="disk"
+            data={detailedDiskData}
+            isCollapsed={collapsedPanels.disk}
+            onCollapseChange={(collapsed) =>
+              handleCollapseChange("disk", collapsed)
+            }
+            panelId="disk"
+            dataMode={panelModes.disk}
+            onModeChange={(mode) => handleModeChange("disk", mode)}
+            wsConnected={wsConnected}
+            hiddenPartitions={hiddenPartitions}
+            onHiddenPartitionsChange={handleHiddenPartitionsChange}
+          />
+        </ErrorBoundary>
       ),
       docker: (
-        <DockerPanel
-          key="docker"
-          containers={dockerContainers}
-          isCollapsed={collapsedPanels.docker}
-          onCollapseChange={(collapsed) =>
-            handleCollapseChange("docker", collapsed)
-          }
-          panelId="docker"
-          dataMode={panelModes.docker}
-          onModeChange={(mode) => handleModeChange("docker", mode)}
-          wsConnected={wsConnected}
-        />
+        <ErrorBoundary panelName="Docker">
+          <DockerPanel
+            key="docker"
+            containers={dockerContainers}
+            isCollapsed={collapsedPanels.docker}
+            onCollapseChange={(collapsed) =>
+              handleCollapseChange("docker", collapsed)
+            }
+            panelId="docker"
+            dataMode={panelModes.docker}
+            onModeChange={(mode) => handleModeChange("docker", mode)}
+            wsConnected={wsConnected}
+          />
+        </ErrorBoundary>
       ),
       services: (
-        <ServicesPanel
-          key="services"
-          services={services}
-          onUpdate={handleServicesUpdate}
-          isCollapsed={collapsedPanels.services}
-          onCollapseChange={(collapsed) =>
-            handleCollapseChange("services", collapsed)
-          }
-          panelId="services"
-          dataMode={panelModes.services}
-          onModeChange={(mode) => handleModeChange("services", mode)}
-          wsConnected={wsConnected}
-        />
+        <ErrorBoundary panelName="Services">
+          <ServicesPanel
+            key="services"
+            services={services}
+            onUpdate={handleServicesUpdate}
+            isCollapsed={collapsedPanels.services}
+            onCollapseChange={(collapsed) =>
+              handleCollapseChange("services", collapsed)
+            }
+            panelId="services"
+            dataMode={panelModes.services}
+            onModeChange={(mode) => handleModeChange("services", mode)}
+            wsConnected={wsConnected}
+          />
+        </ErrorBoundary>
       ),
       processes: (
-        <ProcessPanel
-          key="processes"
-          data={processData}
-          isCollapsed={collapsedPanels.processes}
-          onCollapseChange={(collapsed) =>
-            handleCollapseChange("processes", collapsed)
-          }
-          panelId="processes"
-          dataMode={panelModes.processes}
-          onModeChange={(mode) => handleModeChange("processes", mode)}
-          wsConnected={wsConnected}
-        />
+        <ErrorBoundary panelName="Processes">
+          <ProcessPanel
+            key="processes"
+            data={processData}
+            isCollapsed={collapsedPanels.processes}
+            onCollapseChange={(collapsed) =>
+              handleCollapseChange("processes", collapsed)
+            }
+            panelId="processes"
+            dataMode={panelModes.processes}
+            onModeChange={(mode) => handleModeChange("processes", mode)}
+            wsConnected={wsConnected}
+          />
+        </ErrorBoundary>
       ),
     }),
     [
