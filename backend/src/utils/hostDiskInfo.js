@@ -13,6 +13,7 @@
 const fs = require("fs");
 const { statfs } = require("fs/promises");
 const path = require("path");
+const logger = require("./logger");
 
 const HOST_ROOT = "/host";
 const HOST_PROC_MOUNTS = "/host/proc/1/mounts";
@@ -112,10 +113,7 @@ async function getHostDiskInfo() {
     return disks;
   } catch (error) {
     // Fallback: host root not mounted, use systeminformation (container-only view)
-    console.warn(
-      "Host disk detection unavailable, falling back to container view:",
-      error.message
-    );
+    logger.warn({ err: error }, "Host disk detection unavailable, falling back to container view");
     const si = require("systeminformation");
     const fsSize = await si.fsSize();
 

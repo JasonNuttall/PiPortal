@@ -2,6 +2,7 @@
  * Channel Configuration and Data Fetchers for WebSocket
  */
 const si = require("systeminformation");
+const logger = require("../utils/logger");
 const fs = require("fs");
 const Docker = require("dockerode");
 const ServiceModel = require("../db/models");
@@ -110,7 +111,7 @@ const dataFetchers = {
         })),
       }));
     } catch (error) {
-      console.error("Docker containers fetch error:", error.message);
+      logger.error({ err: error }, "Docker containers fetch error");
       return [];
     }
   },
@@ -126,7 +127,7 @@ const dataFetchers = {
         serverVersion: info.ServerVersion,
       };
     } catch (error) {
-      console.error("Docker info fetch error:", error.message);
+      logger.error({ err: error }, "Docker info fetch error");
       return null;
     }
   },
@@ -135,7 +136,7 @@ const dataFetchers = {
     try {
       return ServiceModel.getAll();
     } catch (error) {
-      console.error("Services fetch error:", error.message);
+      logger.error({ err: error }, "Services fetch error");
       return [];
     }
   },

@@ -1,6 +1,7 @@
 const express = require("express");
 const si = require("systeminformation");
 const fs = require("fs");
+const logger = require("../utils/logger");
 const { getHostDiskInfo } = require("../utils/hostDiskInfo");
 const { getProcessList } = require("../utils/processMonitor");
 const { getNetworkData } = require("../utils/networkMonitor");
@@ -70,7 +71,7 @@ router.get("/system", async (req, res) => {
     setCache("system", result);
     res.json(result);
   } catch (error) {
-    console.error("System metrics error:", error.message);
+    logger.error({ err: error }, "System metrics error");
     res.status(500).json({
       error: "Failed to fetch system metrics",
       message: error.message,
@@ -99,7 +100,7 @@ router.get("/temperature", async (req, res) => {
       unit: "C",
     });
   } catch (error) {
-    console.error("Temperature error:", error.message);
+    logger.error({ err: error }, "Temperature error");
     res.status(500).json({
       error: "Failed to fetch temperature",
       message: error.message,
@@ -121,7 +122,7 @@ router.get("/disk", async (req, res) => {
       mount: mainDisk.mount,
     });
   } catch (error) {
-    console.error("Disk metrics error:", error.message);
+    logger.error({ err: error }, "Disk metrics error");
     res.status(500).json({
       error: "Failed to fetch disk metrics",
       message: error.message,
@@ -135,7 +136,7 @@ router.get("/disk/detailed", async (req, res) => {
     const diskInfo = await getHostDiskInfo();
     res.json(diskInfo);
   } catch (error) {
-    console.error("Detailed disk info error:", error.message);
+    logger.error({ err: error }, "Detailed disk info error");
     res.status(500).json({
       error: "Failed to fetch detailed disk information",
       message: error.message,
@@ -149,7 +150,7 @@ router.get("/network", async (req, res) => {
     const data = await getNetworkData();
     res.json(data);
   } catch (error) {
-    console.error("Network metrics error:", error.message);
+    logger.error({ err: error }, "Network metrics error");
     res.status(500).json({
       error: "Failed to fetch network metrics",
       message: error.message,
@@ -163,8 +164,7 @@ router.get("/processes", async (req, res) => {
     const data = await getProcessList();
     res.json(data);
   } catch (error) {
-    console.error("Processes error:", error);
-    console.error("Error stack:", error.stack);
+    logger.error({ err: error }, "Processes error");
     res.status(500).json({
       error: "Failed to fetch processes",
       message: error.message,

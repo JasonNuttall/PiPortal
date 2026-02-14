@@ -1,5 +1,20 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+
+// Mock @tanstack/react-virtual since jsdom has no layout engine
+vi.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: ({ count, estimateSize }) => ({
+    getTotalSize: () => count * estimateSize(0),
+    getVirtualItems: () =>
+      Array.from({ length: count }, (_, i) => ({
+        index: i,
+        start: i * estimateSize(0),
+        size: estimateSize(0),
+        key: i,
+      })),
+  }),
+}));
+
 import ProcessPanel from "../ProcessPanel";
 
 const defaultProps = {

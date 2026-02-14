@@ -1,5 +1,6 @@
 const express = require("express");
 const Docker = require("dockerode");
+const logger = require("../utils/logger");
 const router = express.Router();
 
 const docker = new Docker({ socketPath: "/var/run/docker.sock" });
@@ -25,7 +26,7 @@ router.get("/containers", async (req, res) => {
 
     res.json(formattedContainers);
   } catch (error) {
-    console.error("Docker API error:", error.message);
+    logger.error({ err: error }, "Docker API error");
     res.status(500).json({
       error: "Failed to fetch Docker containers",
       message: error.message,
@@ -45,7 +46,7 @@ router.get("/info", async (req, res) => {
       serverVersion: info.ServerVersion,
     });
   } catch (error) {
-    console.error("Docker info error:", error.message);
+    logger.error({ err: error }, "Docker info error");
     res.status(500).json({
       error: "Failed to fetch Docker info",
       message: error.message,

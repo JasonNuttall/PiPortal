@@ -1,5 +1,6 @@
 const express = require("express");
 const ServiceModel = require("../db/models");
+const logger = require("../utils/logger");
 const router = express.Router();
 
 // Validation limits
@@ -78,7 +79,7 @@ router.get("/", (req, res) => {
     const services = ServiceModel.getAll();
     res.json(services);
   } catch (error) {
-    console.error("Get services error:", error.message);
+    logger.error({ err: error }, "Get services error");
     res.status(500).json({ error: "Failed to fetch services" });
   }
 });
@@ -92,7 +93,7 @@ router.get("/:id", (req, res) => {
     }
     res.json(service);
   } catch (error) {
-    console.error("Get service error:", error.message);
+    logger.error({ err: error }, "Get service error");
     res.status(500).json({ error: "Failed to fetch service" });
   }
 });
@@ -108,7 +109,7 @@ router.post("/", (req, res) => {
     const service = ServiceModel.create(sanitized);
     res.status(201).json(service);
   } catch (error) {
-    console.error("Create service error:", error.message);
+    logger.error({ err: error }, "Create service error");
     res.status(500).json({ error: "Failed to create service" });
   }
 });
@@ -127,7 +128,7 @@ router.put("/:id", (req, res) => {
     }
     res.json(service);
   } catch (error) {
-    console.error("Update service error:", error.message);
+    logger.error({ err: error }, "Update service error");
     res.status(500).json({ error: "Failed to update service" });
   }
 });
@@ -138,7 +139,7 @@ router.delete("/:id", (req, res) => {
     ServiceModel.delete(req.params.id);
     res.status(204).send();
   } catch (error) {
-    console.error("Delete service error:", error.message);
+    logger.error({ err: error }, "Delete service error");
     res.status(500).json({ error: "Failed to delete service" });
   }
 });

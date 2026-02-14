@@ -4,6 +4,7 @@
  */
 const WebSocket = require("ws");
 const ChangeDetector = require("./ChangeDetector");
+const logger = require("../utils/logger");
 const {
   CHANNEL_CONFIG,
   fetchChannelData,
@@ -28,7 +29,7 @@ class WebSocketManager {
     if (this.isRunning) return;
     this.isRunning = true;
 
-    console.log("WebSocket: Starting data push loops...");
+    logger.info("WebSocket: Starting data push loops");
 
     Object.entries(CHANNEL_CONFIG).forEach(([channel, config]) => {
       const intervalId = setInterval(async () => {
@@ -38,9 +39,7 @@ class WebSocketManager {
       this.pushIntervals.set(channel, intervalId);
     });
 
-    console.log(
-      `WebSocket: Push loops started for ${Object.keys(CHANNEL_CONFIG).length} channels`
-    );
+    logger.info({ channels: Object.keys(CHANNEL_CONFIG).length }, "WebSocket: Push loops started");
   }
 
   /**
@@ -50,7 +49,7 @@ class WebSocketManager {
     if (!this.isRunning) return;
     this.isRunning = false;
 
-    console.log("WebSocket: Stopping data push loops...");
+    logger.info("WebSocket: Stopping data push loops");
 
     this.pushIntervals.forEach((intervalId, channel) => {
       clearInterval(intervalId);
@@ -70,7 +69,7 @@ class WebSocketManager {
         connectedAt: Date.now(),
       });
 
-      console.log(`WebSocket: Client ${clientId} connected`);
+      logger.info({ clientId }, "WebSocket: Client connected");
 
       // Send connection acknowledgment with available channels
       this.send(ws, {
@@ -87,19 +86,19 @@ class WebSocketManager {
       // Handle client disconnect
       ws.on("close", () => {
         const clientData = this.clients.get(ws);
-        console.log(`WebSocket: Client ${clientData?.id || "unknown"} disconnected`);
+        logger.info({ clientId: clientData?.id }, "WebSocket: Client disconnected");
         this.clients.delete(ws);
       });
 
       // Handle errors
       ws.on("error", (err) => {
-        console.error(`WebSocket: Client error:`, err.message);
+        logger.error({ err }, "WebSocket: Client error");
         this.clients.delete(ws);
       });
     });
 
     this.wss.on("error", (err) => {
-      console.error("WebSocket Server error:", err.message);
+      logger.error({ err }, "WebSocket Server error");
     });
   }
 
@@ -112,7 +111,7 @@ class WebSocketManager {
       const clientData = this.clients.get(ws);
 
       if (!clientData) {
-        console.warn("WebSocket: Received message from unknown client");
+        logger.warn("WebSocket: Received message from unknown client");
         return;
       }
 
@@ -137,7 +136,7 @@ class WebSocketManager {
           });
       }
     } catch (err) {
-      console.error("WebSocket: Failed to parse message:", err.message);
+      logger.error({ err }, "WebSocket: Failed to parse message");
       this.send(ws, {
         type: "error",
         message: "Invalid JSON message",
@@ -178,9 +177,7 @@ class WebSocketManager {
       invalid: invalidChannels.length > 0 ? invalidChannels : undefined,
     });
 
-    console.log(
-      `WebSocket: Client ${clientData.id} subscribed to: ${validChannels.join(", ")}`
-    );
+    logger.info({ clientId: clientData.id, channels: validChannels }, "WebSocket: Client subscribed");
 
     // Immediately send current data for subscribed channels
     for (const channel of validChannels) {
@@ -193,7 +190,7 @@ class WebSocketManager {
           timestamp: Date.now(),
         });
       } catch (err) {
-        console.error(`WebSocket: Failed to fetch initial data for ${channel}:`, err.message);
+        logger.error({ err, channel }, "WebSocket: Failed to fetch initial data");
       }
     }
   }
@@ -220,9 +217,7 @@ class WebSocketManager {
       channels,
     });
 
-    console.log(
-      `WebSocket: Client ${clientData.id} unsubscribed from: ${channels.join(", ")}`
-    );
+    logger.info({ clientId: clientData.id, channels }, "WebSocket: Client unsubscribed");
   }
 
   /**
@@ -249,7 +244,7 @@ class WebSocketManager {
       // Broadcast to subscribed clients
       this.broadcast(channel, data);
     } catch (err) {
-      console.error(`WebSocket: Failed to push ${channel}:`, err.message);
+      logger.error({ err, channel }, "WebSocket: Failed to push channel data");
     }
   }
 

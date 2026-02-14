@@ -132,4 +132,9 @@ describe("ServicesPanel", () => {
     render(<ServicesPanel {...defaultProps} services={[]} />);
     expect(screen.getByText("(0)")).toBeInTheDocument();
   });
+
+  it("does not crash when services is null", () => {
+    render(<ServicesPanel {...defaultProps} services={null} />);
+    expect(screen.getByText("(0)")).toBeInTheDocument();
+  });
 });

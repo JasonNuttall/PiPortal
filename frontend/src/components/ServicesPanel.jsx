@@ -74,7 +74,7 @@ const ServicesPanel = ({
     setFormData({ name: "", url: "", icon: "", category: "" });
   };
 
-  const groupedServices = services.reduce((acc, service) => {
+  const groupedServices = (services || []).reduce((acc, service) => {
     const category = service.category || "Other";
     if (!acc[category]) acc[category] = [];
     acc[category].push(service);

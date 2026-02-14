@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   Activity,
   Search,
@@ -6,6 +6,7 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import BasePanel from "./BasePanel";
 
 const formatMem = (memRssMB) => {
@@ -16,7 +17,99 @@ const formatMem = (memRssMB) => {
 };
 
 // Inner component to handle memoized filtering/sorting
+const ROW_HEIGHT = 44;
+
+const VirtualizedRows = ({ parentRef, processes }) => {
+  const virtualizer = useVirtualizer({
+    count: processes.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 5,
+  });
+
+  return (
+    <table className="w-full text-sm">
+      <tbody
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+          position: "relative",
+          display: "block",
+        }}
+      >
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const proc = processes[virtualRow.index];
+          return (
+            <tr
+              key={proc.pid}
+              className="border-b border-slate-700/50 hover:bg-slate-700/30"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: `${virtualRow.size}px`,
+                transform: `translateY(${virtualRow.start}px)`,
+                display: "table",
+                tableLayout: "fixed",
+              }}
+            >
+              <td className="py-2 px-2">
+                <div className="font-medium text-slate-100 truncate max-w-xs">
+                  {proc.name}
+                </div>
+                <div className="text-xs text-slate-500 truncate max-w-xs hidden xl:block">
+                  {proc.command}
+                </div>
+              </td>
+              <td className="py-2 px-2 text-slate-300 hidden md:table-cell">
+                {proc.user}
+              </td>
+              <td className="py-2 px-2 text-right">
+                <span
+                  className={`font-mono ${
+                    proc.cpu > 50
+                      ? "text-red-400"
+                      : proc.cpu > 20
+                      ? "text-orange-400"
+                      : proc.cpu > 5
+                      ? "text-yellow-400"
+                      : "text-slate-300"
+                  }`}
+                >
+                  {proc.cpu.toFixed(1)}%
+                </span>
+              </td>
+              <td className="py-2 px-2 text-right">
+                <span
+                  className={`font-mono ${
+                    proc.mem > 10
+                      ? "text-red-400"
+                      : proc.mem > 5
+                      ? "text-orange-400"
+                      : proc.mem > 2
+                      ? "text-yellow-400"
+                      : "text-slate-300"
+                  }`}
+                >
+                  {proc.mem.toFixed(1)}%
+                </span>
+              </td>
+              <td className="py-2 px-2 text-right text-slate-300 font-mono text-xs hidden lg:table-cell">
+                {formatMem(proc.memRssMB)}
+              </td>
+              <td className="py-2 px-2 text-center text-slate-400 font-mono text-xs hidden sm:table-cell">
+                {proc.pid}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+};
+
 const ProcessList = ({ processData, searchTerm, sortBy, sortDirection, displayLimit, onSort, onSearchChange, onLimitChange }) => {
+  const parentRef = useRef(null);
   const getSortIcon = (column) => {
     if (sortBy !== column)
       return <ArrowUpDown className="w-3 h-3 text-slate-500" />;
@@ -133,63 +226,17 @@ const ProcessList = ({ processData, searchTerm, sortBy, sortDirection, displayLi
               </th>
             </tr>
           </thead>
-          <tbody>
-            {displayedProcesses.map((proc) => (
-              <tr
-                key={proc.pid}
-                className="border-b border-slate-700/50 hover:bg-slate-700/30"
-              >
-                <td className="py-2 px-2">
-                  <div className="font-medium text-slate-100 truncate max-w-xs">
-                    {proc.name}
-                  </div>
-                  <div className="text-xs text-slate-500 truncate max-w-xs hidden xl:block">
-                    {proc.command}
-                  </div>
-                </td>
-                <td className="py-2 px-2 text-slate-300 hidden md:table-cell">
-                  {proc.user}
-                </td>
-                <td className="py-2 px-2 text-right">
-                  <span
-                    className={`font-mono ${
-                      proc.cpu > 50
-                        ? "text-red-400"
-                        : proc.cpu > 20
-                        ? "text-orange-400"
-                        : proc.cpu > 5
-                        ? "text-yellow-400"
-                        : "text-slate-300"
-                    }`}
-                  >
-                    {proc.cpu.toFixed(1)}%
-                  </span>
-                </td>
-                <td className="py-2 px-2 text-right">
-                  <span
-                    className={`font-mono ${
-                      proc.mem > 10
-                        ? "text-red-400"
-                        : proc.mem > 5
-                        ? "text-orange-400"
-                        : proc.mem > 2
-                        ? "text-yellow-400"
-                        : "text-slate-300"
-                    }`}
-                  >
-                    {proc.mem.toFixed(1)}%
-                  </span>
-                </td>
-                <td className="py-2 px-2 text-right text-slate-300 font-mono text-xs hidden lg:table-cell">
-                  {formatMem(proc.memRssMB)}
-                </td>
-                <td className="py-2 px-2 text-center text-slate-400 font-mono text-xs hidden sm:table-cell">
-                  {proc.pid}
-                </td>
-              </tr>
-            ))}
-          </tbody>
         </table>
+        <div
+          ref={parentRef}
+          className="overflow-auto"
+          style={{ maxHeight: `${Math.min(displayedProcesses.length, 20) * ROW_HEIGHT}px` }}
+        >
+          <VirtualizedRows
+            parentRef={parentRef}
+            processes={displayedProcesses}
+          />
+        </div>
       </div>
 
       {/* Footer */}

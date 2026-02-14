@@ -53,7 +53,7 @@ describe("API functions", () => {
         mockFetch.mockResolvedValue(mockOkResponse(data));
 
         const result = await fn();
-        expect(mockFetch).toHaveBeenCalledWith(url);
+        expect(mockFetch.mock.calls[0][0]).toBe(url);
         expect(result).toEqual(data);
       });
 
@@ -71,7 +71,8 @@ describe("API functions", () => {
 
       const result = await createService(service);
 
-      expect(mockFetch).toHaveBeenCalledWith("/api/services", {
+      expect(mockFetch.mock.calls[0][0]).toBe("/api/services");
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(service),
@@ -92,7 +93,8 @@ describe("API functions", () => {
 
       const result = await updateService(5, service);
 
-      expect(mockFetch).toHaveBeenCalledWith("/api/services/5", {
+      expect(mockFetch.mock.calls[0][0]).toBe("/api/services/5");
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(service),
@@ -112,14 +114,59 @@ describe("API functions", () => {
 
       await deleteService(3);
 
-      expect(mockFetch).toHaveBeenCalledWith("/api/services/3", {
+      expect(mockFetch).toHaveBeenCalledWith("/api/services/3", expect.objectContaining({
         method: "DELETE",
-      });
+      }));
     });
 
     it("throws on error response", async () => {
       mockFetch.mockResolvedValue(mockErrorResponse());
       await expect(deleteService(1)).rejects.toThrow("Failed to delete service");
+    });
+  });
+
+  describe("request timeouts", () => {
+    it("passes an AbortSignal to fetch", async () => {
+      mockFetch.mockResolvedValue(mockOkResponse({ test: true }));
+
+      await fetchSystemMetrics();
+
+      const callArgs = mockFetch.mock.calls[0];
+      expect(callArgs[1]).toBeDefined();
+      expect(callArgs[1].signal).toBeInstanceOf(AbortSignal);
+    });
+
+    it("abort signal is not already aborted on call", async () => {
+      mockFetch.mockResolvedValue(mockOkResponse({}));
+
+      await fetchSystemMetrics();
+
+      const signal = mockFetch.mock.calls[0][1].signal;
+      // Signal should have been created fresh (not pre-aborted)
+      expect(signal.aborted).toBe(false);
+    });
+
+    it("all fetch functions include signal in options", async () => {
+      mockFetch.mockResolvedValue(mockOkResponse({}));
+
+      const fns = [
+        () => fetchSystemMetrics(),
+        () => fetchTemperature(),
+        () => fetchDiskMetrics(),
+        () => fetchDockerContainers(),
+        () => fetchDockerInfo(),
+        () => fetchServices(),
+        () => fetchDetailedDiskInfo(),
+        () => fetchNetworkMetrics(),
+        () => fetchProcesses(),
+      ];
+
+      for (const fn of fns) {
+        mockFetch.mockClear();
+        await fn();
+        const callArgs = mockFetch.mock.calls[0];
+        expect(callArgs[1]?.signal).toBeInstanceOf(AbortSignal);
+      }
     });
   });
 });

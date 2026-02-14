@@ -4,6 +4,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const http = require("http");
+const logger = require("./utils/logger");
 
 // Initialize database
 require("./db/database");
@@ -72,15 +73,53 @@ app.get("/api/ws/stats", (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error("Error:", err);
+  logger.error({ err }, "Unhandled error");
   res.status(500).json({ error: "Internal server error" });
 });
 
+// Graceful shutdown handler
+const shutdown = (signal) => {
+  logger.info({ signal }, "Starting graceful shutdown");
+
+  // Stop WebSocket push loops
+  wsManager.stop();
+
+  // Close all WebSocket connections
+  wsManager.wss.clients.forEach((client) => {
+    client.close(1001, "Server shutting down");
+  });
+  wsManager.wss.close(() => {
+    logger.info("WebSocket server closed");
+  });
+
+  // Close database connection
+  try {
+    const db = require("./db/database");
+    db.close();
+    logger.info("Database connection closed");
+  } catch (err) {
+    logger.error({ err }, "Error closing database");
+  }
+
+  // Drain HTTP server
+  server.close(() => {
+    logger.info("HTTP server closed");
+    process.exit(0);
+  });
+
+  // Force exit after 10 seconds
+  setTimeout(() => {
+    logger.error("Forced shutdown after timeout");
+    process.exit(1);
+  }, 10000).unref();
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
 // Start HTTP + WebSocket server
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Homelab Portal Backend running on port ${PORT}`);
-  console.log(`WebSocket server available at ws://0.0.0.0:${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+  logger.info({ port: PORT, env: process.env.NODE_ENV || "development" }, "Homelab Portal Backend started");
 
   // Start WebSocket data push loops
   wsManager.start();
