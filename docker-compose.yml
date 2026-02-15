@@ -8,8 +8,8 @@ services:
     network_mode: host
     pid: "host" # Share host's process namespace to see all Pi processes
     volumes:
-      # Mount Docker socket for container monitoring
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Mount Docker socket for container monitoring and management
+      - /var/run/docker.sock:/var/run/docker.sock
       # Mount thermal zone for temperature monitoring
       - /sys/class/thermal:/sys/class/thermal:ro
       # Mount network statistics for accurate monitoring

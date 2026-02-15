@@ -47,6 +47,18 @@ export const fetchDockerInfo = async () => {
   return response.json();
 };
 
+export const containerAction = async (id, action) => {
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/docker/containers/${id}/${action}`,
+    { method: "POST" }
+  );
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error || `Failed to ${action} container`);
+  }
+  return response.json();
+};
+
 export const fetchServices = async () => {
   const response = await fetchWithTimeout(`${API_BASE_URL}/services`);
   if (!response.ok) throw new Error("Failed to fetch services");

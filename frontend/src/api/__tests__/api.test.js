@@ -5,6 +5,7 @@ import {
   fetchDiskMetrics,
   fetchDockerContainers,
   fetchDockerInfo,
+  containerAction,
   fetchServices,
   createService,
   updateService,
@@ -122,6 +123,45 @@ describe("API functions", () => {
     it("throws on error response", async () => {
       mockFetch.mockResolvedValue(mockErrorResponse());
       await expect(deleteService(1)).rejects.toThrow("Failed to delete service");
+    });
+  });
+
+  describe("containerAction", () => {
+    const actions = ["start", "stop", "restart"];
+
+    actions.forEach((action) => {
+      it(`sends POST to correct URL for ${action}`, async () => {
+        mockFetch.mockResolvedValue(mockOkResponse({ success: true }));
+
+        const result = await containerAction("abc123", action);
+
+        expect(mockFetch.mock.calls[0][0]).toBe(`/api/docker/containers/abc123/${action}`);
+        expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: "POST" });
+        expect(result.success).toBe(true);
+      });
+    });
+
+    it("throws with server error message on failure", async () => {
+      mockFetch.mockResolvedValue(mockErrorResponse(500));
+      await expect(containerAction("abc123", "stop")).rejects.toThrow("Server error");
+    });
+
+    it("throws with fallback message when response body is not JSON", async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: () => Promise.reject(new Error("not json")),
+      });
+      await expect(containerAction("abc123", "start")).rejects.toThrow("Failed to start container");
+    });
+
+    it("includes AbortSignal in request", async () => {
+      mockFetch.mockResolvedValue(mockOkResponse({ success: true }));
+
+      await containerAction("abc123", "restart");
+
+      const callArgs = mockFetch.mock.calls[0];
+      expect(callArgs[1].signal).toBeInstanceOf(AbortSignal);
     });
   });
 

@@ -246,6 +246,10 @@ const Dashboard = () => {
     fetchServices().then(setServices);
   }, []);
 
+  const handleDockerUpdate = useCallback(() => {
+    fetchDockerContainers().then(setDockerContainers);
+  }, []);
+
   // Panel components mapping
   const panelComponents = useMemo(
     () => ({
@@ -288,6 +292,7 @@ const Dashboard = () => {
           <DockerPanel
             key="docker"
             containers={dockerContainers}
+            onUpdate={handleDockerUpdate}
             isCollapsed={collapsedPanels.docker}
             onCollapseChange={(collapsed) =>
               handleCollapseChange("docker", collapsed)
@@ -344,6 +349,7 @@ const Dashboard = () => {
       wsConnected,
       hiddenPartitions,
       handleServicesUpdate,
+      handleDockerUpdate,
       handleCollapseChange,
       handleModeChange,
       handleHiddenPartitionsChange,

@@ -48,4 +48,26 @@ router.get("/info", async (req, res) => {
   }
 });
 
+// Container actions: start, stop, restart
+const ALLOWED_ACTIONS = ["start", "stop", "restart"];
+
+router.post("/containers/:id/:action", async (req, res) => {
+  const { id, action } = req.params;
+
+  if (!ALLOWED_ACTIONS.includes(action)) {
+    return res.status(400).json({ error: "Invalid action" });
+  }
+
+  try {
+    const container = docker.getContainer(id);
+    await container[action]();
+    logger.info({ containerId: id, action }, "Container action completed");
+    res.json({ success: true, action, containerId: id });
+  } catch (error) {
+    logger.error({ err: error, containerId: id, action }, "Container action failed");
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: `Failed to ${action} container` });
+  }
+});
+
 module.exports = router;
