@@ -27,10 +27,7 @@ router.get("/containers", async (req, res) => {
     res.json(formattedContainers);
   } catch (error) {
     logger.error({ err: error }, "Docker API error");
-    res.status(500).json({
-      error: "Failed to fetch Docker containers",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to fetch Docker containers" });
   }
 });
 
@@ -47,10 +44,7 @@ router.get("/info", async (req, res) => {
     });
   } catch (error) {
     logger.error({ err: error }, "Docker info error");
-    res.status(500).json({
-      error: "Failed to fetch Docker info",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to fetch Docker info" });
   }
 });
 

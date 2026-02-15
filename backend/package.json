@@ -7,7 +7,8 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "keywords": [
     "homelab",
@@ -29,6 +30,7 @@
     "ws": "^8.19.0"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.18",
     "nodemon": "^3.0.2",
     "supertest": "^7.2.2",
     "vitest": "^4.0.18"

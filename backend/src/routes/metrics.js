@@ -72,10 +72,7 @@ router.get("/system", async (req, res) => {
     res.json(result);
   } catch (error) {
     logger.error({ err: error }, "System metrics error");
-    res.status(500).json({
-      error: "Failed to fetch system metrics",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to fetch system metrics" });
   }
 });
 
@@ -101,10 +98,7 @@ router.get("/temperature", async (req, res) => {
     });
   } catch (error) {
     logger.error({ err: error }, "Temperature error");
-    res.status(500).json({
-      error: "Failed to fetch temperature",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to fetch temperature" });
   }
 });
 
@@ -123,10 +117,7 @@ router.get("/disk", async (req, res) => {
     });
   } catch (error) {
     logger.error({ err: error }, "Disk metrics error");
-    res.status(500).json({
-      error: "Failed to fetch disk metrics",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to fetch disk metrics" });
   }
 });
 
@@ -137,10 +128,7 @@ router.get("/disk/detailed", async (req, res) => {
     res.json(diskInfo);
   } catch (error) {
     logger.error({ err: error }, "Detailed disk info error");
-    res.status(500).json({
-      error: "Failed to fetch detailed disk information",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to fetch detailed disk information" });
   }
 });
 
@@ -151,10 +139,7 @@ router.get("/network", async (req, res) => {
     res.json(data);
   } catch (error) {
     logger.error({ err: error }, "Network metrics error");
-    res.status(500).json({
-      error: "Failed to fetch network metrics",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to fetch network metrics" });
   }
 });
 
@@ -165,10 +150,7 @@ router.get("/processes", async (req, res) => {
     res.json(data);
   } catch (error) {
     logger.error({ err: error }, "Processes error");
-    res.status(500).json({
-      error: "Failed to fetch processes",
-      message: error.message,
-    });
+    res.status(500).json({ error: "Failed to fetch processes" });
   }
 });
 
