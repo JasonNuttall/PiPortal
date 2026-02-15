@@ -7,14 +7,14 @@ RUN npm install --production
 
 COPY src ./src
 
-# Create data directory owned by node user
-RUN mkdir -p /app/data && chown -R node:node /app/data
+RUN mkdir -p /app/data
 
 ENV PORT=3001
 ENV NODE_ENV=production
 
-# Run as non-root user
-USER node
+# Note: backend runs as root because it needs access to the Docker socket,
+# host /proc, /sys, and other privileged mounts. The frontend runs as
+# non-root (nginx user) since it only serves static files.
 
 EXPOSE 3001
 
