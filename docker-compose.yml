@@ -43,11 +43,11 @@ services:
     container_name: homelab-portal-frontend
     restart: unless-stopped
     ports:
-      - "1781:80"
+      - "1781:8080"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080"]
       interval: 30s
       timeout: 5s
       retries: 3
