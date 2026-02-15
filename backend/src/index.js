@@ -26,6 +26,9 @@ const server = http.createServer(app);
 // Initialize WebSocket server
 const wsManager = new WebSocketManager(server);
 
+// Trust proxy (nginx frontend forwards X-Forwarded-For headers)
+app.set("trust proxy", 1);
+
 // Security middleware
 app.use(helmet());
 
