@@ -17,7 +17,7 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Prepare nginx to run as non-root
 RUN sed -i 's/^user  nginx;/# user  nginx;/' /etc/nginx/nginx.conf && \
-    sed -i 's|/var/run/nginx.pid|/tmp/nginx.pid|' /etc/nginx/nginx.conf && \
+    sed -i 's|pid\s*/run/nginx.pid;|pid /tmp/nginx.pid;|' /etc/nginx/nginx.conf && \
     chown -R nginx:nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /var/log/nginx
