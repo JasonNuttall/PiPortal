@@ -44,11 +44,16 @@ const MetricCard = ({
         />
       </div>
       <div className="flex items-baseline gap-1">
-        <span className="font-spectral text-3xl text-crystal-blue" style={{ textShadow: "0 0 18px rgba(56, 189, 248, 0.5)" }}>
+        <span
+          className="font-spectral text-3xl text-crystal-blue"
+          style={{ textShadow: "0 0 18px rgba(56, 189, 248, 0.5)" }}
+        >
           {value}
         </span>
         {unit && (
-          <span className="text-ctext-mid text-sm font-source-code">{unit}</span>
+          <span className="text-ctext-mid text-sm font-source-code">
+            {unit}
+          </span>
         )}
       </div>
       {percentage !== undefined && (

@@ -70,10 +70,10 @@ const VirtualizedRows = ({ parentRef, processes }) => {
                     proc.cpu > 50
                       ? "text-red-400"
                       : proc.cpu > 20
-                      ? "text-crystal-teal"
-                      : proc.cpu > 5
-                      ? "text-crystal-seafoam"
-                      : "text-crystal-blue"
+                        ? "text-crystal-teal"
+                        : proc.cpu > 5
+                          ? "text-crystal-seafoam"
+                          : "text-crystal-blue"
                   }`}
                 >
                   {proc.cpu.toFixed(1)}%
@@ -85,10 +85,10 @@ const VirtualizedRows = ({ parentRef, processes }) => {
                     proc.mem > 10
                       ? "text-red-400"
                       : proc.mem > 5
-                      ? "text-crystal-teal"
-                      : proc.mem > 2
-                      ? "text-crystal-seafoam"
-                      : "text-crystal-blue"
+                        ? "text-crystal-teal"
+                        : proc.mem > 2
+                          ? "text-crystal-seafoam"
+                          : "text-crystal-blue"
                   }`}
                 >
                   {proc.mem.toFixed(1)}%
@@ -108,7 +108,16 @@ const VirtualizedRows = ({ parentRef, processes }) => {
   );
 };
 
-const ProcessList = ({ processData, searchTerm, sortBy, sortDirection, displayLimit, onSort, onSearchChange, onLimitChange }) => {
+const ProcessList = ({
+  processData,
+  searchTerm,
+  sortBy,
+  sortDirection,
+  displayLimit,
+  onSort,
+  onSearchChange,
+  onLimitChange,
+}) => {
   const parentRef = useRef(null);
   const getSortIcon = (column) => {
     if (sortBy !== column)
@@ -131,7 +140,7 @@ const ProcessList = ({ processData, searchTerm, sortBy, sortDirection, displayLi
         (proc) =>
           proc.name.toLowerCase().includes(lowerSearch) ||
           proc.command.toLowerCase().includes(lowerSearch) ||
-          proc.user.toLowerCase().includes(lowerSearch)
+          proc.user.toLowerCase().includes(lowerSearch),
       );
     }
 
@@ -199,9 +208,7 @@ const ProcessList = ({ processData, searchTerm, sortBy, sortDirection, displayLi
                   Process {getSortIcon("name")}
                 </button>
               </th>
-              <th className="pb-3 font-medium hidden md:table-cell">
-                User
-              </th>
+              <th className="pb-3 font-medium hidden md:table-cell">User</th>
               <th className="pb-3 font-medium text-right">
                 <button
                   onClick={() => onSort("cpu")}
@@ -230,7 +237,9 @@ const ProcessList = ({ processData, searchTerm, sortBy, sortDirection, displayLi
         <div
           ref={parentRef}
           className="overflow-auto"
-          style={{ maxHeight: `${Math.min(displayedProcesses.length, 20) * ROW_HEIGHT}px` }}
+          style={{
+            maxHeight: `${Math.min(displayedProcesses.length, 20) * ROW_HEIGHT}px`,
+          }}
         >
           <VirtualizedRows
             parentRef={parentRef}

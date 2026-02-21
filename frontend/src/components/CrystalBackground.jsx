@@ -70,8 +70,7 @@ const SHARDS = [
     style: {
       width: 60,
       height: 200,
-      background:
-        "linear-gradient(0deg, rgba(56, 189, 248, 0.3), transparent)",
+      background: "linear-gradient(0deg, rgba(56, 189, 248, 0.3), transparent)",
       clipPath: "polygon(50% 100%, 100% 65%, 85% 0%, 15% 0%, 0% 65%)",
       bottom: 0,
       left: "8%",
@@ -84,8 +83,7 @@ const SHARDS = [
     style: {
       width: 35,
       height: 120,
-      background:
-        "linear-gradient(0deg, rgba(45, 212, 191, 0.3), transparent)",
+      background: "linear-gradient(0deg, rgba(45, 212, 191, 0.3), transparent)",
       clipPath: "polygon(50% 100%, 100% 60%, 80% 0%, 20% 0%, 0% 60%)",
       bottom: 0,
       right: "12%",
