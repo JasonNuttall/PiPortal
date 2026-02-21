@@ -39,10 +39,10 @@ app.use(cors(corsOrigin ? { origin: corsOrigin.split(",") } : undefined));
 // Body size limits
 app.use(express.json({ limit: "1mb" }));
 
-// Rate limiting for expensive endpoints
+// Rate limiting — tuned for dashboard polling (up to 9 requests per cycle)
 const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 120,
+  max: 600,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests, please try again later" },
@@ -50,7 +50,7 @@ const apiLimiter = rateLimit({
 
 const processesLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
-  max: 60,
+  max: 120,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests, please try again later" },

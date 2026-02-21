@@ -39,6 +39,9 @@ import { useWebSocketSubscriptions } from "../hooks/useWebSocketSubscriptions";
 import { useNetworkSpeed } from "../hooks/useNetworkSpeed";
 import { PANEL_TO_CHANNEL } from "../hooks/usePanelData";
 
+// Sentinel value indicating a fetch failed — state should not be overwritten
+const FETCH_FAILED = Symbol("FETCH_FAILED");
+
 const Dashboard = () => {
   const { isConnected: wsConnected, subscribe } = useWebSocket();
 
@@ -156,10 +159,10 @@ const Dashboard = () => {
       setError(null);
 
       const corePromises = [
-        fetchSystemMetrics().catch((err) => ({ error: err.message })),
-        fetchTemperature().catch((err) => ({ error: err.message })),
-        fetchDiskMetrics().catch((err) => ({ error: err.message })),
-        fetchDockerInfo().catch((err) => ({ error: err.message })),
+        fetchSystemMetrics().catch(() => FETCH_FAILED),
+        fetchTemperature().catch(() => FETCH_FAILED),
+        fetchDiskMetrics().catch(() => FETCH_FAILED),
+        fetchDockerInfo().catch(() => FETCH_FAILED),
       ];
 
       const panelPromises = [];
@@ -169,27 +172,27 @@ const Dashboard = () => {
         !collapsedPanels[panelId] && panelModes[panelId] !== "websocket";
 
       if (shouldPoll("docker")) {
-        panelPromises.push(fetchDockerContainers().catch(() => []));
+        panelPromises.push(fetchDockerContainers().catch(() => FETCH_FAILED));
         panelKeys.push("docker");
       }
 
       if (shouldPoll("services")) {
-        panelPromises.push(fetchServices().catch(() => []));
+        panelPromises.push(fetchServices().catch(() => FETCH_FAILED));
         panelKeys.push("services");
       }
 
       if (shouldPoll("network")) {
-        panelPromises.push(fetchNetworkMetrics().catch(() => null));
+        panelPromises.push(fetchNetworkMetrics().catch(() => FETCH_FAILED));
         panelKeys.push("network");
       }
 
       if (shouldPoll("disk")) {
-        panelPromises.push(fetchDetailedDiskInfo().catch(() => null));
+        panelPromises.push(fetchDetailedDiskInfo().catch(() => FETCH_FAILED));
         panelKeys.push("disk");
       }
 
       if (shouldPoll("processes")) {
-        panelPromises.push(fetchProcesses().catch(() => null));
+        panelPromises.push(fetchProcesses().catch(() => FETCH_FAILED));
         panelKeys.push("processes");
       }
 
@@ -199,13 +202,14 @@ const Dashboard = () => {
       ]);
 
       const [system, temp, disk, dockerInf] = coreResults;
-      setSystemMetrics(system);
-      setTemperature(temp);
-      setDiskMetrics(disk);
-      setDockerInfo(dockerInf);
+      if (system !== FETCH_FAILED) setSystemMetrics(system);
+      if (temp !== FETCH_FAILED) setTemperature(temp);
+      if (disk !== FETCH_FAILED) setDiskMetrics(disk);
+      if (dockerInf !== FETCH_FAILED) setDockerInfo(dockerInf);
 
       panelKeys.forEach((key, index) => {
         const data = panelResults[index];
+        if (data === FETCH_FAILED) return;
         switch (key) {
           case "docker":
             setDockerContainers(data);
@@ -214,11 +218,9 @@ const Dashboard = () => {
             setServices(data);
             break;
           case "network":
-            if (data) {
-              setNetworkData(data);
-              const speeds = calculateSpeed(data);
-              if (speeds) setNetworkStats(speeds);
-            }
+            setNetworkData(data);
+            const speeds = calculateSpeed(data);
+            if (speeds) setNetworkStats(speeds);
             break;
           case "disk":
             setDetailedDiskData(data);
