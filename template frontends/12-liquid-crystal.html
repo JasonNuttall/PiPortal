@@ -1,0 +1,1330 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Homelab — Liquid Crystal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --void: #080b1a;
+        --cyan: #00e5ff;
+        --pink: #ff6ec7;
+        --purple: #a855f7;
+        --ice: #e0f0ff;
+        --glass: rgba(0, 229, 255, 0.04);
+        --glass-hover: rgba(0, 229, 255, 0.08);
+        --glass-border: rgba(0, 229, 255, 0.1);
+        --glass-border-hover: rgba(0, 229, 255, 0.22);
+        --text: rgba(224, 240, 255, 0.93);
+        --text-mid: rgba(180, 210, 240, 0.55);
+        --text-dim: rgba(140, 180, 220, 0.32);
+      }
+
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--void);
+        color: var(--text);
+        font-family: "IBM Plex Mono", monospace;
+        font-weight: 400;
+        font-size: 13px;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* === MORPHING BLOBS === */
+      .liquid-bg {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        overflow: hidden;
+      }
+
+      .morph-blob {
+        position: absolute;
+        filter: blur(100px);
+        opacity: 0.4;
+        will-change: transform, border-radius;
+      }
+      .mb1 {
+        width: 650px;
+        height: 550px;
+        background: radial-gradient(
+          ellipse,
+          rgba(0, 229, 255, 0.25),
+          transparent 70%
+        );
+        top: -12%;
+        left: -8%;
+        animation:
+          morph-a 12s ease-in-out infinite alternate,
+          drift-a 18s ease-in-out infinite alternate;
+      }
+      .mb2 {
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(
+          ellipse,
+          rgba(255, 110, 199, 0.2),
+          transparent 70%
+        );
+        top: 30%;
+        right: -10%;
+        animation:
+          morph-b 14s ease-in-out infinite alternate,
+          drift-b 20s ease-in-out infinite alternate;
+      }
+      .mb3 {
+        width: 600px;
+        height: 450px;
+        background: radial-gradient(
+          ellipse,
+          rgba(168, 85, 247, 0.2),
+          transparent 70%
+        );
+        bottom: -8%;
+        left: 15%;
+        animation:
+          morph-c 10s ease-in-out infinite alternate,
+          drift-c 16s ease-in-out infinite alternate;
+      }
+      .mb4 {
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(
+          ellipse,
+          rgba(0, 229, 255, 0.15),
+          transparent 70%
+        );
+        top: 50%;
+        left: 40%;
+        animation:
+          morph-a 16s ease-in-out infinite alternate,
+          drift-b 22s ease-in-out infinite alternate;
+        animation-delay: -5s;
+      }
+
+      @keyframes morph-a {
+        0% {
+          border-radius: 60% 40% 30% 70%/60% 30% 70% 40%;
+        }
+        25% {
+          border-radius: 30% 60% 70% 40%/50% 60% 30% 60%;
+        }
+        50% {
+          border-radius: 50% 50% 40% 60%/40% 50% 60% 50%;
+        }
+        75% {
+          border-radius: 40% 60% 50% 50%/60% 40% 50% 60%;
+        }
+        100% {
+          border-radius: 70% 30% 50% 50%/30% 70% 40% 60%;
+        }
+      }
+      @keyframes morph-b {
+        0% {
+          border-radius: 40% 60% 60% 40%/50% 40% 60% 50%;
+        }
+        33% {
+          border-radius: 60% 40% 40% 60%/40% 60% 40% 60%;
+        }
+        66% {
+          border-radius: 50% 50% 50% 50%/60% 40% 50% 60%;
+        }
+        100% {
+          border-radius: 30% 70% 60% 40%/50% 50% 40% 60%;
+        }
+      }
+      @keyframes morph-c {
+        0% {
+          border-radius: 50% 50% 40% 60%/60% 40% 60% 40%;
+        }
+        50% {
+          border-radius: 60% 40% 50% 50%/40% 60% 40% 60%;
+        }
+        100% {
+          border-radius: 40% 60% 60% 40%/50% 50% 50% 50%;
+        }
+      }
+
+      @keyframes drift-a {
+        from {
+          transform: translate(0, 0);
+        }
+        to {
+          transform: translate(60px, 40px);
+        }
+      }
+      @keyframes drift-b {
+        from {
+          transform: translate(0, 0);
+        }
+        to {
+          transform: translate(-50px, 60px);
+        }
+      }
+      @keyframes drift-c {
+        from {
+          transform: translate(0, 0);
+        }
+        to {
+          transform: translate(40px, -50px);
+        }
+      }
+
+      /* Noise overlay */
+      .noise-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+        opacity: 0.03;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        background-repeat: repeat;
+        background-size: 256px 256px;
+      }
+
+      /* === HEADER === */
+      header {
+        position: relative;
+        z-index: 10;
+        padding: 22px 32px 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        border-bottom: 1px solid var(--glass-border);
+        backdrop-filter: blur(14px);
+      }
+      .logo-label {
+        font-size: 9px;
+        letter-spacing: 5px;
+        color: var(--cyan);
+        text-transform: uppercase;
+        margin-bottom: 4px;
+        opacity: 0.7;
+      }
+      .logo-name {
+        font-family: "Instrument Serif", serif;
+        font-style: italic;
+        font-size: 40px;
+        line-height: 1;
+        letter-spacing: 1px;
+        background: linear-gradient(
+          135deg,
+          var(--cyan),
+          var(--pink),
+          var(--purple)
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .pills {
+        display: flex;
+        gap: 7px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .pill {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 11px;
+        border-radius: 100px;
+        font-size: 10px;
+        border: 1px solid var(--glass-border);
+        background: var(--glass);
+        backdrop-filter: blur(10px);
+      }
+      .pill-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .pd-c {
+        background: var(--cyan);
+        box-shadow: 0 0 8px var(--cyan);
+        animation: pulse-d 2.5s ease-in-out infinite;
+      }
+      .pd-p {
+        background: var(--pink);
+        box-shadow: 0 0 8px var(--pink);
+      }
+      .pd-v {
+        background: var(--purple);
+        box-shadow: 0 0 8px var(--purple);
+      }
+      @keyframes pulse-d {
+        0%,
+        100% {
+          box-shadow: 0 0 4px var(--cyan);
+        }
+        50% {
+          box-shadow:
+            0 0 14px var(--cyan),
+            0 0 24px rgba(0, 229, 255, 0.4);
+        }
+      }
+      .pill-label {
+        color: var(--text-mid);
+      }
+
+      /* === MAIN GRID === */
+      main {
+        position: relative;
+        z-index: 10;
+        padding: 22px 32px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        max-width: 1440px;
+        margin: 0 auto;
+      }
+
+      /* === CARDS === */
+      .card {
+        background: var(--glass);
+        border: 1px solid var(--glass-border);
+        border-radius: 14px;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+        animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      .card:hover {
+        background: var(--glass-hover);
+        border-color: var(--glass-border-hover);
+        transform: translateY(-3px);
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.5),
+          0 0 0 1px rgba(0, 229, 255, 0.08);
+      }
+
+      /* Shimmer sweep on hover */
+      .card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        pointer-events: none;
+        background: linear-gradient(
+          105deg,
+          transparent 40%,
+          rgba(0, 229, 255, 0.06) 45%,
+          rgba(255, 110, 199, 0.06) 50%,
+          transparent 55%
+        );
+        background-size: 300% 100%;
+        background-position: 200% 0;
+        transition: background-position 0.8s ease;
+      }
+      .card:hover::before {
+        background-position: -100% 0;
+      }
+
+      /* Iridescent top accent */
+      .card-cyan::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--cyan),
+          transparent
+        );
+        opacity: 0.8;
+      }
+      .card-pink::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--pink),
+          transparent
+        );
+        opacity: 0.7;
+      }
+      .card-purple::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--purple),
+          transparent
+        );
+        opacity: 0.8;
+      }
+
+      .card:nth-child(1) {
+        animation-delay: 0.05s;
+      }
+      .card:nth-child(2) {
+        animation-delay: 0.1s;
+      }
+      .card:nth-child(3) {
+        animation-delay: 0.15s;
+      }
+      .card:nth-child(4) {
+        animation-delay: 0.2s;
+      }
+      .card:nth-child(5) {
+        animation-delay: 0.25s;
+      }
+      .card:nth-child(6) {
+        animation-delay: 0.3s;
+      }
+      .card:nth-child(7) {
+        animation-delay: 0.35s;
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(22px) scale(0.98);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .card-header {
+        padding: 14px 16px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--glass-border);
+      }
+      .card-title {
+        font-family: "Instrument Serif", serif;
+        font-style: italic;
+        font-size: 16px;
+        color: var(--text);
+        letter-spacing: 0.5px;
+      }
+      .card-badge {
+        font-size: 8px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 100px;
+        border: 1px solid currentColor;
+      }
+      .badge-c {
+        color: var(--cyan);
+      }
+      .badge-p {
+        color: var(--pink);
+      }
+      .badge-v {
+        color: var(--purple);
+      }
+      .card-body {
+        padding: 14px 16px;
+      }
+
+      /* === STAT CELLS === */
+      .stats-2x2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .sc {
+        background: rgba(0, 229, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        padding: 12px 10px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+      }
+      .sc:hover {
+        transform: scale(1.03);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      }
+      .sc::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 50px;
+        height: 24px;
+        border-radius: 50%;
+        filter: blur(16px);
+        opacity: 0.35;
+        background: var(--cg, var(--cyan));
+      }
+      .cg-c {
+        --cg: var(--cyan);
+      }
+      .cg-p {
+        --cg: var(--pink);
+      }
+      .cg-v {
+        --cg: var(--purple);
+      }
+      .sc-nm {
+        font-size: 7px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-bottom: 5px;
+      }
+      .sc-val {
+        font-family: "Instrument Serif", serif;
+        font-size: 32px;
+        line-height: 1;
+      }
+      .sv-c {
+        color: var(--cyan);
+        text-shadow: 0 0 18px rgba(0, 229, 255, 0.5);
+      }
+      .sv-p {
+        color: var(--pink);
+        text-shadow: 0 0 18px rgba(255, 110, 199, 0.5);
+      }
+      .sv-v {
+        color: var(--purple);
+        text-shadow: 0 0 18px rgba(168, 85, 247, 0.5);
+      }
+      .sc-unit {
+        font-size: 13px;
+        font-weight: 400;
+      }
+      .sc-sub {
+        font-size: 8px;
+        color: var(--text-mid);
+        margin-top: 3px;
+      }
+
+      /* bars */
+      .bar-w {
+        margin-top: 7px;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 2px;
+        overflow: visible;
+        position: relative;
+      }
+      .bar {
+        height: 100%;
+        border-radius: 2px;
+        position: relative;
+        transition: width 1s ease;
+      }
+      .bar::after {
+        content: "";
+        position: absolute;
+        right: -2px;
+        top: -4px;
+        width: 6px;
+        height: 10px;
+        border-radius: 3px;
+        background: currentColor;
+        filter: blur(2px);
+        opacity: 0.9;
+      }
+      .b-c {
+        background: linear-gradient(
+          90deg,
+          rgba(0, 229, 255, 0.15),
+          var(--cyan)
+        );
+        color: var(--cyan);
+      }
+      .b-p {
+        background: linear-gradient(
+          90deg,
+          rgba(255, 110, 199, 0.15),
+          var(--pink)
+        );
+        color: var(--pink);
+      }
+      .b-v {
+        background: linear-gradient(
+          90deg,
+          rgba(168, 85, 247, 0.15),
+          var(--purple)
+        );
+        color: var(--purple);
+      }
+      .b-r {
+        background: linear-gradient(90deg, rgba(239, 68, 68, 0.15), #ef4444);
+        color: #ef4444;
+      }
+
+      /* === NET === */
+      .net-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .nc {
+        background: rgba(0, 229, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        padding: 10px;
+        text-align: center;
+        transition: transform 0.2s;
+      }
+      .nc:hover {
+        transform: scale(1.02);
+      }
+      .nc-lbl {
+        font-size: 7px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-bottom: 5px;
+      }
+      .nc-big {
+        font-family: "Instrument Serif", serif;
+        font-size: 24px;
+        line-height: 1;
+      }
+      .nc-unit {
+        font-size: 10px;
+        font-family: "IBM Plex Mono", monospace;
+      }
+      .nc-tot {
+        font-size: 8px;
+        color: var(--text-mid);
+        margin-top: 3px;
+      }
+
+      /* === DISK === */
+      .dsk-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .dsk-meta {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+      }
+      .dsk-mn {
+        font-size: 10px;
+        color: var(--text);
+      }
+      .dsk-pct {
+        font-size: 9px;
+        font-weight: 600;
+      }
+
+      /* === SERVICES === */
+      .svc-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 7px;
+      }
+      .svc {
+        padding: 12px 6px;
+        background: rgba(0, 229, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        text-decoration: none;
+        display: block;
+        text-align: center;
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+      }
+      .svc::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          circle at 50% 120%,
+          rgba(0, 229, 255, 0.12),
+          transparent 60%
+        );
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .svc:hover {
+        background: rgba(0, 229, 255, 0.08);
+        border-color: var(--glass-border-hover);
+        transform: translateY(-3px) scale(1.02);
+      }
+      .svc:hover::after {
+        opacity: 1;
+      }
+      .svc-icon {
+        font-size: 20px;
+        margin-bottom: 3px;
+        display: block;
+      }
+      .svc-name {
+        font-size: 10px;
+        color: var(--text);
+        display: block;
+        font-weight: 600;
+      }
+      .svc-cat {
+        font-size: 7px;
+        color: var(--text-dim);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-top: 2px;
+        display: block;
+      }
+
+      /* === DOCKER === */
+      .dc-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .dc-item {
+        display: grid;
+        grid-template-columns: 7px 1fr auto;
+        gap: 8px;
+        align-items: center;
+        padding: 7px 10px;
+        background: rgba(0, 229, 255, 0.02);
+        border: 1px solid var(--glass-border);
+        border-radius: 8px;
+        transition: background 0.2s;
+      }
+      .dc-item:hover {
+        background: rgba(0, 229, 255, 0.06);
+      }
+      .dc-live {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--cyan);
+        box-shadow: 0 0 8px var(--cyan);
+      }
+      .dc-off {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.15);
+      }
+      .dc-nm {
+        font-size: 10px;
+        color: var(--text);
+      }
+      .dc-img {
+        font-size: 8px;
+        color: var(--text-dim);
+        margin-top: 1px;
+      }
+      .dc-port {
+        font-size: 9px;
+        color: var(--cyan);
+      }
+
+      /* === PROCESSES === */
+      .pr-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .pr-item {
+        display: grid;
+        grid-template-columns: 1fr 42px 42px;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        background: rgba(0, 229, 255, 0.02);
+        border: 1px solid var(--glass-border);
+        border-radius: 7px;
+        transition: background 0.2s;
+      }
+      .pr-item:hover {
+        background: rgba(0, 229, 255, 0.05);
+      }
+      .pr-nm {
+        font-size: 10px;
+        color: var(--text);
+      }
+      .pr-pid {
+        font-size: 7px;
+        color: var(--text-dim);
+        margin-top: 1px;
+      }
+      .pr-stat {
+        text-align: right;
+      }
+      .pr-sl {
+        font-size: 6px;
+        color: var(--text-dim);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .pr-sv {
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .pv-hi {
+        color: var(--pink);
+      }
+      .pv-md {
+        color: var(--purple);
+      }
+      .pv-ok {
+        color: var(--cyan);
+      }
+
+      .span2 {
+        grid-column: span 2;
+      }
+      .span3 {
+        grid-column: span 3;
+      }
+      .span4 {
+        grid-column: span 4;
+      }
+
+      /* === MOBILE === */
+      @media (max-width: 1024px) {
+        main {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 10px;
+          padding: 16px 20px;
+        }
+        .span2 {
+          grid-column: span 2;
+        }
+        .span3,
+        .span4 {
+          grid-column: span 2;
+        }
+        header {
+          padding: 16px 20px 12px;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+        }
+        .pills {
+          justify-content: flex-start;
+        }
+      }
+      @media (max-width: 640px) {
+        main {
+          grid-template-columns: 1fr;
+          gap: 10px;
+          padding: 12px 14px;
+        }
+        .span2,
+        .span3,
+        .span4 {
+          grid-column: span 1;
+        }
+        header {
+          padding: 14px 14px 10px;
+        }
+        .logo-name {
+          font-size: 28px;
+        }
+        .pills {
+          gap: 4px;
+        }
+        .pill {
+          font-size: 9px;
+          padding: 3px 8px;
+        }
+        .stats-2x2 {
+          grid-template-columns: 1fr 1fr;
+          gap: 6px;
+        }
+        .sc-val {
+          font-size: 26px;
+        }
+        .svc-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .net-2 {
+          grid-template-columns: 1fr 1fr;
+          gap: 6px;
+        }
+      }
+
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(0, 229, 255, 0.15);
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="liquid-bg" id="liquidBg">
+      <div class="morph-blob mb1" id="blob1"></div>
+      <div class="morph-blob mb2" id="blob2"></div>
+      <div class="morph-blob mb3" id="blob3"></div>
+      <div class="morph-blob mb4" id="blob4"></div>
+    </div>
+    <div class="noise-overlay"></div>
+
+    <header>
+      <div>
+        <div class="logo-label">Liquid Crystal — Private Cloud</div>
+        <div class="logo-name">Homelab</div>
+      </div>
+      <div class="pills">
+        <div class="pill">
+          <div class="pill-dot pd-c"></div>
+          <span class="pill-label">raspberrypi.local</span>
+        </div>
+        <div class="pill">
+          <div class="pill-dot pd-c"></div>
+          <span class="pill-label">5 containers</span>
+        </div>
+        <div class="pill">
+          <div class="pill-dot pd-p"></div>
+          <span class="pill-label">Storage 89%</span>
+        </div>
+        <div class="pill">
+          <div class="pill-dot pd-v"></div>
+          <span class="pill-label">14d 3h up</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="card card-cyan">
+        <div class="card-header">
+          <span class="card-title">System</span
+          ><span class="card-badge badge-c">Live</span>
+        </div>
+        <div class="card-body">
+          <div class="stats-2x2">
+            <div class="sc cg-c">
+              <div class="sc-nm">CPU</div>
+              <div class="sc-val sv-c" id="cpuV">
+                34<span class="sc-unit">%</span>
+              </div>
+              <div class="bar-w">
+                <div class="bar b-c" id="cpuB" style="width: 34%"></div>
+              </div>
+            </div>
+            <div class="sc cg-p">
+              <div class="sc-nm">Memory</div>
+              <div class="sc-val sv-p" id="memV">
+                67<span class="sc-unit">%</span>
+              </div>
+              <div class="bar-w">
+                <div class="bar b-p" id="memB" style="width: 67%"></div>
+              </div>
+            </div>
+            <div class="sc cg-v">
+              <div class="sc-nm">Temp</div>
+              <div class="sc-val sv-v">52<span class="sc-unit">°C</span></div>
+              <div class="bar-w">
+                <div class="bar b-v" style="width: 52%"></div>
+              </div>
+            </div>
+            <div class="sc cg-c">
+              <div class="sc-nm">Processes</div>
+              <div class="sc-val sv-c">148</div>
+              <div class="sc-sub">running</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-pink">
+        <div class="card-header">
+          <span class="card-title">Network</span
+          ><span class="card-badge badge-p">eth0</span>
+        </div>
+        <div class="card-body">
+          <div class="net-2">
+            <div class="nc">
+              <div class="nc-lbl">↓ Inbound</div>
+              <div class="nc-big" style="color: var(--cyan)" id="rxV">
+                1.24<span class="nc-unit"> MB/s</span>
+              </div>
+              <div class="nc-tot">248.3 GB total</div>
+            </div>
+            <div class="nc">
+              <div class="nc-lbl">↑ Outbound</div>
+              <div class="nc-big" style="color: var(--pink)" id="txV">
+                0.38<span class="nc-unit"> MB/s</span>
+              </div>
+              <div class="nc-tot">89.1 GB total</div>
+            </div>
+          </div>
+          <div
+            style="
+              margin-top: 10px;
+              border-top: 1px solid var(--glass-border);
+              padding-top: 8px;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 9px;
+                margin-bottom: 4px;
+              "
+            >
+              <span style="color: var(--cyan)">eth0</span
+              ><span style="color: var(--text-dim)">192.168.1.42</span
+              ><span style="color: var(--text-mid)">1 Gbps</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 9px;
+              "
+            >
+              <span style="color: var(--text-dim)">wlan0</span
+              ><span style="color: var(--text-dim)">—</span
+              ><span style="color: var(--pink)">Offline</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-purple span2">
+        <div class="card-header">
+          <span class="card-title">Storage</span
+          ><span class="card-badge badge-v">5 Volumes</span>
+        </div>
+        <div class="card-body">
+          <div class="dsk-rows">
+            <div>
+              <div class="dsk-meta">
+                <span class="dsk-mn">/</span
+                ><span class="dsk-pct" style="color: var(--cyan)"
+                  >38% · 45.2/118 GB</span
+                >
+              </div>
+              <div class="bar-w">
+                <div class="bar b-c" style="width: 38%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="dsk-meta">
+                <span class="dsk-mn">/boot</span
+                ><span class="dsk-pct" style="color: var(--cyan)"
+                  >18% · 90/500 MB</span
+                >
+              </div>
+              <div class="bar-w">
+                <div class="bar b-c" style="width: 18%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="dsk-meta">
+                <span class="dsk-mn">/boot/firmware</span
+                ><span class="dsk-pct" style="color: var(--cyan)"
+                  >12% · 60/500 MB</span
+                >
+              </div>
+              <div class="bar-w">
+                <div class="bar b-c" style="width: 12%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="dsk-meta">
+                <span class="dsk-mn" style="color: var(--pink)"
+                  >/mnt/storage ⚠</span
+                ><span class="dsk-pct" style="color: var(--pink)"
+                  >89% · 892/1000 GB</span
+                >
+              </div>
+              <div class="bar-w">
+                <div class="bar b-r" style="width: 89%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="dsk-meta">
+                <span class="dsk-mn">/mnt/backup</span
+                ><span class="dsk-pct" style="color: var(--purple)"
+                  >54% · 270/500 GB</span
+                >
+              </div>
+              <div class="bar-w">
+                <div class="bar b-v" style="width: 54%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-cyan span2">
+        <div class="card-header">
+          <span class="card-title">Services</span
+          ><span class="card-badge badge-c">6 active</span>
+        </div>
+        <div class="card-body">
+          <div class="svc-grid">
+            <a class="svc" href="#"
+              ><span class="svc-icon">🏠</span
+              ><span class="svc-name">Home Assistant</span
+              ><span class="svc-cat">Home Auto</span></a
+            >
+            <a class="svc" href="#"
+              ><span class="svc-icon">🐳</span
+              ><span class="svc-name">Portainer</span
+              ><span class="svc-cat">Infra</span></a
+            >
+            <a class="svc" href="#"
+              ><span class="svc-icon">🛡️</span
+              ><span class="svc-name">Pi-hole</span
+              ><span class="svc-cat">Network</span></a
+            >
+            <a class="svc" href="#"
+              ><span class="svc-icon">📊</span
+              ><span class="svc-name">Grafana</span
+              ><span class="svc-cat">Monitor</span></a
+            >
+            <a class="svc" href="#"
+              ><span class="svc-icon">☁️</span
+              ><span class="svc-name">Nextcloud</span
+              ><span class="svc-cat">Storage</span></a
+            >
+            <a class="svc" href="#"
+              ><span class="svc-icon">🎬</span
+              ><span class="svc-name">Jellyfin</span
+              ><span class="svc-cat">Media</span></a
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-pink span2">
+        <div class="card-header">
+          <span class="card-title">Processes</span
+          ><span class="card-badge badge-p">Top 6</span>
+        </div>
+        <div class="card-body">
+          <div class="pr-list">
+            <div class="pr-item">
+              <div>
+                <div class="pr-nm">homeassistant</div>
+                <div class="pr-pid">PID 1247</div>
+              </div>
+              <div class="pr-stat">
+                <div class="pr-sl">CPU</div>
+                <div class="pr-sv pv-hi">8.2%</div>
+              </div>
+              <div class="pr-stat">
+                <div class="pr-sl">MEM</div>
+                <div class="pr-sv pv-md">12.4%</div>
+              </div>
+            </div>
+            <div class="pr-item">
+              <div>
+                <div class="pr-nm">node</div>
+                <div class="pr-pid">PID 892</div>
+              </div>
+              <div class="pr-stat">
+                <div class="pr-sl">CPU</div>
+                <div class="pr-sv pv-md">4.1%</div>
+              </div>
+              <div class="pr-stat">
+                <div class="pr-sl">MEM</div>
+                <div class="pr-sv pv-ok">5.8%</div>
+              </div>
+            </div>
+            <div class="pr-item">
+              <div>
+                <div class="pr-nm">python3</div>
+                <div class="pr-pid">PID 1455</div>
+              </div>
+              <div class="pr-stat">
+                <div class="pr-sl">CPU</div>
+                <div class="pr-sv pv-ok">2.8%</div>
+              </div>
+              <div class="pr-stat">
+                <div class="pr-sl">MEM</div>
+                <div class="pr-sv pv-ok">3.2%</div>
+              </div>
+            </div>
+            <div class="pr-item">
+              <div>
+                <div class="pr-nm">influxd</div>
+                <div class="pr-pid">PID 743</div>
+              </div>
+              <div class="pr-stat">
+                <div class="pr-sl">CPU</div>
+                <div class="pr-sv pv-ok">1.9%</div>
+              </div>
+              <div class="pr-stat">
+                <div class="pr-sl">MEM</div>
+                <div class="pr-sv pv-ok">4.1%</div>
+              </div>
+            </div>
+            <div class="pr-item">
+              <div>
+                <div class="pr-nm">nginx</div>
+                <div class="pr-pid">PID 412</div>
+              </div>
+              <div class="pr-stat">
+                <div class="pr-sl">CPU</div>
+                <div class="pr-sv pv-ok">0.3%</div>
+              </div>
+              <div class="pr-stat">
+                <div class="pr-sl">MEM</div>
+                <div class="pr-sv pv-ok">0.8%</div>
+              </div>
+            </div>
+            <div class="pr-item">
+              <div>
+                <div class="pr-nm">pihole-FTL</div>
+                <div class="pr-pid">PID 321</div>
+              </div>
+              <div class="pr-stat">
+                <div class="pr-sl">CPU</div>
+                <div class="pr-sv pv-ok">0.2%</div>
+              </div>
+              <div class="pr-stat">
+                <div class="pr-sl">MEM</div>
+                <div class="pr-sv pv-ok">1.1%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-cyan span2">
+        <div class="card-header">
+          <span class="card-title">Containers</span
+          ><span class="card-badge badge-c">5 running</span>
+        </div>
+        <div class="card-body">
+          <div class="dc-list">
+            <div class="dc-item">
+              <div class="dc-live"></div>
+              <div>
+                <div class="dc-nm">nginx</div>
+                <div class="dc-img">nginx:latest</div>
+              </div>
+              <div class="dc-port">:80 :443</div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-live"></div>
+              <div>
+                <div class="dc-nm">homeassistant</div>
+                <div class="dc-img">home-assistant:stable</div>
+              </div>
+              <div class="dc-port">:8123</div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-live"></div>
+              <div>
+                <div class="dc-nm">pihole</div>
+                <div class="dc-img">pihole/pihole:latest</div>
+              </div>
+              <div class="dc-port">:53 :80</div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-live"></div>
+              <div>
+                <div class="dc-nm">portainer</div>
+                <div class="dc-img">portainer-ce:latest</div>
+              </div>
+              <div class="dc-port">:9000</div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-off"></div>
+              <div>
+                <div class="dc-nm" style="color: var(--pink)">grafana</div>
+                <div class="dc-img">grafana:latest</div>
+              </div>
+              <div class="dc-port" style="color: var(--text-dim)">stopped</div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-live"></div>
+              <div>
+                <div class="dc-nm">influxdb</div>
+                <div class="dc-img">influxdb:latest</div>
+              </div>
+              <div class="dc-port">:8086</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      // Mouse parallax on blobs
+      (function () {
+        const blobs = [
+          { el: document.getElementById("blob1"), factor: 0.03 },
+          { el: document.getElementById("blob2"), factor: 0.02 },
+          { el: document.getElementById("blob3"), factor: 0.025 },
+          { el: document.getElementById("blob4"), factor: 0.015 },
+        ];
+        const isTouch = "ontouchstart" in window;
+        if (!isTouch) {
+          document.addEventListener("mousemove", function (e) {
+            const cx = window.innerWidth / 2,
+              cy = window.innerHeight / 2;
+            const dx = e.clientX - cx,
+              dy = e.clientY - cy;
+            blobs.forEach((b) => {
+              if (b.el) {
+                b.el.style.transform = `translate(${dx * b.factor}px,${dy * b.factor}px)`;
+              }
+            });
+          });
+        }
+      })();
+
+      // Live data
+      setInterval(() => {
+        const cpu = Math.max(8, Math.min(90, 34 + (Math.random() - 0.5) * 22));
+        const mem = Math.max(55, Math.min(85, 67 + (Math.random() - 0.5) * 8));
+        document.getElementById("cpuV").innerHTML =
+          cpu.toFixed(0) + '<span class="sc-unit">%</span>';
+        document.getElementById("cpuB").style.width = cpu + "%";
+        document.getElementById("memV").innerHTML =
+          mem.toFixed(0) + '<span class="sc-unit">%</span>';
+        document.getElementById("memB").style.width = mem + "%";
+        const rx = (Math.random() * 3.5).toFixed(2),
+          tx = (Math.random() * 1.1).toFixed(2);
+        document.getElementById("rxV").innerHTML =
+          rx + '<span class="nc-unit"> MB/s</span>';
+        document.getElementById("txV").innerHTML =
+          tx + '<span class="nc-unit"> MB/s</span>';
+      }, 3000);
+    </script>
+  </body>
+</html>

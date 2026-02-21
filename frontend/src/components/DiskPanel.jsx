@@ -16,7 +16,6 @@ const DiskPanel = ({
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -29,18 +28,15 @@ const DiskPanel = ({
     }
   }, [isFilterDropdownOpen]);
 
-  // Get all available partition mount points
   const allPartitions = useMemo(() => {
     return data?.map(disk => disk.mount) || [];
   }, [data]);
 
-  // Filter visible disks
   const visibleDisks = useMemo(() => {
     if (!data) return [];
     return data.filter(disk => !hiddenPartitions.includes(disk.mount));
   }, [data, hiddenPartitions]);
 
-  // Toggle partition visibility
   const handleTogglePartition = (mountPoint) => {
     const isHidden = hiddenPartitions.includes(mountPoint);
     const newHiddenPartitions = isHidden
@@ -49,17 +45,17 @@ const DiskPanel = ({
     onHiddenPartitionsChange(newHiddenPartitions);
   };
 
-  const getUsageColor = (percentage) => {
-    if (percentage < 50) return "bg-green-500";
-    if (percentage < 75) return "bg-yellow-500";
-    if (percentage < 90) return "bg-orange-500";
-    return "bg-red-500";
+  const getBarClass = (percentage) => {
+    if (percentage < 50) return "crystal-bar-teal";
+    if (percentage < 75) return "crystal-bar-seafoam";
+    if (percentage < 90) return "crystal-bar-blue";
+    return "crystal-bar-warn";
   };
 
   const getUsageTextColor = (percentage) => {
-    if (percentage < 50) return "text-green-400";
-    if (percentage < 75) return "text-yellow-400";
-    if (percentage < 90) return "text-orange-400";
+    if (percentage < 50) return "text-crystal-teal";
+    if (percentage < 75) return "text-crystal-seafoam";
+    if (percentage < 90) return "text-crystal-blue";
     return "text-red-400";
   };
 
@@ -70,7 +66,7 @@ const DiskPanel = ({
           e.stopPropagation();
           setIsFilterDropdownOpen(!isFilterDropdownOpen);
         }}
-        className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-all bg-slate-600/50 text-slate-300 border border-slate-500/50 hover:bg-slate-600 hover:text-slate-100"
+        className="flex items-center gap-1.5 px-2 py-1 rounded-sm text-xs font-medium transition-all bg-glass text-ctext-mid border border-glass-border hover:bg-glass-hover hover:text-ctext"
         title="Filter partitions"
       >
         {hiddenPartitions.length > 0 ? (
@@ -87,9 +83,11 @@ const DiskPanel = ({
       </button>
 
       {isFilterDropdownOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50">
+        <div className="absolute right-0 mt-2 w-56 bg-crystal-void border border-glass-border rounded-sm shadow-xl z-50"
+          style={{ backdropFilter: "blur(20px)" }}
+        >
           <div className="p-2">
-            <div className="text-xs font-semibold text-slate-400 px-2 py-1 mb-1">
+            <div className="text-[8px] tracking-[2px] uppercase text-ctext-dim px-2 py-1 mb-1">
               Show/Hide Partitions
             </div>
             <div className="space-y-0.5">
@@ -102,28 +100,28 @@ const DiskPanel = ({
                       e.stopPropagation();
                       handleTogglePartition(mountPoint);
                     }}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-700 rounded transition-colors"
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-ctext-mid hover:bg-glass-hover rounded-sm transition-colors"
                   >
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                    <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
                       isVisible
-                        ? 'bg-blue-600 border-blue-600'
-                        : 'bg-slate-700 border-slate-500'
+                        ? 'bg-crystal-blue/30 border-crystal-blue/60'
+                        : 'bg-glass border-glass-border'
                     }`}>
-                      {isVisible && <Check className="w-3 h-3 text-white" />}
+                      {isVisible && <Check className="w-2.5 h-2.5 text-crystal-blue" />}
                     </div>
-                    <span className="flex-1 text-left font-mono">{mountPoint}</span>
+                    <span className="flex-1 text-left font-source-code">{mountPoint}</span>
                   </button>
                 );
               })}
             </div>
             {hiddenPartitions.length > 0 && (
-              <div className="border-t border-slate-700 mt-2 pt-2">
+              <div className="border-t border-glass-border mt-2 pt-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onHiddenPartitionsChange([]);
                   }}
-                  className="w-full text-xs text-blue-400 hover:text-blue-300 px-2 py-1 text-center"
+                  className="w-full text-xs text-crystal-blue hover:text-crystal-teal px-2 py-1 text-center transition-colors"
                 >
                   Show All
                 </button>
@@ -139,7 +137,7 @@ const DiskPanel = ({
     <BasePanel
       title="Disk Storage"
       icon={HardDrive}
-      iconColor="text-purple-400"
+      iconColor="text-crystal-seafoam"
       data={data}
       isCollapsed={isCollapsed}
       onCollapseChange={onCollapseChange}
@@ -151,57 +149,46 @@ const DiskPanel = ({
       subtitle={visibleDisks ? `(${visibleDisks.length}/${allPartitions.length})` : ""}
     >
       {() => (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {visibleDisks?.map((disk) => (
             <div
               key={disk.mount}
-              className="p-4 rounded-lg bg-slate-700/50 border border-slate-600"
+              className="p-3 rounded-sm bg-glass border border-glass-border"
             >
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-100 font-medium">
+                  <span className="text-ctext text-[10px] font-medium">
                     {disk.mount}
                   </span>
-                  <span className="text-xs text-slate-400 font-mono">
+                  <span className="text-[8px] text-ctext-dim font-source-code">
                     {disk.type}
                   </span>
                 </div>
                 <span
-                  className={`text-lg font-bold ${getUsageTextColor(disk.use)}`}
+                  className={`text-sm font-semibold font-spectral ${getUsageTextColor(disk.use)}`}
                 >
                   {disk.use.toFixed(1)}%
                 </span>
               </div>
 
-              {/* Progress bar */}
-              <div className="w-full bg-slate-600 rounded-full h-2.5 mb-3">
+              {/* Crystal progress bar */}
+              <div className="crystal-bar-track mb-2">
                 <div
-                  className={`${getUsageColor(
-                    disk.use
-                  )} h-2.5 rounded-full transition-all duration-300`}
+                  className={`crystal-bar-fill ${getBarClass(disk.use)}`}
                   style={{ width: `${Math.min(disk.use, 100)}%` }}
                 />
               </div>
 
               {/* Storage info */}
-              <div className="flex justify-between text-sm">
-                <div className="text-slate-400">
-                  <span className="text-slate-300 font-medium">
-                    {disk.usedGB} GB
-                  </span>{" "}
-                  used
+              <div className="flex justify-between text-[9px] font-source-code">
+                <div className="text-ctext-dim">
+                  <span className="text-ctext-mid">{disk.usedGB} GB</span> used
                 </div>
-                <div className="text-slate-400">
-                  <span className="text-slate-300 font-medium">
-                    {disk.availableGB} GB
-                  </span>{" "}
-                  free
+                <div className="text-ctext-dim">
+                  <span className="text-ctext-mid">{disk.availableGB} GB</span> free
                 </div>
-                <div className="text-slate-400">
-                  <span className="text-slate-300 font-medium">
-                    {disk.sizeGB} GB
-                  </span>{" "}
-                  total
+                <div className="text-ctext-dim">
+                  <span className="text-ctext-mid">{disk.sizeGB} GB</span> total
                 </div>
               </div>
             </div>

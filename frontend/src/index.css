@@ -2,18 +2,266 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: #0f172a;
-  color: #e2e8f0;
+:root {
+  --void: #060612;
+  --crystal-blue: #38bdf8;
+  --crystal-teal: #2dd4bf;
+  --crystal-white: #f0f0ff;
+  --deep-teal: #0f766e;
+  --seafoam: #5eead4;
+  --glass: rgba(56, 189, 248, 0.04);
+  --glass-hover: rgba(56, 189, 248, 0.08);
+  --glass-border: rgba(56, 189, 248, 0.1);
+  --glass-border-hover: rgba(56, 189, 248, 0.22);
+  --text: rgba(240, 240, 255, 0.92);
+  --text-mid: rgba(200, 200, 240, 0.55);
+  --text-dim: rgba(160, 160, 220, 0.32);
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
+body {
+  margin: 0;
+  font-family: "Source Code Pro", monospace;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--void);
+  color: var(--text);
+  font-size: 13px;
+}
+
+/* === GLASSMORPHISM COMPONENT LAYER === */
+@layer components {
+  /* Glass card - the core panel wrapper */
+  .glass-card {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .glass-card:hover {
+    background: var(--glass-hover);
+    border-color: var(--glass-border-hover);
+    transform: translateY(-3px);
+    box-shadow:
+      0 20px 60px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(56, 189, 248, 0.08);
+  }
+
+  /* Top accent lines */
+  .glass-card-accent-blue::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    z-index: 4;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--crystal-blue),
+      transparent
+    );
+    opacity: 0.8;
+  }
+  .glass-card-accent-teal::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    z-index: 4;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--crystal-teal),
+      transparent
+    );
+    opacity: 0.7;
+  }
+
+  /* Refraction light streak on hover */
+  .glass-refraction::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    background: linear-gradient(
+      115deg,
+      transparent 35%,
+      rgba(240, 240, 255, 0.08) 45%,
+      rgba(56, 189, 248, 0.05) 50%,
+      transparent 55%
+    );
+    background-size: 300% 100%;
+    background-position: 200% 0;
+    transition: background-position 0.6s ease;
+  }
+  .glass-refraction:hover::before {
+    background-position: -100% 0;
+  }
+
+  /* Crystal progress bar */
+  .crystal-bar-track {
+    height: 3px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 2px;
+    overflow: visible;
+    position: relative;
+  }
+  .crystal-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    position: relative;
+    transition: width 1s ease;
+  }
+  .crystal-bar-fill::after {
+    content: "";
+    position: absolute;
+    right: -2px;
+    top: -4px;
+    width: 6px;
+    height: 10px;
+    border-radius: 3px;
+    background: currentColor;
+    filter: blur(2px);
+    opacity: 0.9;
+  }
+  .crystal-bar-blue {
+    background: linear-gradient(
+      90deg,
+      rgba(56, 189, 248, 0.15),
+      var(--crystal-blue)
+    );
+    color: var(--crystal-blue);
+  }
+  .crystal-bar-teal {
+    background: linear-gradient(
+      90deg,
+      rgba(45, 212, 191, 0.15),
+      var(--crystal-teal)
+    );
+    color: var(--crystal-teal);
+  }
+  .crystal-bar-seafoam {
+    background: linear-gradient(
+      90deg,
+      rgba(94, 234, 212, 0.15),
+      var(--seafoam)
+    );
+    color: var(--seafoam);
+  }
+  .crystal-bar-warn {
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.15), #ef4444);
+    color: #ef4444;
+  }
+
+  /* Glass input */
+  .glass-input {
+    background: var(--glass);
+    color: var(--text);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    backdrop-filter: blur(10px);
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: "Source Code Pro", monospace;
+  }
+  .glass-input:focus {
+    border-color: var(--crystal-blue);
+  }
+  .glass-input::placeholder {
+    color: var(--text-dim);
+  }
+
+  /* Glass pill */
+  .glass-pill {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 11px;
+    border-radius: 100px;
+    font-size: 10px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+  }
+
+  /* Status dots */
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-dot-blue {
+    background: var(--crystal-blue);
+    box-shadow: 0 0 8px var(--crystal-blue);
+    animation: pulse-glow 2.5s ease-in-out infinite;
+  }
+  .status-dot-teal {
+    background: var(--crystal-teal);
+    box-shadow: 0 0 8px var(--crystal-teal);
+  }
+  .status-dot-white {
+    background: var(--crystal-white);
+    box-shadow: 0 0 8px rgba(240, 240, 255, 0.5);
+  }
+
+  /* Gradient text utility */
+  .crystal-gradient-text {
+    background: linear-gradient(135deg, #38bdf8, #2dd4bf, #f0f0ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+/* === CRYSTAL FLOAT ANIMATION (uses CSS custom properties) === */
+@keyframes crystal-float {
+  0% {
+    opacity: 0;
+    transform: translateX(-100px) translateY(var(--yoff, 0px)) rotate(0deg);
+  }
+  10% {
+    opacity: 0.6;
+  }
+  80% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(calc(100vw + 100px))
+      translateY(calc(var(--yoff, 0px) + var(--ydrift, 30px))) rotate(360deg);
+  }
+}
+
+/* === PULSE GLOW KEYFRAMES === */
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 4px #38bdf8;
+  }
+  50% {
+    box-shadow:
+      0 0 14px #38bdf8,
+      0 0 24px rgba(56, 189, 248, 0.4);
+  }
+}
+
+/* === CUSTOM SCROLLBAR === */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.15);
+  border-radius: 4px;
 }

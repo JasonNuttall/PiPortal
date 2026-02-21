@@ -1,0 +1,1171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Homelab — Analog Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper: #f0e6c8;
+        --paper2: #e8dbb8;
+        --paper3: #ddd0a8;
+        --ink: #1a1008;
+        --ink-mid: #3d2e18;
+        --ink-light: #6b5840;
+        --ink-pale: #a09070;
+        --rust: #9e3a1a;
+        --rust-light: #c8502a;
+        --olive: #5a6e2a;
+        --blue: #2a4a6e;
+        --amber: #b87020;
+        --border: rgba(26, 16, 8, 0.2);
+        --border-dark: rgba(26, 16, 8, 0.4);
+      }
+
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background-color: var(--paper2);
+        background-image:
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E"),
+          repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 28px,
+            rgba(26, 16, 8, 0.04) 28px,
+            rgba(26, 16, 8, 0.04) 29px
+          );
+        color: var(--ink);
+        font-family: "Courier Prime", monospace;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      header {
+        background: var(--ink);
+        color: var(--paper);
+        padding: 0;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .header-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: stretch;
+        border-bottom: 4px solid var(--rust);
+      }
+
+      .header-logo {
+        padding: 20px 32px;
+        border-right: 3px double rgba(240, 230, 200, 0.2);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .logo-pre {
+        font-family: "Courier Prime", monospace;
+        font-size: 9px;
+        letter-spacing: 6px;
+        color: var(--ink-pale);
+        text-transform: uppercase;
+      }
+
+      .logo-main {
+        font-family: "Bebas Neue", cursive;
+        font-size: 48px;
+        letter-spacing: 8px;
+        line-height: 1;
+        color: var(--paper);
+        text-shadow: 2px 2px 0 var(--rust);
+      }
+
+      .logo-post {
+        font-family: "Courier Prime", monospace;
+        font-size: 9px;
+        letter-spacing: 3px;
+        color: var(--rust-light);
+        text-transform: uppercase;
+      }
+
+      .header-gauges {
+        display: flex;
+        align-items: center;
+        padding: 16px 32px;
+        gap: 40px;
+      }
+
+      .mini-gauge {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .mini-gauge-label {
+        font-size: 8px;
+        letter-spacing: 3px;
+        color: var(--ink-pale);
+        text-transform: uppercase;
+      }
+
+      .mini-gauge-num {
+        font-family: "Bebas Neue", cursive;
+        font-size: 32px;
+        line-height: 1;
+        color: var(--paper);
+        letter-spacing: 2px;
+      }
+
+      .mini-gauge-unit {
+        font-size: 11px;
+        color: var(--ink-pale);
+      }
+
+      .header-status {
+        padding: 16px 24px;
+        border-left: 3px double rgba(240, 230, 200, 0.2);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .status-line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 10px;
+        letter-spacing: 2px;
+        color: var(--ink-pale);
+      }
+
+      .status-led {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        flex-shrink: 0;
+      }
+
+      .led-green {
+        background: #4aaa44;
+        box-shadow: 0 0 8px #4aaa44;
+      }
+      .led-amber {
+        background: #ddaa22;
+        box-shadow: 0 0 8px #ddaa22;
+      }
+      .led-red {
+        background: #dd2222;
+        box-shadow: 0 0 8px #dd2222;
+      }
+
+      main {
+        padding: 24px 32px;
+        display: grid;
+        grid-template-columns: auto 1fr 1fr;
+        gap: 20px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .panel {
+        background: var(--paper);
+        border: 2px solid var(--border-dark);
+        box-shadow:
+          3px 3px 0 var(--border),
+          inset 0 0 0 1px rgba(240, 230, 200, 0.8);
+        position: relative;
+      }
+
+      /* Aged worn corner effect */
+      .panel::before {
+        content: "";
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        right: 4px;
+        bottom: 4px;
+        border: 1px solid var(--border);
+        pointer-events: none;
+      }
+
+      .panel-header {
+        background: var(--ink);
+        color: var(--paper);
+        padding: 8px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 3px solid var(--rust);
+      }
+
+      .panel-title {
+        font-family: "Special Elite", cursive;
+        font-size: 14px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+
+      .panel-num {
+        font-family: "Bebas Neue", cursive;
+        font-size: 12px;
+        letter-spacing: 2px;
+        color: var(--rust-light);
+      }
+
+      .panel-body {
+        padding: 16px;
+      }
+
+      /* SVG Gauges */
+      .gauges-col {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        min-width: 160px;
+      }
+
+      .gauge-wrap {
+        text-align: center;
+      }
+
+      .gauge-label {
+        font-family: "Special Elite", cursive;
+        font-size: 10px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--ink-light);
+        margin-bottom: 6px;
+      }
+
+      .gauge-svg {
+        display: block;
+        margin: 0 auto;
+      }
+
+      .gauge-readout {
+        margin-top: -10px;
+        font-family: "Bebas Neue", cursive;
+        font-size: 28px;
+        letter-spacing: 2px;
+        color: var(--ink);
+      }
+
+      .gauge-unit {
+        font-size: 12px;
+        color: var(--ink-light);
+      }
+
+      /* VU meter style bar */
+      .vu-wrap {
+        margin-top: 8px;
+      }
+
+      .vu-label {
+        font-size: 9px;
+        letter-spacing: 2px;
+        color: var(--ink-light);
+        text-transform: uppercase;
+        margin-bottom: 4px;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .vu-segments {
+        display: flex;
+        gap: 2px;
+        height: 10px;
+      }
+
+      .vu-seg {
+        flex: 1;
+        background: var(--border);
+        border: 1px solid rgba(26, 16, 8, 0.15);
+        transition: background 0.4s;
+      }
+
+      .vu-seg.active-green {
+        background: var(--olive);
+      }
+      .vu-seg.active-amber {
+        background: var(--amber);
+      }
+      .vu-seg.active-red {
+        background: var(--rust);
+      }
+
+      /* Disk */
+      .disk-entries {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .disk-entry {
+      }
+
+      .disk-head {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+        font-size: 12px;
+      }
+
+      .disk-mount-name {
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .disk-size-text {
+        color: var(--ink-light);
+        font-size: 11px;
+      }
+
+      .disk-bar-segs {
+        display: flex;
+        gap: 2px;
+        height: 12px;
+      }
+
+      .disk-seg {
+        flex: 1;
+        border: 1px solid rgba(26, 16, 8, 0.2);
+      }
+
+      .disk-seg.used-ok {
+        background: var(--olive);
+      }
+      .disk-seg.used-warn {
+        background: var(--amber);
+      }
+      .disk-seg.used-crit {
+        background: var(--rust);
+      }
+      .disk-seg.unused {
+        background: var(--paper2);
+      }
+
+      /* Docker */
+      .docker-entries {
+      }
+
+      .docker-entry {
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        margin-bottom: 8px;
+        background: var(--paper2);
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .docker-entry:last-child {
+        margin-bottom: 0;
+      }
+
+      .d-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid var(--ink);
+        flex-shrink: 0;
+      }
+
+      .d-run {
+        background: var(--olive);
+        box-shadow: inset 0 1px rgba(255, 255, 255, 0.4);
+      }
+      .d-stop {
+        background: var(--paper3);
+      }
+
+      .d-info {
+      }
+      .d-name {
+        font-weight: 700;
+        font-size: 12px;
+      }
+      .d-img {
+        font-size: 10px;
+        color: var(--ink-light);
+        font-style: italic;
+      }
+
+      .d-ports {
+        font-size: 10px;
+        color: var(--blue);
+        font-weight: 700;
+      }
+
+      /* Network bars */
+      .net-section {
+        margin-bottom: 16px;
+      }
+
+      .net-speed-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0;
+        border-bottom: 1px dashed var(--border);
+      }
+
+      .net-dir-label {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--ink-light);
+        width: 24px;
+      }
+
+      .net-speed-big {
+        font-family: "Bebas Neue", cursive;
+        font-size: 28px;
+        letter-spacing: 2px;
+        min-width: 70px;
+      }
+
+      .net-speed-sub {
+        font-size: 10px;
+        color: var(--ink-light);
+      }
+
+      .net-bar-wrap {
+        flex: 1;
+        height: 8px;
+        background: var(--paper3);
+        border: 1px solid var(--border);
+        overflow: hidden;
+      }
+
+      .net-bar {
+        height: 100%;
+        background: var(--blue);
+        max-width: 100%;
+      }
+
+      /* Services grid */
+      .services-stamp-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+
+      .stamp {
+        padding: 12px 8px;
+        border: 2px solid var(--ink);
+        background: var(--paper2);
+        text-align: center;
+        cursor: pointer;
+        text-decoration: none;
+        display: block;
+        transition: all 0.15s;
+        position: relative;
+      }
+
+      .stamp::after {
+        content: "";
+        position: absolute;
+        inset: 3px;
+        border: 1px dashed rgba(26, 16, 8, 0.3);
+        pointer-events: none;
+      }
+
+      .stamp:hover {
+        background: var(--ink);
+        color: var(--paper);
+      }
+
+      .stamp-icon {
+        font-size: 20px;
+        margin-bottom: 4px;
+      }
+
+      .stamp-name {
+        font-family: "Special Elite", cursive;
+        font-size: 11px;
+        letter-spacing: 1px;
+        color: inherit;
+      }
+
+      .stamp-cat {
+        font-size: 8px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--ink-light);
+        margin-top: 2px;
+      }
+
+      .stamp:hover .stamp-cat {
+        color: var(--paper2);
+      }
+
+      /* Processes */
+      .proc-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .proc-table th {
+        font-size: 9px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--ink-light);
+        padding: 4px 10px;
+        border-bottom: 2px solid var(--ink);
+        font-family: "Special Elite", cursive;
+        text-align: left;
+      }
+
+      .proc-table td {
+        font-size: 12px;
+        padding: 7px 10px;
+        border-bottom: 1px dashed var(--border);
+      }
+
+      .proc-table tr:last-child td {
+        border-bottom: none;
+      }
+
+      .p-name {
+        font-weight: 700;
+      }
+      .p-pid {
+        font-size: 10px;
+        color: var(--ink-light);
+      }
+      .p-cpu {
+        font-family: "Bebas Neue", cursive;
+        font-size: 18px;
+        letter-spacing: 1px;
+      }
+      .p-cpu.hi {
+        color: var(--rust);
+      }
+      .p-cpu.med {
+        color: var(--amber);
+      }
+
+      .span2 {
+        grid-column: span 2;
+      }
+      .span-full {
+        grid-column: span 3;
+      }
+
+      /* Entry animations */
+      @keyframes slide-in {
+        from {
+          opacity: 0;
+          transform: translateX(-8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      .panel {
+        animation: slide-in 0.5s ease both;
+      }
+      .panel:nth-child(1) {
+        animation-delay: 0.05s;
+      }
+      .panel:nth-child(2) {
+        animation-delay: 0.1s;
+      }
+      .panel:nth-child(3) {
+        animation-delay: 0.15s;
+      }
+      .panel:nth-child(4) {
+        animation-delay: 0.2s;
+      }
+      .panel:nth-child(5) {
+        animation-delay: 0.25s;
+      }
+      .panel:nth-child(6) {
+        animation-delay: 0.3s;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--paper2);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border-dark);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-inner">
+        <div class="header-logo">
+          <div class="logo-pre">System Monitor v1.0</div>
+          <div class="logo-main">HOMELAB</div>
+          <div class="logo-post">Raspberry Pi · Control Station</div>
+        </div>
+        <div class="header-gauges">
+          <div class="mini-gauge">
+            <div class="mini-gauge-num" id="hCpu">
+              34<span class="mini-gauge-unit">%</span>
+            </div>
+            <div class="mini-gauge-label">CPU</div>
+          </div>
+          <div class="mini-gauge">
+            <div class="mini-gauge-num">
+              67<span class="mini-gauge-unit">%</span>
+            </div>
+            <div class="mini-gauge-label">MEM</div>
+          </div>
+          <div class="mini-gauge">
+            <div class="mini-gauge-num">
+              52<span class="mini-gauge-unit">°</span>
+            </div>
+            <div class="mini-gauge-label">TEMP</div>
+          </div>
+          <div class="mini-gauge">
+            <div class="mini-gauge-num">
+              14<span class="mini-gauge-unit">d</span>
+            </div>
+            <div class="mini-gauge-label">UPTIME</div>
+          </div>
+        </div>
+        <div class="header-status">
+          <div class="status-line">
+            <div class="status-led led-green"></div>
+            SYSTEM NOMINAL
+          </div>
+          <div class="status-line">
+            <div class="status-led led-green"></div>
+            NETWORK ACTIVE
+          </div>
+          <div class="status-line">
+            <div class="status-led led-amber"></div>
+            STORAGE WARNING
+          </div>
+          <div class="status-line">
+            <div class="status-led led-green"></div>
+            DOCKER ONLINE
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- Gauges Column -->
+      <div class="panel gauges-col">
+        <div class="panel-header">
+          <span class="panel-title">Instruments</span>
+          <span class="panel-num">01</span>
+        </div>
+        <div class="panel-body">
+          <!-- CPU Gauge -->
+          <div class="gauge-wrap">
+            <div class="gauge-label">Processor Load</div>
+            <svg class="gauge-svg" width="140" height="80" viewBox="0 0 140 80">
+              <!-- Track -->
+              <path
+                d="M 14 70 A 56 56 0 0 1 126 70"
+                fill="none"
+                stroke="#c8b890"
+                stroke-width="10"
+                stroke-linecap="round"
+              />
+              <!-- Fill (CPU 34%) - angle range: 180deg to 0deg, so 34% = 180 - 34*1.8 = 118.8deg from left -->
+              <path
+                id="cpuArc"
+                d="M 14 70 A 56 56 0 0 1 126 70"
+                fill="none"
+                stroke="#5a6e2a"
+                stroke-width="10"
+                stroke-linecap="round"
+                stroke-dasharray="175.93"
+                stroke-dashoffset="116.1"
+              />
+              <!-- Tick marks -->
+              <line
+                x1="14"
+                y1="70"
+                x2="22"
+                y2="70"
+                stroke="#3d2e18"
+                stroke-width="1.5"
+                transform="rotate(-180,70,70)"
+              />
+              <line
+                x1="14"
+                y1="70"
+                x2="22"
+                y2="70"
+                stroke="#3d2e18"
+                stroke-width="1"
+                transform="rotate(-144,70,70)"
+              />
+              <line
+                x1="14"
+                y1="70"
+                x2="22"
+                y2="70"
+                stroke="#3d2e18"
+                stroke-width="1"
+                transform="rotate(-108,70,70)"
+              />
+              <line
+                x1="14"
+                y1="70"
+                x2="22"
+                y2="70"
+                stroke="#9e3a1a"
+                stroke-width="1.5"
+                transform="rotate(-72,70,70)"
+              />
+              <line
+                x1="14"
+                y1="70"
+                x2="22"
+                y2="70"
+                stroke="#9e3a1a"
+                stroke-width="1"
+                transform="rotate(-36,70,70)"
+              />
+              <line
+                x1="14"
+                y1="70"
+                x2="22"
+                y2="70"
+                stroke="#9e3a1a"
+                stroke-width="2"
+                transform="rotate(0,70,70)"
+              />
+              <!-- Needle -->
+              <line
+                id="cpuNeedle"
+                x1="70"
+                y1="70"
+                x2="70"
+                y2="20"
+                stroke="#1a1008"
+                stroke-width="2"
+                stroke-linecap="round"
+                transform="rotate(-118.8,70,70)"
+              />
+              <circle cx="70" cy="70" r="5" fill="#1a1008" />
+            </svg>
+            <div class="gauge-readout" id="cpuRead">
+              34<span class="gauge-unit">%</span>
+            </div>
+          </div>
+
+          <!-- Mem VU -->
+          <div class="vu-wrap">
+            <div class="vu-label">
+              <span>Memory</span><span id="memPct">67%</span>
+            </div>
+            <div class="vu-segments" id="memVu">
+              <!-- Filled by JS -->
+            </div>
+          </div>
+
+          <!-- Temp VU -->
+          <div class="vu-wrap" style="margin-top: 10px">
+            <div class="vu-label">
+              <span>Temperature</span><span>52°C</span>
+            </div>
+            <div class="vu-segments" id="tempVu"></div>
+          </div>
+
+          <!-- Net VU -->
+          <div class="vu-wrap" style="margin-top: 10px">
+            <div class="vu-label">
+              <span>Net RX</span><span id="rxLbl">1.24 MB/s</span>
+            </div>
+            <div class="vu-segments" id="netVu"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Docker + Processes -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Docker Containers</span>
+          <span class="panel-num">02</span>
+        </div>
+        <div class="panel-body">
+          <div class="docker-entries">
+            <div class="docker-entry">
+              <div class="d-indicator d-run"></div>
+              <div class="d-info">
+                <div class="d-name">nginx</div>
+                <div class="d-img">nginx:latest</div>
+              </div>
+              <div class="d-ports">80 · 443</div>
+            </div>
+            <div class="docker-entry">
+              <div class="d-indicator d-run"></div>
+              <div class="d-info">
+                <div class="d-name">homeassistant</div>
+                <div class="d-img">home-assistant:stable</div>
+              </div>
+              <div class="d-ports">8123</div>
+            </div>
+            <div class="docker-entry">
+              <div class="d-indicator d-run"></div>
+              <div class="d-info">
+                <div class="d-name">pihole</div>
+                <div class="d-img">pihole/pihole:latest</div>
+              </div>
+              <div class="d-ports">53 · 80</div>
+            </div>
+            <div class="docker-entry">
+              <div class="d-indicator d-run"></div>
+              <div class="d-info">
+                <div class="d-name">portainer</div>
+                <div class="d-img">portainer-ce:latest</div>
+              </div>
+              <div class="d-ports">9000</div>
+            </div>
+            <div class="docker-entry">
+              <div class="d-indicator d-stop"></div>
+              <div class="d-info">
+                <div class="d-name">grafana</div>
+                <div class="d-img">grafana:latest</div>
+              </div>
+              <div class="d-ports" style="color: var(--ink-light)">—</div>
+            </div>
+            <div class="docker-entry">
+              <div class="d-indicator d-run"></div>
+              <div class="d-info">
+                <div class="d-name">influxdb</div>
+                <div class="d-img">influxdb:latest</div>
+              </div>
+              <div class="d-ports">8086</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Disk -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Disk Storage</span>
+          <span class="panel-num">03</span>
+        </div>
+        <div class="panel-body">
+          <div class="disk-entries" id="diskEntries">
+            <!-- Built by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Services -->
+      <div class="panel span-full">
+        <div class="panel-header">
+          <span class="panel-title">Service Directory</span>
+          <span class="panel-num">04</span>
+        </div>
+        <div class="panel-body">
+          <div class="services-stamp-grid">
+            <a class="stamp" href="#"
+              ><div class="stamp-icon">🏠</div>
+              <div class="stamp-name">Home Assistant</div>
+              <div class="stamp-cat">Home Automation</div></a
+            >
+            <a class="stamp" href="#"
+              ><div class="stamp-icon">🐳</div>
+              <div class="stamp-name">Portainer</div>
+              <div class="stamp-cat">Infrastructure</div></a
+            >
+            <a class="stamp" href="#"
+              ><div class="stamp-icon">🛡️</div>
+              <div class="stamp-name">Pi-hole</div>
+              <div class="stamp-cat">Network</div></a
+            >
+            <a class="stamp" href="#"
+              ><div class="stamp-icon">📊</div>
+              <div class="stamp-name">Grafana</div>
+              <div class="stamp-cat">Monitoring</div></a
+            >
+            <a class="stamp" href="#"
+              ><div class="stamp-icon">☁️</div>
+              <div class="stamp-name">Nextcloud</div>
+              <div class="stamp-cat">Storage</div></a
+            >
+            <a class="stamp" href="#"
+              ><div class="stamp-icon">🎬</div>
+              <div class="stamp-name">Jellyfin</div>
+              <div class="stamp-cat">Media</div></a
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- Network -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Network Traffic</span>
+          <span class="panel-num">05</span>
+        </div>
+        <div class="panel-body">
+          <div class="net-section">
+            <div class="net-speed-row">
+              <span class="net-dir-label">▼</span>
+              <span class="net-speed-big" id="rxSpd" style="color: var(--blue)"
+                >1.24<span
+                  style="
+                    font-size: 13px;
+                    font-family: &quot;Courier Prime&quot;;
+                  "
+                >
+                  MB/s</span
+                ></span
+              >
+              <div style="flex: 1">
+                <div class="net-bar-wrap">
+                  <div
+                    class="net-bar"
+                    id="rxBar"
+                    style="width: 41%; background: var(--blue)"
+                  ></div>
+                </div>
+                <div class="net-speed-sub">Total: 248.3 GB received</div>
+              </div>
+            </div>
+            <div class="net-speed-row">
+              <span class="net-dir-label">▲</span>
+              <span class="net-speed-big" id="txSpd" style="color: var(--olive)"
+                >0.38<span
+                  style="
+                    font-size: 13px;
+                    font-family: &quot;Courier Prime&quot;;
+                  "
+                >
+                  MB/s</span
+                ></span
+              >
+              <div style="flex: 1">
+                <div class="net-bar-wrap">
+                  <div
+                    class="net-bar"
+                    id="txBar"
+                    style="width: 13%; background: var(--olive)"
+                  ></div>
+                </div>
+                <div class="net-speed-sub">Total: 89.1 GB sent</div>
+              </div>
+            </div>
+          </div>
+          <table
+            style="width: 100%; border-collapse: collapse; margin-top: 8px"
+          >
+            <tr style="border-bottom: 1px solid var(--border)">
+              <td style="padding: 5px 0; font-weight: 700; font-size: 11px">
+                eth0
+              </td>
+              <td
+                style="padding: 5px 0; font-size: 10px; color: var(--ink-light)"
+              >
+                192.168.1.42
+              </td>
+              <td style="padding: 5px 0; font-size: 10px; color: var(--blue)">
+                1000 Mbps
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 5px 0; font-weight: 700; font-size: 11px">
+                wlan0
+              </td>
+              <td
+                style="padding: 5px 0; font-size: 10px; color: var(--ink-light)"
+              >
+                —
+              </td>
+              <td style="padding: 5px 0; font-size: 10px; color: var(--rust)">
+                DOWN
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Processes -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Process Monitor</span>
+          <span class="panel-num">06</span>
+        </div>
+        <div class="panel-body">
+          <table class="proc-table">
+            <thead>
+              <tr>
+                <th>Process</th>
+                <th>PID</th>
+                <th>CPU</th>
+                <th>MEM</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div class="p-name">homeassistant</div></td>
+                <td class="p-pid">1247</td>
+                <td class="p-cpu hi">8.2%</td>
+                <td>12.4%</td>
+              </tr>
+              <tr>
+                <td><div class="p-name">node</div></td>
+                <td class="p-pid">892</td>
+                <td class="p-cpu med">4.1%</td>
+                <td>5.8%</td>
+              </tr>
+              <tr>
+                <td><div class="p-name">python3</div></td>
+                <td class="p-pid">1455</td>
+                <td class="p-cpu">2.8%</td>
+                <td>3.2%</td>
+              </tr>
+              <tr>
+                <td><div class="p-name">influxd</div></td>
+                <td class="p-pid">743</td>
+                <td class="p-cpu">1.9%</td>
+                <td>4.1%</td>
+              </tr>
+              <tr>
+                <td><div class="p-name">grafana</div></td>
+                <td class="p-pid">988</td>
+                <td class="p-cpu">0.8%</td>
+                <td>2.9%</td>
+              </tr>
+              <tr>
+                <td><div class="p-name">nginx</div></td>
+                <td class="p-pid">412</td>
+                <td class="p-cpu">0.3%</td>
+                <td>0.8%</td>
+              </tr>
+              <tr>
+                <td><div class="p-name">pihole-FTL</div></td>
+                <td class="p-pid">321</td>
+                <td class="p-cpu">0.2%</td>
+                <td>1.1%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      // Build VU meters
+      function buildVU(el, pct, type) {
+        el.innerHTML = "";
+        const total = 20;
+        const filled = Math.round((pct / 100) * total);
+        for (let i = 0; i < total; i++) {
+          const seg = document.createElement("div");
+          seg.className = "vu-seg";
+          if (i < filled) {
+            if (i < total * 0.6) seg.className += " active-green";
+            else if (i < total * 0.8) seg.className += " active-amber";
+            else seg.className += " active-red";
+          }
+          el.appendChild(seg);
+        }
+      }
+
+      buildVU(document.getElementById("memVu"), 67);
+      buildVU(document.getElementById("tempVu"), 52);
+      buildVU(document.getElementById("netVu"), 41);
+
+      // Build disk
+      const disks = [
+        { mount: "/", used: 45.2, total: 118, unit: "GB", pct: 38 },
+        { mount: "/boot", used: 90, total: 500, unit: "MB", pct: 18 },
+        { mount: "/boot/firmware", used: 60, total: 500, unit: "MB", pct: 12 },
+        { mount: "/mnt/storage", used: 892, total: 1000, unit: "GB", pct: 89 },
+        { mount: "/mnt/backup", used: 270, total: 500, unit: "GB", pct: 54 },
+      ];
+
+      const diskEl = document.getElementById("diskEntries");
+      disks.forEach((d) => {
+        const segs = 16;
+        const filled = Math.round((d.pct / 100) * segs);
+        let segHtml = "";
+        for (let i = 0; i < segs; i++) {
+          if (i < filled) {
+            const cls =
+              d.pct > 80 ? "used-crit" : d.pct > 55 ? "used-warn" : "used-ok";
+            segHtml += `<div class="disk-seg ${cls}"></div>`;
+          } else {
+            segHtml += `<div class="disk-seg unused"></div>`;
+          }
+        }
+        diskEl.innerHTML += `
+    <div class="disk-entry">
+      <div class="disk-head">
+        <span class="disk-mount-name">${d.mount}</span>
+        <span class="disk-size-text">${d.used} / ${d.total} ${d.unit}</span>
+      </div>
+      <div class="disk-bar-segs">${segHtml}</div>
+    </div>
+  `;
+      });
+
+      // Animate gauge needle
+      function updateCpu(val) {
+        const pct = val / 100;
+        const angle = -180 + pct * 180; // -180 to 0
+        document
+          .getElementById("cpuNeedle")
+          .setAttribute("transform", `rotate(${-180 + pct * 180},70,70)`);
+        // dasharray for arc
+        const total = 175.93;
+        const dashOffset = total - pct * total;
+        document
+          .getElementById("cpuArc")
+          .setAttribute("stroke-dashoffset", dashOffset.toFixed(1));
+        document.getElementById("cpuRead").innerHTML =
+          Math.round(val) + '<span class="gauge-unit">%</span>';
+        document.getElementById("hCpu").innerHTML =
+          Math.round(val) + '<span class="mini-gauge-unit">%</span>';
+      }
+
+      // Live updates
+      setInterval(() => {
+        const cpu = Math.max(5, Math.min(95, 34 + (Math.random() - 0.5) * 20));
+        const rx = (Math.random() * 4).toFixed(2);
+        updateCpu(cpu);
+        buildVU(
+          document.getElementById("memVu"),
+          67 + (Math.random() - 0.5) * 10,
+        );
+        buildVU(document.getElementById("netVu"), (parseFloat(rx) / 4) * 100);
+        document.getElementById("rxLbl").textContent = rx + " MB/s";
+        document.getElementById("rxSpd").innerHTML =
+          rx +
+          "<span style=\"font-size:13px;font-family:'Courier Prime'\"> MB/s</span>";
+        document.getElementById("rxBar").style.width =
+          (parseFloat(rx) / 4) * 100 + "%";
+        const tx = (Math.random() * 0.8).toFixed(2);
+        document.getElementById("txSpd").innerHTML =
+          tx +
+          "<span style=\"font-size:13px;font-family:'Courier Prime'\"> MB/s</span>";
+        document.getElementById("txBar").style.width =
+          (parseFloat(tx) / 0.8) * 40 + "%";
+      }, 2500);
+    </script>
+  </body>
+</html>

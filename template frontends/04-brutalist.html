@@ -1,0 +1,1099 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HOMELAB / BRUTALIST</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500;700&family=Space+Grotesk:wght@700;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --white: #ffffff;
+        --black: #0a0a0a;
+        --yellow: #f5d800;
+        --red: #ff1a00;
+        --blue: #0059ff;
+        --gray: #f0f0f0;
+        --mgray: #d0d0d0;
+        --dgray: #666666;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--white);
+        color: var(--black);
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 13px;
+        min-height: 100vh;
+      }
+
+      /* Top banner */
+      .topbar {
+        background: var(--black);
+        color: var(--yellow);
+        padding: 8px 32px;
+        font-size: 10px;
+        letter-spacing: 3px;
+        font-weight: 700;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      header {
+        border-bottom: 4px solid var(--black);
+        padding: 24px 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        background: var(--yellow);
+        position: relative;
+      }
+
+      header::after {
+        content: "";
+        position: absolute;
+        bottom: -8px;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--red);
+      }
+
+      .logo-block {
+      }
+
+      .logo-main {
+        font-family: "Anton", sans-serif;
+        font-size: 72px;
+        letter-spacing: 4px;
+        line-height: 0.85;
+        color: var(--black);
+        text-transform: uppercase;
+        display: block;
+      }
+
+      .logo-sub {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 6px;
+        color: var(--black);
+        text-transform: uppercase;
+        margin-top: 8px;
+        display: block;
+      }
+
+      .header-stats {
+        display: flex;
+        gap: 0;
+        border: 3px solid var(--black);
+        background: var(--white);
+      }
+
+      .hstat {
+        padding: 12px 20px;
+        border-right: 3px solid var(--black);
+        text-align: center;
+      }
+
+      .hstat:last-child {
+        border-right: none;
+      }
+
+      .hstat-val {
+        font-family: "Anton", sans-serif;
+        font-size: 36px;
+        line-height: 1;
+        color: var(--black);
+        display: block;
+      }
+
+      .hstat-val.alert {
+        color: var(--red);
+      }
+      .hstat-val.ok {
+        color: var(--blue);
+      }
+
+      .hstat-label {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--dgray);
+        display: block;
+        margin-top: 4px;
+      }
+
+      main {
+        padding: 32px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0;
+        border-left: 4px solid var(--black);
+      }
+
+      /* Grid items */
+      .block {
+        border: 3px solid var(--black);
+        border-left: none;
+        border-top: none;
+        margin-top: -3px;
+        margin-left: 3px;
+        position: relative;
+        box-shadow: 6px 6px 0 var(--black);
+        background: var(--white);
+        transition:
+          box-shadow 0.1s,
+          transform 0.1s;
+      }
+
+      .block:hover {
+        box-shadow: 10px 10px 0 var(--black);
+        transform: translate(-2px, -2px);
+      }
+
+      /* First row top border */
+      .block.row1 {
+        border-top: 3px solid var(--black);
+      }
+
+      .block-header {
+        padding: 10px 14px;
+        border-bottom: 3px solid var(--black);
+        background: var(--black);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .block-title {
+        font-family: "Anton", sans-serif;
+        font-size: 16px;
+        letter-spacing: 3px;
+        color: var(--yellow);
+        text-transform: uppercase;
+      }
+
+      .block-tag {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        color: var(--dgray);
+        text-transform: uppercase;
+      }
+
+      .block-body {
+        padding: 16px;
+      }
+
+      /* big number stat */
+      .big-num {
+        font-family: "Anton", sans-serif;
+        font-size: 64px;
+        line-height: 1;
+        letter-spacing: 2px;
+        display: block;
+      }
+
+      .big-unit {
+        font-size: 22px;
+      }
+      .num-label {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        color: var(--dgray);
+        text-transform: uppercase;
+        margin-top: 4px;
+        display: block;
+      }
+
+      .metric-4grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+      }
+
+      .m4 {
+        padding: 14px;
+        border-right: 2px solid var(--black);
+        border-bottom: 2px solid var(--black);
+      }
+
+      .m4:nth-child(2),
+      .m4:nth-child(4) {
+        border-right: none;
+      }
+      .m4:nth-child(3),
+      .m4:nth-child(4) {
+        border-bottom: none;
+      }
+
+      .m4-val {
+        font-family: "Anton", sans-serif;
+        font-size: 36px;
+        line-height: 1;
+        letter-spacing: 1px;
+      }
+
+      .m4-val.c-red {
+        color: var(--red);
+      }
+      .m4-val.c-blue {
+        color: var(--blue);
+      }
+      .m4-val.c-green {
+        color: #006600;
+      }
+
+      .m4-label {
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--dgray);
+        margin-top: 3px;
+      }
+
+      /* Brutalist progress bar */
+      .brut-bar {
+        margin-top: 10px;
+        height: 16px;
+        background: var(--gray);
+        border: 2px solid var(--black);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .brut-bar-fill {
+        height: 100%;
+        position: relative;
+        transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      .brut-bar-fill::after {
+        content: "";
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: rgba(0, 0, 0, 0.4);
+      }
+
+      .fill-black {
+        background: var(--black);
+      }
+      .fill-red {
+        background: var(--red);
+      }
+      .fill-blue {
+        background: var(--blue);
+      }
+      .fill-yellow {
+        background: var(--yellow);
+        border-right: none;
+      }
+
+      /* Docker list */
+      .d-list {
+      }
+
+      .d-item {
+        display: grid;
+        grid-template-columns: 14px 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 2px solid var(--black);
+      }
+
+      .d-item:last-child {
+        border-bottom: none;
+      }
+
+      .d-sq {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+      }
+      .d-sq.run {
+        background: #00bb44;
+        border: 2px solid var(--black);
+      }
+      .d-sq.stop {
+        background: var(--red);
+        border: 2px solid var(--black);
+      }
+
+      .d-text {
+      }
+      .d-name {
+        font-weight: 700;
+        font-size: 12px;
+      }
+      .d-img {
+        font-size: 9px;
+        color: var(--dgray);
+      }
+
+      .d-port {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--blue);
+      }
+
+      /* Disk rows */
+      .disk-brut {
+      }
+
+      .dbrut-row {
+        margin-bottom: 12px;
+      }
+      .dbrut-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .dbrut-head {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+      }
+      .dbrut-mount {
+        font-weight: 700;
+        font-size: 12px;
+      }
+      .dbrut-size {
+        font-size: 10px;
+        color: var(--dgray);
+      }
+
+      .dbrut-bar {
+        height: 20px;
+        background: var(--gray);
+        border: 2px solid var(--black);
+        position: relative;
+      }
+
+      .dbrut-fill {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        padding-right: 4px;
+        justify-content: flex-end;
+      }
+
+      .dbrut-pct {
+        font-size: 9px;
+        font-weight: 700;
+        color: var(--white);
+        letter-spacing: 1px;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* Services */
+      .services-brut {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+      }
+
+      .svc {
+        padding: 14px;
+        border-right: 2px solid var(--black);
+        border-bottom: 2px solid var(--black);
+        text-decoration: none;
+        display: block;
+        color: var(--black);
+        transition: background 0.1s;
+        position: relative;
+      }
+
+      .svc:nth-child(even) {
+        border-right: none;
+      }
+      .svc:nth-last-child(-n + 2) {
+        border-bottom: none;
+      }
+
+      .svc:hover {
+        background: var(--yellow);
+      }
+
+      .svc-icon {
+        font-size: 22px;
+        margin-bottom: 6px;
+        display: block;
+      }
+      .svc-name {
+        font-weight: 700;
+        font-size: 13px;
+        display: block;
+      }
+      .svc-cat {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        color: var(--dgray);
+        text-transform: uppercase;
+        margin-top: 2px;
+        display: block;
+      }
+
+      .svc-arrow {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        font-size: 16px;
+        opacity: 0;
+        transition: opacity 0.1s;
+      }
+
+      .svc:hover .svc-arrow {
+        opacity: 1;
+      }
+
+      /* Network */
+      .net-split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+      }
+      .net-half {
+        padding: 14px;
+        border-right: 2px solid var(--black);
+      }
+      .net-half:last-child {
+        border-right: none;
+      }
+      .net-dir {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--dgray);
+        margin-bottom: 6px;
+      }
+      .net-big {
+        font-family: "Anton", sans-serif;
+        font-size: 40px;
+        letter-spacing: 2px;
+        line-height: 1;
+      }
+      .net-unit {
+        font-size: 14px;
+      }
+      .net-total {
+        font-size: 10px;
+        color: var(--dgray);
+        margin-top: 4px;
+      }
+
+      /* Processes */
+      .proc-brut {
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      .proc-brut th {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        padding: 6px 8px;
+        border-bottom: 3px solid var(--black);
+        text-align: left;
+        background: var(--gray);
+      }
+
+      .proc-brut td {
+        padding: 7px 8px;
+        border-bottom: 2px solid var(--black);
+        vertical-align: middle;
+      }
+
+      .proc-brut tr:last-child td {
+        border-bottom: none;
+      }
+
+      .pname {
+        font-weight: 700;
+        font-size: 12px;
+      }
+      .ppid {
+        font-size: 10px;
+        color: var(--dgray);
+      }
+      .pcpu {
+        font-family: "Anton", sans-serif;
+        font-size: 20px;
+        letter-spacing: 1px;
+      }
+      .pcpu.hi {
+        color: var(--red);
+      }
+      .pcpu.med {
+        color: var(--blue);
+      }
+
+      .cpu-strip {
+        display: inline-block;
+        height: 10px;
+        background: var(--black);
+        border: 1px solid var(--black);
+        vertical-align: middle;
+        margin-left: 4px;
+      }
+
+      /* Typography details */
+      .span2 {
+        grid-column: span 2;
+      }
+      .span4 {
+        grid-column: span 4;
+      }
+
+      /* Marquee */
+      .marquee-wrap {
+        background: var(--red);
+        color: var(--white);
+        font-weight: 700;
+        font-size: 11px;
+        letter-spacing: 3px;
+        padding: 6px 0;
+        overflow: hidden;
+        border-top: 3px solid var(--black);
+        border-bottom: 3px solid var(--black);
+      }
+
+      .marquee-inner {
+        display: inline-block;
+        white-space: nowrap;
+        animation: marquee 18s linear infinite;
+      }
+
+      @keyframes marquee {
+        from {
+          transform: translateX(100vw);
+        }
+        to {
+          transform: translateX(-100%);
+        }
+      }
+
+      /* Hover animation for block */
+      @keyframes appear {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .block {
+        animation: appear 0.4s ease both;
+      }
+      .block:nth-child(1) {
+        animation-delay: 0.05s;
+      }
+      .block:nth-child(2) {
+        animation-delay: 0.1s;
+      }
+      .block:nth-child(3) {
+        animation-delay: 0.15s;
+      }
+      .block:nth-child(4) {
+        animation-delay: 0.2s;
+      }
+      .block:nth-child(5) {
+        animation-delay: 0.25s;
+      }
+      .block:nth-child(6) {
+        animation-delay: 0.3s;
+      }
+      .block:nth-child(7) {
+        animation-delay: 0.35s;
+      }
+      .block:nth-child(8) {
+        animation-delay: 0.4s;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--gray);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--black);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <span>HOMELAB PORTAL // SYSTEM DASHBOARD</span>
+      <span id="clock">--:--:--</span>
+    </div>
+
+    <header>
+      <div class="logo-block">
+        <span class="logo-main">homelab</span>
+        <span class="logo-sub">Raspberry Pi · System Monitor</span>
+      </div>
+      <div class="header-stats">
+        <div class="hstat">
+          <span class="hstat-val" id="hCpu"
+            >34<span style="font-size: 22px">%</span></span
+          >
+          <span class="hstat-label">CPU Load</span>
+        </div>
+        <div class="hstat">
+          <span class="hstat-val"
+            >67<span style="font-size: 22px">%</span></span
+          >
+          <span class="hstat-label">Memory</span>
+        </div>
+        <div class="hstat">
+          <span class="hstat-val"
+            >52<span style="font-size: 22px">°</span></span
+          >
+          <span class="hstat-label">Temp</span>
+        </div>
+        <div class="hstat">
+          <span class="hstat-val alert"
+            >89<span style="font-size: 22px">%</span></span
+          >
+          <span class="hstat-label">Max Disk</span>
+        </div>
+        <div class="hstat">
+          <span class="hstat-val ok">5/6</span>
+          <span class="hstat-label">Containers</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="marquee-wrap">
+      <span class="marquee-inner">
+        ⚠ WARNING: /mnt/storage IS AT 89% CAPACITY — ACTION RECOMMENDED
+        &nbsp;&nbsp;&nbsp; ● SYSTEM UPTIME: 14 DAYS 3 HOURS &nbsp;&nbsp;&nbsp; ●
+        NETWORK: ETH0 @1GBPS ACTIVE · WLAN0 DOWN &nbsp;&nbsp;&nbsp; ● 5
+        CONTAINERS RUNNING · 1 STOPPED &nbsp;&nbsp;&nbsp; ● RASPBERRYPI.LOCAL ·
+        192.168.1.42 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ⚠ WARNING:
+        /mnt/storage IS AT 89% CAPACITY — ACTION RECOMMENDED
+      </span>
+    </div>
+
+    <main>
+      <!-- CPU -->
+      <div class="block row1">
+        <div class="block-header">
+          <span class="block-title">CPU</span>
+          <span class="block-tag">processor</span>
+        </div>
+        <div class="block-body">
+          <span class="big-num" id="cpuBig"
+            >34<span class="big-unit">%</span></span
+          >
+          <span class="num-label">Current Load</span>
+          <div class="brut-bar" style="margin-top: 12px">
+            <div
+              class="brut-bar-fill fill-black"
+              id="cpuBar"
+              style="width: 34%"
+            ></div>
+          </div>
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              margin-top: 4px;
+              font-size: 9px;
+              font-weight: 700;
+              color: var(--dgray);
+            "
+          >
+            <span>0%</span><span>50%</span><span>100%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Memory -->
+      <div class="block row1">
+        <div class="block-header">
+          <span class="block-title">Memory</span>
+          <span class="block-tag">RAM</span>
+        </div>
+        <div class="block-body">
+          <span class="big-num" id="memBig"
+            >67<span class="big-unit">%</span></span
+          >
+          <span class="num-label">3.4 / 5.1 GB Used</span>
+          <div class="brut-bar" style="margin-top: 12px">
+            <div
+              class="brut-bar-fill fill-blue"
+              id="memBar"
+              style="width: 67%"
+            ></div>
+          </div>
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              margin-top: 4px;
+              font-size: 9px;
+              font-weight: 700;
+              color: var(--dgray);
+            "
+          >
+            <span>0%</span><span>50%</span><span>100%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Network -->
+      <div class="block row1 span2">
+        <div class="block-header">
+          <span class="block-title">Network</span>
+          <span class="block-tag">eth0 / live</span>
+        </div>
+        <div class="block-body">
+          <div class="net-split">
+            <div class="net-half">
+              <div class="net-dir">▼ Download</div>
+              <div class="net-big" id="rxBig">
+                1.24<span class="net-unit"> MB/s</span>
+              </div>
+              <div class="net-total">Total: 248.3 GB received</div>
+              <div class="brut-bar" style="margin-top: 8px">
+                <div
+                  class="brut-bar-fill fill-blue"
+                  id="rxBar"
+                  style="width: 41%"
+                ></div>
+              </div>
+            </div>
+            <div class="net-half">
+              <div class="net-dir">▲ Upload</div>
+              <div class="net-big" id="txBig">
+                0.38<span class="net-unit"> MB/s</span>
+              </div>
+              <div class="net-total">Total: 89.1 GB sent</div>
+              <div class="brut-bar" style="margin-top: 8px">
+                <div
+                  class="brut-bar-fill fill-black"
+                  id="txBar"
+                  style="width: 13%"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Docker -->
+      <div class="block span2">
+        <div class="block-header">
+          <span class="block-title">Containers</span>
+          <span class="block-tag">docker · 5 up / 1 down</span>
+        </div>
+        <div class="block-body">
+          <div class="d-list">
+            <div class="d-item">
+              <div class="d-sq run"></div>
+              <div class="d-text">
+                <div class="d-name">nginx</div>
+                <div class="d-img">nginx:latest</div>
+              </div>
+              <div class="d-port">:80 :443</div>
+            </div>
+            <div class="d-item">
+              <div class="d-sq run"></div>
+              <div class="d-text">
+                <div class="d-name">homeassistant</div>
+                <div class="d-img">home-assistant:stable</div>
+              </div>
+              <div class="d-port">:8123</div>
+            </div>
+            <div class="d-item">
+              <div class="d-sq run"></div>
+              <div class="d-text">
+                <div class="d-name">pihole</div>
+                <div class="d-img">pihole/pihole:latest</div>
+              </div>
+              <div class="d-port">:53 :80</div>
+            </div>
+            <div class="d-item">
+              <div class="d-sq run"></div>
+              <div class="d-text">
+                <div class="d-name">portainer</div>
+                <div class="d-img">portainer-ce:latest</div>
+              </div>
+              <div class="d-port">:9000</div>
+            </div>
+            <div class="d-item">
+              <div class="d-sq stop"></div>
+              <div class="d-text">
+                <div class="d-name" style="color: var(--red)">grafana</div>
+                <div class="d-img">grafana:latest</div>
+              </div>
+              <div class="d-port" style="color: var(--dgray)">—</div>
+            </div>
+            <div class="d-item">
+              <div class="d-sq run"></div>
+              <div class="d-text">
+                <div class="d-name">influxdb</div>
+                <div class="d-img">influxdb:latest</div>
+              </div>
+              <div class="d-port">:8086</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Disk -->
+      <div class="block span2">
+        <div class="block-header">
+          <span class="block-title">Disk Storage</span>
+          <span class="block-tag">5 volumes</span>
+        </div>
+        <div class="block-body">
+          <div class="disk-brut">
+            <div class="dbrut-row">
+              <div class="dbrut-head">
+                <span class="dbrut-mount">/</span
+                ><span class="dbrut-size">45.2 / 118 GB · 38%</span>
+              </div>
+              <div class="dbrut-bar">
+                <div class="dbrut-fill fill-black" style="width: 38%">
+                  <span class="dbrut-pct">38%</span>
+                </div>
+              </div>
+            </div>
+            <div class="dbrut-row">
+              <div class="dbrut-head">
+                <span class="dbrut-mount">/boot</span
+                ><span class="dbrut-size">90 / 500 MB · 18%</span>
+              </div>
+              <div class="dbrut-bar">
+                <div class="dbrut-fill fill-black" style="width: 18%">
+                  <span class="dbrut-pct" style="color: var(--black)"></span>
+                </div>
+              </div>
+            </div>
+            <div class="dbrut-row">
+              <div class="dbrut-head">
+                <span class="dbrut-mount">/boot/firmware</span
+                ><span class="dbrut-size">60 / 500 MB · 12%</span>
+              </div>
+              <div class="dbrut-bar">
+                <div class="dbrut-fill fill-black" style="width: 12%"></div>
+              </div>
+            </div>
+            <div class="dbrut-row">
+              <div class="dbrut-head">
+                <span class="dbrut-mount" style="color: var(--red)"
+                  >/mnt/storage ⚠</span
+                ><span class="dbrut-size" style="color: var(--red)"
+                  >892 / 1000 GB · 89%</span
+                >
+              </div>
+              <div class="dbrut-bar" style="border-color: var(--red)">
+                <div class="dbrut-fill fill-red" style="width: 89%">
+                  <span class="dbrut-pct">89%</span>
+                </div>
+              </div>
+            </div>
+            <div class="dbrut-row">
+              <div class="dbrut-head">
+                <span class="dbrut-mount">/mnt/backup</span
+                ><span class="dbrut-size">270 / 500 GB · 54%</span>
+              </div>
+              <div class="dbrut-bar">
+                <div class="dbrut-fill fill-blue" style="width: 54%">
+                  <span class="dbrut-pct">54%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Services -->
+      <div class="block span2">
+        <div class="block-header">
+          <span class="block-title">Services</span>
+          <span class="block-tag">quick access</span>
+        </div>
+        <div class="block-body" style="padding: 0">
+          <div class="services-brut">
+            <a class="svc" href="#"
+              ><span class="svc-arrow">↗</span><span class="svc-icon">🏠</span
+              ><span class="svc-name">Home Assistant</span
+              ><span class="svc-cat">Home Automation</span></a
+            >
+            <a class="svc" href="#"
+              ><span class="svc-arrow">↗</span><span class="svc-icon">🐳</span
+              ><span class="svc-name">Portainer</span
+              ><span class="svc-cat">Infrastructure</span></a
+            >
+            <a class="svc" href="#"
+              ><span class="svc-arrow">↗</span><span class="svc-icon">🛡️</span
+              ><span class="svc-name">Pi-hole</span
+              ><span class="svc-cat">Network</span></a
+            >
+            <a class="svc" href="#"
+              ><span class="svc-arrow">↗</span><span class="svc-icon">📊</span
+              ><span class="svc-name">Grafana</span
+              ><span class="svc-cat">Monitoring</span></a
+            >
+            <a class="svc" href="#"
+              ><span class="svc-arrow">↗</span><span class="svc-icon">☁️</span
+              ><span class="svc-name">Nextcloud</span
+              ><span class="svc-cat">Storage</span></a
+            >
+            <a class="svc" href="#"
+              ><span class="svc-arrow">↗</span><span class="svc-icon">🎬</span
+              ><span class="svc-name">Jellyfin</span
+              ><span class="svc-cat">Media</span></a
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- Processes -->
+      <div class="block span2">
+        <div class="block-header">
+          <span class="block-title">Processes</span>
+          <span class="block-tag">top by CPU</span>
+        </div>
+        <div class="block-body">
+          <table class="proc-brut">
+            <thead>
+              <tr>
+                <th>Process</th>
+                <th>PID</th>
+                <th>CPU %</th>
+                <th>MEM %</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div class="pname">homeassistant</div></td>
+                <td class="ppid">1247</td>
+                <td>
+                  <span class="pcpu hi">8.2</span
+                  ><span class="cpu-strip" style="width: 41px"></span>
+                </td>
+                <td class="ppid">12.4%</td>
+              </tr>
+              <tr>
+                <td><div class="pname">node</div></td>
+                <td class="ppid">892</td>
+                <td>
+                  <span class="pcpu med">4.1</span
+                  ><span class="cpu-strip" style="width: 21px"></span>
+                </td>
+                <td class="ppid">5.8%</td>
+              </tr>
+              <tr>
+                <td><div class="pname">python3</div></td>
+                <td class="ppid">1455</td>
+                <td>
+                  <span class="pcpu">2.8</span
+                  ><span class="cpu-strip" style="width: 14px"></span>
+                </td>
+                <td class="ppid">3.2%</td>
+              </tr>
+              <tr>
+                <td><div class="pname">influxd</div></td>
+                <td class="ppid">743</td>
+                <td>
+                  <span class="pcpu">1.9</span
+                  ><span class="cpu-strip" style="width: 10px"></span>
+                </td>
+                <td class="ppid">4.1%</td>
+              </tr>
+              <tr>
+                <td><div class="pname">grafana</div></td>
+                <td class="ppid">988</td>
+                <td>
+                  <span class="pcpu">0.8</span
+                  ><span class="cpu-strip" style="width: 4px"></span>
+                </td>
+                <td class="ppid">2.9%</td>
+              </tr>
+              <tr>
+                <td><div class="pname">nginx</div></td>
+                <td class="ppid">412</td>
+                <td>
+                  <span class="pcpu">0.3</span
+                  ><span class="cpu-strip" style="width: 2px"></span>
+                </td>
+                <td class="ppid">0.8%</td>
+              </tr>
+              <tr>
+                <td><div class="pname">pihole-FTL</div></td>
+                <td class="ppid">321</td>
+                <td>
+                  <span class="pcpu">0.2</span
+                  ><span class="cpu-strip" style="width: 1px"></span>
+                </td>
+                <td class="ppid">1.1%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      // Clock
+      setInterval(() => {
+        const now = new Date();
+        document.getElementById("clock").textContent = now.toLocaleTimeString(
+          "en-GB",
+          { hour12: false },
+        );
+      }, 1000);
+
+      // Live data
+      setInterval(() => {
+        const cpu = Math.max(
+          5,
+          Math.min(90, 34 + (Math.random() - 0.5) * 24),
+        ).toFixed(0);
+        document.getElementById("cpuBig").innerHTML =
+          cpu + '<span class="big-unit">%</span>';
+        document.getElementById("hCpu").innerHTML =
+          cpu + '<span style="font-size:22px">%</span>';
+        document.getElementById("cpuBar").style.width = cpu + "%";
+        document.getElementById("cpuBar").className =
+          "brut-bar-fill " + (cpu > 75 ? "fill-red" : "fill-black");
+
+        const rx = (Math.random() * 4).toFixed(2);
+        const tx = (Math.random() * 0.9).toFixed(2);
+        document.getElementById("rxBig").innerHTML =
+          rx + '<span class="net-unit"> MB/s</span>';
+        document.getElementById("txBig").innerHTML =
+          tx + '<span class="net-unit"> MB/s</span>';
+        document.getElementById("rxBar").style.width =
+          (parseFloat(rx) / 4) * 100 + "%";
+        document.getElementById("txBar").style.width =
+          (parseFloat(tx) / 0.9) * 100 + "%";
+      }, 2000);
+    </script>
+  </body>
+</html>

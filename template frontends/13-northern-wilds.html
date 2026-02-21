@@ -1,0 +1,1459 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Northern Wilds — Homelab Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ============================================
+   RESET & BASE
+   ============================================ */
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --forest: #050e0a;
+        --aurora-green: #00ff87;
+        --aurora-cyan: #00d4ff;
+        --aurora-violet: #8b5cf6;
+        --snow-white: #f0f6ff;
+        --warning-red: #ff4f7b;
+        --glass-bg: rgba(0, 255, 135, 0.04);
+        --glass-border: rgba(0, 255, 135, 0.1);
+        --glass-border-cyan: rgba(0, 212, 255, 0.1);
+        --glass-border-violet: rgba(139, 92, 246, 0.1);
+      }
+
+      html {
+        font-size: 14px;
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family: "JetBrains Mono", monospace;
+        background: var(--forest);
+        color: var(--snow-white);
+        min-height: 100vh;
+        overflow-x: hidden;
+        position: relative;
+        line-height: 1.5;
+      }
+
+      /* ============================================
+   AURORA CURTAIN BANDS
+   ============================================ */
+      .aurora-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+        overflow: hidden;
+      }
+
+      .aurora-band {
+        position: absolute;
+        top: -10%;
+        height: 120%;
+        border-radius: 50%;
+        filter: blur(40px);
+        will-change: transform, opacity;
+      }
+
+      .aurora-band:nth-child(1) {
+        left: 8%;
+        width: 120px;
+        background: linear-gradient(
+          180deg,
+          transparent 0%,
+          var(--aurora-green) 30%,
+          var(--aurora-cyan) 60%,
+          transparent 100%
+        );
+        animation: aurora-wave 12s ease-in-out infinite;
+        opacity: 0.4;
+      }
+
+      .aurora-band:nth-child(2) {
+        left: 28%;
+        width: 180px;
+        background: linear-gradient(
+          180deg,
+          transparent 0%,
+          var(--aurora-cyan) 25%,
+          var(--aurora-violet) 55%,
+          transparent 100%
+        );
+        animation: aurora-wave 9s ease-in-out infinite -3s;
+        opacity: 0.35;
+      }
+
+      .aurora-band:nth-child(3) {
+        left: 48%;
+        width: 200px;
+        background: linear-gradient(
+          180deg,
+          transparent 0%,
+          var(--aurora-green) 35%,
+          var(--aurora-green) 50%,
+          transparent 100%
+        );
+        animation: aurora-wave 14s ease-in-out infinite -6s;
+        opacity: 0.45;
+      }
+
+      .aurora-band:nth-child(4) {
+        left: 68%;
+        width: 100px;
+        background: linear-gradient(
+          180deg,
+          transparent 0%,
+          var(--aurora-violet) 30%,
+          var(--aurora-cyan) 65%,
+          transparent 100%
+        );
+        animation: aurora-wave 10s ease-in-out infinite -2s;
+        opacity: 0.3;
+      }
+
+      .aurora-band:nth-child(5) {
+        left: 85%;
+        width: 150px;
+        background: linear-gradient(
+          180deg,
+          transparent 0%,
+          var(--aurora-cyan) 25%,
+          var(--aurora-green) 60%,
+          transparent 100%
+        );
+        animation: aurora-wave 16s ease-in-out infinite -8s;
+        opacity: 0.35;
+      }
+
+      @keyframes aurora-wave {
+        0%,
+        100% {
+          transform: translateY(-30px) scaleY(0.85);
+          opacity: 0.3;
+        }
+        50% {
+          transform: translateY(30px) scaleY(1.15);
+          opacity: 0.7;
+        }
+      }
+
+      /* ============================================
+   SNOWFALL
+   ============================================ */
+      .snow-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1;
+        overflow: hidden;
+      }
+
+      .snow {
+        position: absolute;
+        top: -10px;
+        border-radius: 50%;
+        background: var(--snow-white);
+        animation: snow-fall linear infinite;
+        will-change: transform;
+      }
+
+      @keyframes snow-fall {
+        0% {
+          transform: translateY(0) translateX(0);
+        }
+        25% {
+          transform: translateY(27.5vh) translateX(var(--drift));
+        }
+        50% {
+          transform: translateY(55vh) translateX(calc(var(--drift) * -0.5));
+        }
+        75% {
+          transform: translateY(82.5vh) translateX(var(--drift));
+        }
+        100% {
+          transform: translateY(110vh) translateX(0);
+        }
+      }
+
+      /* ============================================
+   PINE TREELINE SILHOUETTE
+   ============================================ */
+      .treeline {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 220px;
+        pointer-events: none;
+        z-index: 0;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 220'%3E%3Cpath d='M0 220 L0 160 L15 100 L30 160 L30 140 L50 70 L70 140 L70 130 L85 80 L100 130 L100 150 L120 90 L140 150 L140 170 L160 110 L180 170 L180 140 L200 60 L220 140 L220 155 L240 95 L260 155 L260 135 L275 75 L290 135 L290 160 L310 100 L330 160 L330 145 L350 85 L370 145 L370 130 L390 50 L410 130 L410 150 L430 90 L450 150 L450 165 L470 105 L490 165 L490 140 L510 65 L530 140 L530 155 L550 95 L570 155 L570 135 L590 70 L610 135 L610 160 L630 100 L650 160 L650 145 L670 80 L690 145 L690 130 L705 55 L720 130 L720 150 L740 85 L760 150 L760 165 L780 100 L800 165 L800 140 L820 60 L840 140 L840 155 L860 90 L880 155 L880 135 L900 75 L920 135 L920 160 L940 95 L960 160 L960 145 L980 80 L1000 145 L1000 130 L1020 50 L1040 130 L1040 150 L1060 85 L1080 150 L1080 165 L1100 100 L1120 165 L1120 140 L1140 65 L1160 140 L1160 155 L1180 90 L1200 155 L1200 135 L1220 70 L1240 135 L1240 160 L1260 95 L1280 160 L1280 145 L1300 80 L1320 145 L1320 130 L1340 55 L1360 130 L1360 150 L1380 85 L1400 150 L1400 165 L1420 100 L1440 160 L1440 220 Z' fill='%23050e0a'/%3E%3C/svg%3E")
+          center bottom / 100% auto no-repeat;
+        opacity: 0.9;
+      }
+
+      /* ============================================
+   BREATHING GLOW
+   ============================================ */
+      @keyframes breathe {
+        0%,
+        100% {
+          text-shadow: 0 0 10px currentColor;
+        }
+        50% {
+          text-shadow:
+            0 0 25px currentColor,
+            0 0 40px currentColor;
+        }
+      }
+
+      .glow-value {
+        animation: breathe 2s ease-in-out infinite;
+      }
+
+      /* ============================================
+   CARD ENTRANCE
+   ============================================ */
+      @keyframes rise {
+        0% {
+          opacity: 0;
+          transform: translateY(30px) scale(0.97);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      /* ============================================
+   PULSING DOT
+   ============================================ */
+      @keyframes pulse-dot {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 currentColor;
+        }
+        50% {
+          box-shadow: 0 0 0 4px transparent;
+        }
+      }
+
+      /* ============================================
+   HEADER
+   ============================================ */
+      header {
+        position: relative;
+        z-index: 10;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        padding: 28px 40px 20px;
+        max-width: 1440px;
+        margin: 0 auto;
+      }
+
+      .logo-section {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .logo-label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px;
+        font-weight: 400;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: rgba(0, 255, 135, 0.6);
+      }
+
+      .logo-name {
+        font-family: "Fraunces", serif;
+        font-style: italic;
+        font-weight: 600;
+        font-size: 42px;
+        color: var(--snow-white);
+        line-height: 1.1;
+        text-shadow: 0 0 40px rgba(0, 255, 135, 0.15);
+      }
+
+      .status-pills {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 500;
+        background: rgba(0, 255, 135, 0.06);
+        border: 1px solid rgba(0, 255, 135, 0.12);
+        color: rgba(240, 246, 255, 0.8);
+        backdrop-filter: blur(8px);
+        white-space: nowrap;
+      }
+
+      .pill-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .pill-dot.green {
+        background: var(--aurora-green);
+        color: var(--aurora-green);
+        animation: pulse-dot 2s ease-in-out infinite;
+      }
+
+      .pill-dot.cyan {
+        background: var(--aurora-cyan);
+        color: var(--aurora-cyan);
+        animation: pulse-dot 2s ease-in-out infinite 0.5s;
+      }
+
+      .pill-dot.violet {
+        background: var(--aurora-violet);
+        color: var(--aurora-violet);
+        animation: pulse-dot 2s ease-in-out infinite 1s;
+      }
+
+      /* ============================================
+   MAIN GRID
+   ============================================ */
+      main {
+        position: relative;
+        z-index: 10;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 10px 40px 60px;
+      }
+
+      .span2 {
+        grid-column: span 2;
+      }
+      .span3 {
+        grid-column: span 3;
+      }
+      .span4 {
+        grid-column: span 4;
+      }
+
+      /* ============================================
+   CARD BASE
+   ============================================ */
+      .card {
+        position: relative;
+        background: var(--glass-bg);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border: 1px solid var(--glass-border);
+        border-radius: 14px;
+        padding: 18px;
+        overflow: hidden;
+        animation: rise 0.6s ease-out both;
+      }
+
+      .card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        border-radius: 14px 14px 0 0;
+      }
+
+      .card::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 10%;
+        right: 10%;
+        height: 60px;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(0, 255, 135, 0.06) 0%,
+          transparent 70%
+        );
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .card-green::before {
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--aurora-green),
+          transparent
+        );
+        opacity: 0.6;
+      }
+
+      .card-cyan::before {
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--aurora-cyan),
+          transparent
+        );
+        opacity: 0.6;
+      }
+
+      .card-cyan::after {
+        background: radial-gradient(
+          ellipse at center,
+          rgba(0, 212, 255, 0.06) 0%,
+          transparent 70%
+        );
+      }
+
+      .card-violet::before {
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--aurora-violet),
+          transparent
+        );
+        opacity: 0.6;
+      }
+
+      .card-violet::after {
+        background: radial-gradient(
+          ellipse at center,
+          rgba(139, 92, 246, 0.06) 0%,
+          transparent 70%
+        );
+      }
+
+      /* staggered entrance */
+      .card:nth-child(1) {
+        animation-delay: 0.05s;
+      }
+      .card:nth-child(2) {
+        animation-delay: 0.12s;
+      }
+      .card:nth-child(3) {
+        animation-delay: 0.19s;
+      }
+      .card:nth-child(4) {
+        animation-delay: 0.26s;
+      }
+      .card:nth-child(5) {
+        animation-delay: 0.33s;
+      }
+      .card:nth-child(6) {
+        animation-delay: 0.4s;
+      }
+
+      /* ============================================
+   CARD HEADER
+   ============================================ */
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .card-title {
+        font-family: "Fraunces", serif;
+        font-style: italic;
+        font-weight: 500;
+        font-size: 15px;
+        color: rgba(240, 246, 255, 0.9);
+        letter-spacing: 0.3px;
+      }
+
+      .badge {
+        font-size: 10px;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 999px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+
+      .badge-green {
+        background: rgba(0, 255, 135, 0.12);
+        color: var(--aurora-green);
+        border: 1px solid rgba(0, 255, 135, 0.2);
+      }
+
+      .badge-cyan {
+        background: rgba(0, 212, 255, 0.12);
+        color: var(--aurora-cyan);
+        border: 1px solid rgba(0, 212, 255, 0.2);
+      }
+
+      .badge-violet {
+        background: rgba(139, 92, 246, 0.12);
+        color: var(--aurora-violet);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+      }
+
+      /* ============================================
+   CARD CONTENT HELPERS
+   ============================================ */
+      .card-body {
+        position: relative;
+        z-index: 1;
+      }
+
+      /* ============================================
+   SYSTEM CARD — 2x2 grid
+   ============================================ */
+      .stats-2x2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .stat-cell {
+        background: rgba(0, 255, 135, 0.03);
+        border: 1px solid rgba(0, 255, 135, 0.07);
+        border-radius: 10px;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .stat-label {
+        font-size: 10px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: rgba(240, 246, 255, 0.45);
+      }
+
+      .stat-value {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--aurora-green);
+      }
+
+      .stat-value.cyan {
+        color: var(--aurora-cyan);
+      }
+      .stat-value.violet {
+        color: var(--aurora-violet);
+      }
+
+      .progress-track {
+        width: 100%;
+        height: 5px;
+        background: rgba(240, 246, 255, 0.06);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        height: 100%;
+        border-radius: 999px;
+        transition: width 0.6s ease;
+        position: relative;
+      }
+
+      .progress-fill.green {
+        background: linear-gradient(
+          90deg,
+          rgba(0, 255, 135, 0.2),
+          var(--aurora-green)
+        );
+        box-shadow: 0 0 8px rgba(0, 255, 135, 0.4);
+      }
+
+      .progress-fill.cyan {
+        background: linear-gradient(
+          90deg,
+          rgba(0, 212, 255, 0.2),
+          var(--aurora-cyan)
+        );
+        box-shadow: 0 0 8px rgba(0, 212, 255, 0.4);
+      }
+
+      .progress-fill.violet {
+        background: linear-gradient(
+          90deg,
+          rgba(139, 92, 246, 0.2),
+          var(--aurora-violet)
+        );
+        box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+      }
+
+      .progress-fill.red {
+        background: linear-gradient(
+          90deg,
+          rgba(255, 79, 123, 0.2),
+          var(--warning-red)
+        );
+        box-shadow: 0 0 8px rgba(255, 79, 123, 0.4);
+      }
+
+      /* ============================================
+   NETWORK CARD
+   ============================================ */
+      .net-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(0, 212, 255, 0.06);
+      }
+
+      .net-row:last-child {
+        border-bottom: none;
+      }
+
+      .net-dir {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: rgba(240, 246, 255, 0.4);
+        width: 70px;
+      }
+
+      .net-speed {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--aurora-cyan);
+      }
+
+      .net-total {
+        font-size: 10px;
+        color: rgba(240, 246, 255, 0.35);
+      }
+
+      .net-iface {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 10px;
+        margin-top: 4px;
+        border-radius: 8px;
+        background: rgba(0, 212, 255, 0.04);
+        font-size: 11px;
+      }
+
+      .net-iface-name {
+        font-weight: 600;
+        color: var(--aurora-cyan);
+      }
+
+      .net-iface-ip {
+        color: rgba(240, 246, 255, 0.5);
+      }
+
+      .net-iface-speed {
+        color: rgba(240, 246, 255, 0.35);
+        font-size: 10px;
+      }
+
+      .net-offline {
+        color: rgba(240, 246, 255, 0.25);
+        font-style: italic;
+      }
+
+      /* ============================================
+   STORAGE CARD
+   ============================================ */
+      .vol-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 7px 0;
+      }
+
+      .vol-path {
+        font-size: 11px;
+        font-weight: 500;
+        color: rgba(240, 246, 255, 0.65);
+        min-width: 130px;
+        flex-shrink: 0;
+      }
+
+      .vol-bar-track {
+        flex: 1;
+        height: 7px;
+        background: rgba(240, 246, 255, 0.05);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .vol-bar-fill {
+        height: 100%;
+        border-radius: 999px;
+        transition: width 0.6s ease;
+      }
+
+      .vol-pct {
+        font-size: 12px;
+        font-weight: 700;
+        min-width: 36px;
+        text-align: right;
+      }
+
+      .vol-pct.green {
+        color: var(--aurora-green);
+      }
+      .vol-pct.red {
+        color: var(--warning-red);
+      }
+
+      .vol-warn {
+        color: var(--warning-red);
+        font-size: 12px;
+      }
+
+      /* ============================================
+   SERVICES CARD
+   ============================================ */
+      .svc-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .svc-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: rgba(0, 255, 135, 0.03);
+        border: 1px solid rgba(0, 255, 135, 0.07);
+        transition:
+          background 0.2s,
+          border-color 0.2s;
+        cursor: default;
+      }
+
+      .svc-item:hover {
+        background: rgba(0, 255, 135, 0.08);
+        border-color: rgba(0, 255, 135, 0.18);
+      }
+
+      .svc-icon {
+        font-size: 18px;
+        flex-shrink: 0;
+      }
+
+      .svc-name {
+        font-size: 11px;
+        font-weight: 500;
+        color: rgba(240, 246, 255, 0.8);
+      }
+
+      /* ============================================
+   PROCESSES CARD
+   ============================================ */
+      .proc-table {
+        width: 100%;
+      }
+
+      .proc-row {
+        display: grid;
+        grid-template-columns: 1fr 70px 70px 90px 90px;
+        align-items: center;
+        padding: 7px 0;
+        border-bottom: 1px solid rgba(139, 92, 246, 0.06);
+        font-size: 11px;
+      }
+
+      .proc-row:last-child {
+        border-bottom: none;
+      }
+
+      .proc-header {
+        color: rgba(240, 246, 255, 0.3);
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        font-weight: 600;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+      }
+
+      .proc-name {
+        font-weight: 600;
+        color: var(--aurora-violet);
+      }
+
+      .proc-cpu,
+      .proc-mem {
+        color: rgba(240, 246, 255, 0.6);
+        text-align: right;
+      }
+
+      .proc-bar-wrap {
+        padding-left: 8px;
+      }
+
+      .proc-bar-track {
+        width: 100%;
+        height: 4px;
+        background: rgba(240, 246, 255, 0.05);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .proc-bar-fill {
+        height: 100%;
+        border-radius: 999px;
+      }
+
+      /* ============================================
+   CONTAINERS CARD
+   ============================================ */
+      .ctn-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .ctn-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: rgba(0, 212, 255, 0.03);
+        border: 1px solid rgba(0, 212, 255, 0.06);
+      }
+
+      .ctn-name {
+        font-size: 12px;
+        font-weight: 600;
+        color: rgba(240, 246, 255, 0.8);
+      }
+
+      .ctn-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+      }
+
+      .ctn-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+      }
+
+      .ctn-dot.running {
+        background: var(--aurora-green);
+        box-shadow: 0 0 6px var(--aurora-green);
+      }
+
+      .ctn-dot.stopped {
+        background: var(--warning-red);
+        box-shadow: 0 0 6px var(--warning-red);
+      }
+
+      .ctn-status.running {
+        color: var(--aurora-green);
+      }
+      .ctn-status.stopped {
+        color: var(--warning-red);
+      }
+
+      .ctn-uptime {
+        font-size: 10px;
+        color: rgba(240, 246, 255, 0.3);
+        margin-left: 8px;
+      }
+
+      /* ============================================
+   RESPONSIVE
+   ============================================ */
+      @media (max-width: 1024px) {
+        main {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 10px;
+          padding: 16px 20px;
+        }
+        .span3,
+        .span4 {
+          grid-column: span 2;
+        }
+        header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+          padding: 20px 20px 14px;
+        }
+        .status-pills {
+          justify-content: flex-start;
+        }
+      }
+
+      @media (max-width: 640px) {
+        main {
+          grid-template-columns: 1fr;
+          gap: 10px;
+          padding: 12px 14px;
+        }
+        .span2,
+        .span3,
+        .span4 {
+          grid-column: span 1;
+        }
+        .logo-name {
+          font-size: 28px;
+        }
+        .svc-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .stats-2x2 {
+          grid-template-columns: 1fr 1fr;
+          gap: 6px;
+        }
+        .proc-row {
+          grid-template-columns: 1fr 50px 50px 70px 70px;
+          font-size: 10px;
+        }
+        .pill {
+          font-size: 10px;
+          padding: 4px 9px;
+        }
+        header {
+          padding: 16px 14px 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Aurora Curtain Bands -->
+    <div class="aurora-container">
+      <div class="aurora-band"></div>
+      <div class="aurora-band"></div>
+      <div class="aurora-band"></div>
+      <div class="aurora-band"></div>
+      <div class="aurora-band"></div>
+    </div>
+
+    <!-- Snowfall Container -->
+    <div class="snow-container" id="snowContainer"></div>
+
+    <!-- Treeline -->
+    <div class="treeline"></div>
+
+    <!-- Header -->
+    <header>
+      <div class="logo-section">
+        <span class="logo-label">Northern Wilds &mdash; Private Cloud</span>
+        <h1 class="logo-name">Homelab</h1>
+      </div>
+      <div class="status-pills">
+        <div class="pill">
+          <span class="pill-dot green"></span> raspberrypi.local
+        </div>
+        <div class="pill">
+          <span class="pill-dot green"></span> 5 containers
+        </div>
+        <div class="pill">
+          <span class="pill-dot violet"></span> Storage 89%
+        </div>
+        <div class="pill"><span class="pill-dot cyan"></span> 14d 3h up</div>
+      </div>
+    </header>
+
+    <!-- Main Dashboard Grid -->
+    <main>
+      <!-- 1. SYSTEM CARD -->
+      <div class="card card-green" style="animation-delay: 0.05s">
+        <div class="card-header">
+          <span class="card-title">System</span>
+          <span class="badge badge-green">Live</span>
+        </div>
+        <div class="card-body">
+          <div class="stats-2x2">
+            <div class="stat-cell">
+              <span class="stat-label">CPU</span>
+              <span class="stat-value glow-value" id="cpuV">34%</span>
+              <div class="progress-track">
+                <div
+                  class="progress-fill green"
+                  id="cpuB"
+                  style="width: 34%"
+                ></div>
+              </div>
+            </div>
+            <div class="stat-cell">
+              <span class="stat-label">Memory</span>
+              <span class="stat-value glow-value" id="memV">67%</span>
+              <div class="progress-track">
+                <div
+                  class="progress-fill green"
+                  id="memB"
+                  style="width: 67%"
+                ></div>
+              </div>
+            </div>
+            <div class="stat-cell">
+              <span class="stat-label">Temp</span>
+              <span class="stat-value cyan glow-value">52&deg;C</span>
+            </div>
+            <div class="stat-cell">
+              <span class="stat-label">Processes</span>
+              <span class="stat-value violet glow-value">148</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. NETWORK CARD -->
+      <div class="card card-cyan" style="animation-delay: 0.12s">
+        <div class="card-header">
+          <span class="card-title">Network</span>
+          <span class="badge badge-cyan">eth0</span>
+        </div>
+        <div class="card-body">
+          <div class="net-row">
+            <span class="net-dir">Inbound</span>
+            <span
+              class="net-speed glow-value"
+              id="rxV"
+              style="color: var(--aurora-cyan)"
+              >1.24 MB/s</span
+            >
+            <span class="net-total">248.3 GB</span>
+          </div>
+          <div class="net-row">
+            <span class="net-dir">Outbound</span>
+            <span
+              class="net-speed glow-value"
+              id="txV"
+              style="color: var(--aurora-cyan)"
+              >0.38 MB/s</span
+            >
+            <span class="net-total">89.1 GB</span>
+          </div>
+          <div class="net-iface">
+            <span class="net-iface-name">eth0</span>
+            <span class="net-iface-ip">192.168.1.42</span>
+            <span class="net-iface-speed">1Gbps</span>
+          </div>
+          <div class="net-iface" style="margin-top: 4px">
+            <span class="net-iface-name" style="color: rgba(240, 246, 255, 0.3)"
+              >wlan0</span
+            >
+            <span class="net-offline">&mdash; Offline</span>
+            <span class="net-iface-speed"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. STORAGE CARD (span 2) -->
+      <div class="card card-green span2" style="animation-delay: 0.19s">
+        <div class="card-header">
+          <span class="card-title">Storage</span>
+          <span class="badge badge-green">5 Volumes</span>
+        </div>
+        <div class="card-body">
+          <div class="vol-row">
+            <span class="vol-path">/</span>
+            <div class="vol-bar-track">
+              <div
+                class="vol-bar-fill progress-fill green"
+                style="width: 38%"
+              ></div>
+            </div>
+            <span class="vol-pct green">38%</span>
+          </div>
+          <div class="vol-row">
+            <span class="vol-path">/boot</span>
+            <div class="vol-bar-track">
+              <div
+                class="vol-bar-fill progress-fill green"
+                style="width: 18%"
+              ></div>
+            </div>
+            <span class="vol-pct green">18%</span>
+          </div>
+          <div class="vol-row">
+            <span class="vol-path">/boot/firmware</span>
+            <div class="vol-bar-track">
+              <div
+                class="vol-bar-fill progress-fill green"
+                style="width: 12%"
+              ></div>
+            </div>
+            <span class="vol-pct green">12%</span>
+          </div>
+          <div class="vol-row">
+            <span class="vol-path"
+              >/mnt/storage <span class="vol-warn">&#9888;</span></span
+            >
+            <div class="vol-bar-track">
+              <div
+                class="vol-bar-fill progress-fill red"
+                style="width: 89%"
+              ></div>
+            </div>
+            <span class="vol-pct red">89%</span>
+          </div>
+          <div class="vol-row">
+            <span class="vol-path">/mnt/backup</span>
+            <div class="vol-bar-track">
+              <div
+                class="vol-bar-fill progress-fill green"
+                style="width: 54%"
+              ></div>
+            </div>
+            <span class="vol-pct green">54%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. SERVICES CARD (span 2) -->
+      <div class="card card-green span2" style="animation-delay: 0.26s">
+        <div class="card-header">
+          <span class="card-title">Services</span>
+          <span class="badge badge-green">6 active</span>
+        </div>
+        <div class="card-body">
+          <div class="svc-grid">
+            <div class="svc-item">
+              <span class="svc-icon">&#127968;</span>
+              <span class="svc-name">Home Assistant</span>
+            </div>
+            <div class="svc-item">
+              <span class="svc-icon">&#128230;</span>
+              <span class="svc-name">Portainer</span>
+            </div>
+            <div class="svc-item">
+              <span class="svc-icon">&#128737;</span>
+              <span class="svc-name">Pi-hole</span>
+            </div>
+            <div class="svc-item">
+              <span class="svc-icon">&#128200;</span>
+              <span class="svc-name">Grafana</span>
+            </div>
+            <div class="svc-item">
+              <span class="svc-icon">&#9729;&#65039;</span>
+              <span class="svc-name">Nextcloud</span>
+            </div>
+            <div class="svc-item">
+              <span class="svc-icon">&#127916;</span>
+              <span class="svc-name">Jellyfin</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. PROCESSES CARD (span 2) -->
+      <div class="card card-violet span2" style="animation-delay: 0.33s">
+        <div class="card-header">
+          <span class="card-title">Processes</span>
+          <span class="badge badge-violet">Top 6</span>
+        </div>
+        <div class="card-body">
+          <div class="proc-table">
+            <div class="proc-row proc-header">
+              <span>Process</span>
+              <span style="text-align: right">CPU</span>
+              <span style="text-align: right">MEM</span>
+              <span style="text-align: center">CPU Bar</span>
+              <span style="text-align: center">MEM Bar</span>
+            </div>
+            <div class="proc-row">
+              <span class="proc-name">homeassistant</span>
+              <span class="proc-cpu">12.4%</span>
+              <span class="proc-mem">18.2%</span>
+              <div class="proc-bar-wrap">
+                <div class="proc-bar-track">
+                  <div
+                    class="proc-bar-fill progress-fill violet"
+                    style="width: 12.4%"
+                  ></div>
+                </div>
+              </div>
+              <div class="proc-bar-wrap">
+                <div class="proc-bar-track">
+                  <div
+                    class="proc-bar-fill progress-fill cyan"
+                    style="width: 18.2%"
+                  ></div>
+                </div>
+              </div>
+            </div>
+            <div class="proc-row">
+              <span class="proc-name">node</span>
+              <span class="proc-cpu">8.7%</span>
+              <span class="proc-mem">12.1%</span>
+              <div class="proc-bar-wrap">
+                <div class="proc-bar-track">
+                  <div
+                    class="proc-bar-fill progress-fill violet"
+                    style="width: 8.7%"
+                  ></div>
+                </div>
+              </div>
+              <div class="proc-bar-wrap">
+                <div class="proc-bar-track">
+                  <div
+                    class="proc-bar-fill progress-fill cyan"
+                    style="width: 12.1%"
+                  ></div>
+                </div>
+              </div>
+            </div>
+            <div class="proc-row">
+              <span class="proc-name">python3</span>
+              <span class="proc-cpu">6.2%</span>
+              <span class="proc-mem">9.8%</span>
+              <div class="proc-bar-wrap">
+                <div class="proc-bar-track">
+                  <div
+                    class="proc-bar-fill progress-fill violet"
+                    style="width: 6.2%"
+                  ></div>
+                </div>
+              </div>
+              <div class="proc-bar-wrap">
+                <div class="proc-bar-track">
+                  <div
+                    class="proc-bar-fill progress-fill cyan"
+                    style="width: 9.8%"
+                  ></div>
+                </div>
+              </div>
+            </div>
+            <div class="proc-row">
+              <span class="proc-name">influxd</span>
+              <span class="proc-cpu">4.1%</span>
+              <span class="proc-mem">15.3%</span>
+              <div class="proc-bar-wrap">
+                <div class="proc-bar-track">
+                  <div
+                    class="proc-bar-fill progress-fill violet"
+                    style="width: 4.1%"
+                  ></div>
+                </div>
+              </div>
+              <div class="proc-bar-wrap">
+                <div class="proc-bar-track">
+                  <div
+                    class="proc-bar-fill progress-fill cyan"
+                    style="width: 15.3%"
+                  ></div>
+                </div>
+              </div>
+            </div>
+            <div class="proc-row">
+              <span class="proc-name">nginx</span>
+              <span class="proc-cpu">2.3%</span>
+              <span class="proc-mem">4.5%</span>
+              <div class="proc-bar-wrap">
+                <div class="proc-bar-track">
+                  <div
+                    class="proc-bar-fill progress-fill violet"
+                    style="width: 2.3%"
+                  ></div>
+                </div>
+              </div>
+              <div class="proc-bar-wrap">
+                <div class="proc-bar-track">
+                  <div
+                    class="proc-bar-fill progress-fill cyan"
+                    style="width: 4.5%"
+                  ></div>
+                </div>
+              </div>
+            </div>
+            <div class="proc-row">
+              <span class="proc-name">pihole-FTL</span>
+              <span class="proc-cpu">1.8%</span>
+              <span class="proc-mem">3.2%</span>
+              <div class="proc-bar-wrap">
+                <div class="proc-bar-track">
+                  <div
+                    class="proc-bar-fill progress-fill violet"
+                    style="width: 1.8%"
+                  ></div>
+                </div>
+              </div>
+              <div class="proc-bar-wrap">
+                <div class="proc-bar-track">
+                  <div
+                    class="proc-bar-fill progress-fill cyan"
+                    style="width: 3.2%"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. CONTAINERS CARD (span 2) -->
+      <div class="card card-cyan span2" style="animation-delay: 0.4s">
+        <div class="card-header">
+          <span class="card-title">Containers</span>
+          <span class="badge badge-cyan">5 running</span>
+        </div>
+        <div class="card-body">
+          <div class="ctn-list">
+            <div class="ctn-row">
+              <span class="ctn-name">nginx</span>
+              <div style="display: flex; align-items: center">
+                <span class="ctn-status running"
+                  ><span class="ctn-dot running"></span> Running</span
+                >
+                <span class="ctn-uptime">14d 3h</span>
+              </div>
+            </div>
+            <div class="ctn-row">
+              <span class="ctn-name">homeassistant</span>
+              <div style="display: flex; align-items: center">
+                <span class="ctn-status running"
+                  ><span class="ctn-dot running"></span> Running</span
+                >
+                <span class="ctn-uptime">14d 3h</span>
+              </div>
+            </div>
+            <div class="ctn-row">
+              <span class="ctn-name">pihole</span>
+              <div style="display: flex; align-items: center">
+                <span class="ctn-status running"
+                  ><span class="ctn-dot running"></span> Running</span
+                >
+                <span class="ctn-uptime">14d 3h</span>
+              </div>
+            </div>
+            <div class="ctn-row">
+              <span class="ctn-name">portainer</span>
+              <div style="display: flex; align-items: center">
+                <span class="ctn-status running"
+                  ><span class="ctn-dot running"></span> Running</span
+                >
+                <span class="ctn-uptime">12d 8h</span>
+              </div>
+            </div>
+            <div class="ctn-row" style="opacity: 0.5">
+              <span class="ctn-name">grafana</span>
+              <div style="display: flex; align-items: center">
+                <span class="ctn-status stopped"
+                  ><span class="ctn-dot stopped"></span> Stopped</span
+                >
+                <span class="ctn-uptime"></span>
+              </div>
+            </div>
+            <div class="ctn-row">
+              <span class="ctn-name">influxdb</span>
+              <div style="display: flex; align-items: center">
+                <span class="ctn-status running"
+                  ><span class="ctn-dot running"></span> Running</span
+                >
+                <span class="ctn-uptime">10d 5h</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      /* ============================================
+   SNOWFALL GENERATOR
+   ============================================ */
+      (function generateSnow() {
+        const container = document.getElementById("snowContainer");
+        const count = 40;
+
+        for (let i = 0; i < count; i++) {
+          const flake = document.createElement("div");
+          flake.classList.add("snow");
+
+          const size = Math.random() * 4 + 2; // 2-6px
+          const left = Math.random() * 100;
+          const duration = Math.random() * 14 + 8; // 8-22s
+          const delay = -(Math.random() * 20); // -20 to 0
+          const opacity = Math.random() * 0.5 + 0.3; // 0.3-0.8
+          const drift = Math.random() * 80 - 40; // -40 to 40
+
+          flake.style.width = size + "px";
+          flake.style.height = size + "px";
+          flake.style.left = left + "%";
+          flake.style.animationDuration = duration + "s";
+          flake.style.animationDelay = delay + "s";
+          flake.style.opacity = opacity;
+          flake.style.setProperty("--drift", drift + "px");
+
+          container.appendChild(flake);
+        }
+      })();
+
+      /* ============================================
+   LIVE DATA SIMULATION
+   ============================================ */
+      (function liveUpdate() {
+        function rand(min, max, dec) {
+          const val = Math.random() * (max - min) + min;
+          return dec !== undefined ? val.toFixed(dec) : Math.round(val);
+        }
+
+        setInterval(function () {
+          // CPU
+          const cpu = rand(15, 65);
+          const cpuV = document.getElementById("cpuV");
+          const cpuB = document.getElementById("cpuB");
+          if (cpuV) cpuV.textContent = cpu + "%";
+          if (cpuB) cpuB.style.width = cpu + "%";
+
+          // Memory
+          const mem = rand(50, 85);
+          const memV = document.getElementById("memV");
+          const memB = document.getElementById("memB");
+          if (memV) memV.textContent = mem + "%";
+          if (memB) memB.style.width = mem + "%";
+
+          // Network
+          const rx = rand(0.2, 3.5, 2);
+          const tx = rand(0.05, 1.2, 2);
+          const rxV = document.getElementById("rxV");
+          const txV = document.getElementById("txV");
+          if (rxV) rxV.textContent = rx + " MB/s";
+          if (txV) txV.textContent = tx + " MB/s";
+        }, 3000);
+      })();
+    </script>
+  </body>
+</html>

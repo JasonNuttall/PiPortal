@@ -1,0 +1,1193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Homelab — Aurora</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@200;300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --deep: #08071a;
+        --void: #0d0b1e;
+        --glass: rgba(255, 255, 255, 0.04);
+        --glass-hover: rgba(255, 255, 255, 0.07);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --glass-border-hover: rgba(255, 255, 255, 0.16);
+        --text: rgba(255, 255, 255, 0.92);
+        --text-mid: rgba(255, 255, 255, 0.55);
+        --text-dim: rgba(255, 255, 255, 0.28);
+        --violet: #c4b5fd;
+        --teal: #5eead4;
+        --rose: #fda4af;
+        --amber: #fcd34d;
+        --blue: #93c5fd;
+        --violet-glow: rgba(196, 181, 253, 0.15);
+        --teal-glow: rgba(94, 234, 212, 0.15);
+        --rose-glow: rgba(253, 164, 175, 0.2);
+      }
+
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--void);
+        color: var(--text);
+        font-family: "Outfit", sans-serif;
+        font-weight: 300;
+        font-size: 13px;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* Aurora background */
+      .aurora-bg {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        overflow: hidden;
+      }
+
+      .aurora-blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.5;
+        animation: aurora-drift ease-in-out infinite alternate;
+        will-change: transform;
+      }
+
+      .b1 {
+        width: 800px;
+        height: 500px;
+        background: radial-gradient(ellipse, #4f2a87 0%, transparent 70%);
+        top: -200px;
+        left: -200px;
+        animation-duration: 12s;
+      }
+
+      .b2 {
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(ellipse, #0f4a5c 0%, transparent 70%);
+        top: 30%;
+        right: -100px;
+        animation-duration: 15s;
+        animation-delay: -5s;
+      }
+
+      .b3 {
+        width: 500px;
+        height: 400px;
+        background: radial-gradient(ellipse, #5c1a3a 0%, transparent 70%);
+        bottom: -100px;
+        left: 30%;
+        animation-duration: 18s;
+        animation-delay: -8s;
+      }
+
+      .b4 {
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(ellipse, #0a3d5c 0%, transparent 70%);
+        top: 50%;
+        left: 20%;
+        animation-duration: 10s;
+        animation-delay: -3s;
+      }
+
+      @keyframes aurora-drift {
+        from {
+          transform: translate(0, 0) scale(1);
+        }
+        to {
+          transform: translate(60px, 40px) scale(1.1);
+        }
+      }
+
+      /* Subtle star field */
+      .stars {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+      }
+
+      header {
+        position: relative;
+        z-index: 10;
+        padding: 28px 36px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        border-bottom: 1px solid var(--glass-border);
+        backdrop-filter: blur(10px);
+      }
+
+      .logo {
+      }
+
+      .logo-label {
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 5px;
+        color: var(--teal);
+        text-transform: uppercase;
+        margin-bottom: 4px;
+        opacity: 0.8;
+      }
+
+      .logo-name {
+        font-family: "DM Serif Display", serif;
+        font-size: 40px;
+        line-height: 1;
+        background: linear-gradient(135deg, var(--violet), var(--teal));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: 2px;
+      }
+
+      .header-pills {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 100px;
+        font-size: 11px;
+        font-weight: 400;
+        border: 1px solid var(--glass-border);
+        background: var(--glass);
+        backdrop-filter: blur(10px);
+      }
+
+      .pill-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .pd-teal {
+        background: var(--teal);
+        box-shadow: 0 0 8px var(--teal);
+      }
+      .pd-amber {
+        background: var(--amber);
+        box-shadow: 0 0 8px var(--amber);
+      }
+      .pd-rose {
+        background: var(--rose);
+        box-shadow: 0 0 8px var(--rose);
+      }
+
+      .pill-label {
+        color: var(--text-mid);
+      }
+
+      main {
+        position: relative;
+        z-index: 10;
+        padding: 28px 36px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        max-width: 1440px;
+        margin: 0 auto;
+      }
+
+      .card {
+        background: var(--glass);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+      }
+
+      .card:hover {
+        background: var(--glass-hover);
+        border-color: var(--glass-border-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      }
+
+      /* Glow accent per card */
+      .card-teal::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--teal),
+          transparent
+        );
+        opacity: 0.8;
+      }
+
+      .card-violet::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--violet),
+          transparent
+        );
+        opacity: 0.8;
+      }
+
+      .card-rose::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--rose),
+          transparent
+        );
+        opacity: 0.8;
+      }
+
+      .card-blue::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--blue),
+          transparent
+        );
+        opacity: 0.8;
+      }
+
+      .card-header {
+        padding: 16px 18px 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--glass-border);
+      }
+
+      .card-title {
+        font-family: "DM Serif Display", serif;
+        font-size: 15px;
+        color: var(--text);
+        letter-spacing: 0.5px;
+      }
+
+      .card-badge {
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 100px;
+        border: 1px solid currentColor;
+      }
+
+      .badge-teal {
+        color: var(--teal);
+      }
+      .badge-violet {
+        color: var(--violet);
+      }
+      .badge-amber {
+        color: var(--amber);
+      }
+      .badge-rose {
+        color: var(--rose);
+      }
+
+      .card-body {
+        padding: 16px 18px;
+      }
+
+      /* Metrics */
+      .stats-2x2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .stat-orb {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        padding: 14px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .stat-orb::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 30px;
+        border-radius: 50%;
+        filter: blur(20px);
+        opacity: 0.4;
+        background: var(--orb-color, var(--teal));
+      }
+
+      .stat-name {
+        font-size: 9px;
+        font-weight: 600;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-bottom: 8px;
+      }
+      .stat-val {
+        font-family: "DM Serif Display", serif;
+        font-size: 36px;
+        line-height: 1;
+      }
+      .stat-unit {
+        font-size: 14px;
+        font-family: "Outfit", sans-serif;
+      }
+      .stat-sub {
+        font-size: 10px;
+        color: var(--text-mid);
+        margin-top: 4px;
+      }
+
+      .orb-teal .stat-val {
+        color: var(--teal);
+        --orb-color: var(--teal);
+      }
+      .orb-violet .stat-val {
+        color: var(--violet);
+        --orb-color: var(--violet);
+      }
+      .orb-amber .stat-val {
+        color: var(--amber);
+        --orb-color: var(--amber);
+      }
+      .orb-rose .stat-val {
+        color: var(--rose);
+        --orb-color: var(--rose);
+      }
+      .orb-blue .stat-val {
+        color: var(--blue);
+        --orb-color: var(--blue);
+      }
+
+      /* Gradient progress bar */
+      .glow-bar-wrap {
+        margin-top: 10px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 2px;
+        overflow: visible;
+        position: relative;
+      }
+
+      .glow-bar {
+        height: 100%;
+        border-radius: 2px;
+        position: relative;
+        transition: width 1s ease;
+      }
+
+      .glow-bar::after {
+        content: "";
+        position: absolute;
+        right: -2px;
+        top: -4px;
+        width: 8px;
+        height: 12px;
+        border-radius: 4px;
+        background: currentColor;
+        filter: blur(3px);
+        opacity: 0.8;
+      }
+
+      .gb-teal {
+        background: linear-gradient(
+          90deg,
+          rgba(94, 234, 212, 0.3),
+          var(--teal)
+        );
+        color: var(--teal);
+      }
+      .gb-violet {
+        background: linear-gradient(
+          90deg,
+          rgba(196, 181, 253, 0.3),
+          var(--violet)
+        );
+        color: var(--violet);
+      }
+      .gb-amber {
+        background: linear-gradient(
+          90deg,
+          rgba(252, 211, 77, 0.3),
+          var(--amber)
+        );
+        color: var(--amber);
+      }
+      .gb-rose {
+        background: linear-gradient(
+          90deg,
+          rgba(253, 164, 175, 0.3),
+          var(--rose)
+        );
+        color: var(--rose);
+      }
+      .gb-blue {
+        background: linear-gradient(
+          90deg,
+          rgba(147, 197, 253, 0.3),
+          var(--blue)
+        );
+        color: var(--blue);
+      }
+
+      /* Disk */
+      .disk-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .disk-item {
+      }
+      .disk-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+      .disk-mount-label {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text);
+      }
+      .disk-pct {
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      /* Docker */
+      .docker-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .dc-item {
+        display: grid;
+        grid-template-columns: 8px 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        transition: background 0.2s;
+      }
+
+      .dc-item:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .dc-glow {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .dc-live {
+        background: var(--teal);
+        box-shadow: 0 0 10px var(--teal);
+      }
+      .dc-off {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .dc-info {
+      }
+      .dc-name {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text);
+      }
+      .dc-img {
+        font-size: 10px;
+        color: var(--text-dim);
+        margin-top: 1px;
+      }
+
+      .dc-port {
+        font-size: 10px;
+        font-weight: 500;
+        color: var(--violet);
+      }
+
+      /* Network */
+      .net-pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .net-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        padding: 14px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .net-label {
+        font-size: 9px;
+        font-weight: 600;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-bottom: 8px;
+      }
+      .net-big {
+        font-family: "DM Serif Display", serif;
+        font-size: 30px;
+        line-height: 1;
+      }
+      .net-unit {
+        font-size: 12px;
+        font-family: "Outfit", sans-serif;
+      }
+      .net-total {
+        font-size: 10px;
+        color: var(--text-mid);
+        margin-top: 6px;
+      }
+
+      /* Services */
+      .services-mosaic {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+
+      .svc-gem {
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        text-decoration: none;
+        display: block;
+        transition: all 0.25s;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .svc-gem:hover {
+        background: rgba(255, 255, 255, 0.07);
+        border-color: var(--glass-border-hover);
+        transform: translateY(-3px);
+      }
+
+      .svc-gem-icon {
+        font-size: 24px;
+        margin-bottom: 6px;
+        display: block;
+      }
+      .svc-gem-name {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text);
+        display: block;
+      }
+      .svc-gem-cat {
+        font-size: 9px;
+        color: var(--text-dim);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-top: 2px;
+        display: block;
+      }
+
+      /* Processes */
+      .proc-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .proc-item {
+        display: grid;
+        grid-template-columns: 1fr 48px 48px;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 8px;
+      }
+
+      .proc-name {
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--text);
+      }
+      .proc-pid {
+        font-size: 9px;
+        color: var(--text-dim);
+        margin-top: 1px;
+      }
+
+      .proc-stat {
+        text-align: right;
+      }
+      .proc-stat-nm {
+        font-size: 8px;
+        color: var(--text-dim);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .proc-stat-v {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .pv-hi {
+        color: var(--rose);
+      }
+      .pv-med {
+        color: var(--amber);
+      }
+      .pv-ok {
+        color: var(--teal);
+      }
+
+      /* Layout spans */
+      .span2 {
+        grid-column: span 2;
+      }
+      .span3 {
+        grid-column: span 3;
+      }
+      .span4 {
+        grid-column: span 4;
+      }
+
+      /* Entrance animation */
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(20px) scale(0.99);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .card {
+        animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      .card:nth-child(1) {
+        animation-delay: 0.05s;
+      }
+      .card:nth-child(2) {
+        animation-delay: 0.1s;
+      }
+      .card:nth-child(3) {
+        animation-delay: 0.15s;
+      }
+      .card:nth-child(4) {
+        animation-delay: 0.2s;
+      }
+      .card:nth-child(5) {
+        animation-delay: 0.25s;
+      }
+      .card:nth-child(6) {
+        animation-delay: 0.3s;
+      }
+      .card:nth-child(7) {
+        animation-delay: 0.35s;
+      }
+
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="aurora-bg">
+      <div class="aurora-blob b1"></div>
+      <div class="aurora-blob b2"></div>
+      <div class="aurora-blob b3"></div>
+      <div class="aurora-blob b4"></div>
+    </div>
+
+    <header>
+      <div class="logo">
+        <div class="logo-label">Private Infrastructure</div>
+        <div class="logo-name">Homelab</div>
+      </div>
+      <div class="header-pills">
+        <div class="pill">
+          <div class="pill-dot pd-teal"></div>
+          <span class="pill-label">raspberrypi.local</span>
+        </div>
+        <div class="pill">
+          <div class="pill-dot pd-teal"></div>
+          <span class="pill-label">5 containers running</span>
+        </div>
+        <div class="pill">
+          <div class="pill-dot pd-amber"></div>
+          <span class="pill-label">Storage ≥ 89%</span>
+        </div>
+        <div class="pill">
+          <div class="pill-dot pd-teal"></div>
+          <span class="pill-label">Uptime 14d 3h</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- System Metrics -->
+      <div class="card card-violet">
+        <div class="card-header">
+          <span class="card-title">System</span>
+          <span class="card-badge badge-violet">Live</span>
+        </div>
+        <div class="card-body">
+          <div class="stats-2x2">
+            <div class="stat-orb orb-teal">
+              <div class="stat-name">CPU</div>
+              <div class="stat-val" id="cpuVal">
+                34<span class="stat-unit">%</span>
+              </div>
+              <div class="glow-bar-wrap">
+                <div
+                  class="glow-bar gb-teal"
+                  id="cpuBar"
+                  style="width: 34%"
+                ></div>
+              </div>
+            </div>
+            <div class="stat-orb orb-amber">
+              <div class="stat-name">Memory</div>
+              <div class="stat-val" id="memVal">
+                67<span class="stat-unit">%</span>
+              </div>
+              <div class="glow-bar-wrap">
+                <div
+                  class="glow-bar gb-amber"
+                  id="memBar"
+                  style="width: 67%"
+                ></div>
+              </div>
+            </div>
+            <div class="stat-orb orb-blue">
+              <div class="stat-name">Temp</div>
+              <div class="stat-val">52<span class="stat-unit">°C</span></div>
+              <div class="glow-bar-wrap">
+                <div class="glow-bar gb-blue" style="width: 52%"></div>
+              </div>
+            </div>
+            <div class="stat-orb orb-violet">
+              <div class="stat-name">Processes</div>
+              <div class="stat-val">148</div>
+              <div class="stat-sub">running</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Network -->
+      <div class="card card-teal">
+        <div class="card-header">
+          <span class="card-title">Network</span>
+          <span class="card-badge badge-teal">eth0</span>
+        </div>
+        <div class="card-body">
+          <div class="net-pair">
+            <div class="net-card">
+              <div class="net-label">↓ Inbound</div>
+              <div class="net-big" style="color: var(--teal)" id="rxVal">
+                1.24<span class="net-unit"> MB/s</span>
+              </div>
+              <div class="net-total">248.3 GB total</div>
+            </div>
+            <div class="net-card">
+              <div class="net-label">↑ Outbound</div>
+              <div class="net-big" style="color: var(--violet)" id="txVal">
+                0.38<span class="net-unit"> MB/s</span>
+              </div>
+              <div class="net-total">89.1 GB total</div>
+            </div>
+          </div>
+          <div
+            style="
+              margin-top: 14px;
+              border-top: 1px solid var(--glass-border);
+              padding-top: 12px;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 11px;
+                margin-bottom: 6px;
+              "
+            >
+              <span style="color: var(--teal); font-weight: 500">eth0</span>
+              <span style="color: var(--text-dim)">192.168.1.42</span>
+              <span style="color: var(--text-mid)">1 Gbps</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 11px;
+              "
+            >
+              <span style="color: var(--text-dim)">wlan0</span>
+              <span style="color: var(--text-dim)">—</span>
+              <span style="color: var(--rose)">Offline</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Disk -->
+      <div class="card card-amber span2">
+        <div class="card-header">
+          <span class="card-title">Storage</span>
+          <span class="card-badge badge-amber">5 Volumes</span>
+        </div>
+        <div class="card-body">
+          <div class="disk-rows">
+            <div class="disk-item">
+              <div class="disk-meta">
+                <span class="disk-mount-label">/</span
+                ><span class="disk-pct" style="color: var(--teal)"
+                  >38% · 45.2 / 118 GB</span
+                >
+              </div>
+              <div class="glow-bar-wrap">
+                <div class="glow-bar gb-teal" style="width: 38%"></div>
+              </div>
+            </div>
+            <div class="disk-item">
+              <div class="disk-meta">
+                <span class="disk-mount-label">/boot</span
+                ><span class="disk-pct" style="color: var(--teal)"
+                  >18% · 90 / 500 MB</span
+                >
+              </div>
+              <div class="glow-bar-wrap">
+                <div class="glow-bar gb-teal" style="width: 18%"></div>
+              </div>
+            </div>
+            <div class="disk-item">
+              <div class="disk-meta">
+                <span class="disk-mount-label">/boot/firmware</span
+                ><span class="disk-pct" style="color: var(--teal)"
+                  >12% · 60 / 500 MB</span
+                >
+              </div>
+              <div class="glow-bar-wrap">
+                <div class="glow-bar gb-teal" style="width: 12%"></div>
+              </div>
+            </div>
+            <div class="disk-item">
+              <div class="disk-meta">
+                <span class="disk-mount-label" style="color: var(--rose)"
+                  >/mnt/storage ⚠</span
+                ><span class="disk-pct" style="color: var(--rose)"
+                  >89% · 892 / 1000 GB</span
+                >
+              </div>
+              <div class="glow-bar-wrap">
+                <div class="glow-bar gb-rose" style="width: 89%"></div>
+              </div>
+            </div>
+            <div class="disk-item">
+              <div class="disk-meta">
+                <span class="disk-mount-label">/mnt/backup</span
+                ><span class="disk-pct" style="color: var(--amber)"
+                  >54% · 270 / 500 GB</span
+                >
+              </div>
+              <div class="glow-bar-wrap">
+                <div class="glow-bar gb-amber" style="width: 54%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Services -->
+      <div class="card card-blue span2">
+        <div class="card-header">
+          <span class="card-title">Services</span>
+          <span class="card-badge badge-teal">6 active</span>
+        </div>
+        <div class="card-body">
+          <div class="services-mosaic">
+            <a class="svc-gem" href="#"
+              ><span class="svc-gem-icon">🏠</span
+              ><span class="svc-gem-name">Home Assistant</span
+              ><span class="svc-gem-cat">Home Auto</span></a
+            >
+            <a class="svc-gem" href="#"
+              ><span class="svc-gem-icon">🐳</span
+              ><span class="svc-gem-name">Portainer</span
+              ><span class="svc-gem-cat">Infra</span></a
+            >
+            <a class="svc-gem" href="#"
+              ><span class="svc-gem-icon">🛡️</span
+              ><span class="svc-gem-name">Pi-hole</span
+              ><span class="svc-gem-cat">Network</span></a
+            >
+            <a class="svc-gem" href="#"
+              ><span class="svc-gem-icon">📊</span
+              ><span class="svc-gem-name">Grafana</span
+              ><span class="svc-gem-cat">Monitor</span></a
+            >
+            <a class="svc-gem" href="#"
+              ><span class="svc-gem-icon">☁️</span
+              ><span class="svc-gem-name">Nextcloud</span
+              ><span class="svc-gem-cat">Storage</span></a
+            >
+            <a class="svc-gem" href="#"
+              ><span class="svc-gem-icon">🎬</span
+              ><span class="svc-gem-name">Jellyfin</span
+              ><span class="svc-gem-cat">Media</span></a
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- Processes -->
+      <div class="card card-violet span2">
+        <div class="card-header">
+          <span class="card-title">Processes</span>
+          <span class="card-badge badge-violet">Top 7</span>
+        </div>
+        <div class="card-body">
+          <div class="proc-list">
+            <div class="proc-item">
+              <div>
+                <div class="proc-name">homeassistant</div>
+                <div class="proc-pid">PID 1247</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">CPU</div>
+                <div class="proc-stat-v pv-hi">8.2%</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">MEM</div>
+                <div class="proc-stat-v pv-med">12.4%</div>
+              </div>
+            </div>
+            <div class="proc-item">
+              <div>
+                <div class="proc-name">node</div>
+                <div class="proc-pid">PID 892</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">CPU</div>
+                <div class="proc-stat-v pv-med">4.1%</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">MEM</div>
+                <div class="proc-stat-v pv-ok">5.8%</div>
+              </div>
+            </div>
+            <div class="proc-item">
+              <div>
+                <div class="proc-name">python3</div>
+                <div class="proc-pid">PID 1455</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">CPU</div>
+                <div class="proc-stat-v pv-ok">2.8%</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">MEM</div>
+                <div class="proc-stat-v pv-ok">3.2%</div>
+              </div>
+            </div>
+            <div class="proc-item">
+              <div>
+                <div class="proc-name">influxd</div>
+                <div class="proc-pid">PID 743</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">CPU</div>
+                <div class="proc-stat-v pv-ok">1.9%</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">MEM</div>
+                <div class="proc-stat-v pv-ok">4.1%</div>
+              </div>
+            </div>
+            <div class="proc-item">
+              <div>
+                <div class="proc-name">nginx</div>
+                <div class="proc-pid">PID 412</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">CPU</div>
+                <div class="proc-stat-v pv-ok">0.3%</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">MEM</div>
+                <div class="proc-stat-v pv-ok">0.8%</div>
+              </div>
+            </div>
+            <div class="proc-item">
+              <div>
+                <div class="proc-name">pihole-FTL</div>
+                <div class="proc-pid">PID 321</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">CPU</div>
+                <div class="proc-stat-v pv-ok">0.2%</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">MEM</div>
+                <div class="proc-stat-v pv-ok">1.1%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Docker -->
+      <div class="card card-teal span2">
+        <div class="card-header">
+          <span class="card-title">Containers</span>
+          <span class="card-badge badge-teal">5 running</span>
+        </div>
+        <div class="card-body">
+          <div class="docker-cards">
+            <div class="dc-item">
+              <div class="dc-glow dc-live"></div>
+              <div class="dc-info">
+                <div class="dc-name">nginx</div>
+                <div class="dc-img">nginx:latest</div>
+              </div>
+              <div class="dc-port">:80 :443</div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-glow dc-live"></div>
+              <div class="dc-info">
+                <div class="dc-name">homeassistant</div>
+                <div class="dc-img">home-assistant:stable</div>
+              </div>
+              <div class="dc-port">:8123</div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-glow dc-live"></div>
+              <div class="dc-info">
+                <div class="dc-name">pihole</div>
+                <div class="dc-img">pihole/pihole:latest</div>
+              </div>
+              <div class="dc-port">:53 :80</div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-glow dc-live"></div>
+              <div class="dc-info">
+                <div class="dc-name">portainer</div>
+                <div class="dc-img">portainer-ce:latest</div>
+              </div>
+              <div class="dc-port">:9000</div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-glow dc-off"></div>
+              <div class="dc-info">
+                <div class="dc-name" style="color: var(--rose)">grafana</div>
+                <div class="dc-img">grafana:latest</div>
+              </div>
+              <div class="dc-port" style="color: var(--text-dim)">stopped</div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-glow dc-live"></div>
+              <div class="dc-info">
+                <div class="dc-name">influxdb</div>
+                <div class="dc-img">influxdb:latest</div>
+              </div>
+              <div class="dc-port">:8086</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      // Gently pulse live data
+      setInterval(() => {
+        const cpu = Math.max(8, Math.min(90, 34 + (Math.random() - 0.5) * 22));
+        const mem = Math.max(55, Math.min(85, 67 + (Math.random() - 0.5) * 8));
+        document.getElementById("cpuVal").innerHTML =
+          cpu.toFixed(0) + '<span class="stat-unit">%</span>';
+        document.getElementById("cpuBar").style.width = cpu + "%";
+        document.getElementById("memVal").innerHTML =
+          mem.toFixed(0) + '<span class="stat-unit">%</span>';
+        document.getElementById("memBar").style.width = mem + "%";
+
+        const rx = (Math.random() * 3.5).toFixed(2);
+        const tx = (Math.random() * 1.1).toFixed(2);
+        document.getElementById("rxVal").innerHTML =
+          rx + '<span class="net-unit"> MB/s</span>';
+        document.getElementById("txVal").innerHTML =
+          tx + '<span class="net-unit"> MB/s</span>';
+      }, 3000);
+    </script>
+  </body>
+</html>

@@ -359,23 +359,27 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl text-slate-400">Loading dashboard...</div>
+        <div className="text-xl text-ctext-mid">Loading dashboard...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      <Header />
+    <div>
+      <Header
+        systemMetrics={systemMetrics}
+        dockerInfo={dockerInfo}
+        diskMetrics={diskMetrics}
+      />
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="max-w-[1440px] mx-auto px-4 sm:px-8 py-6">
         <div className="flex justify-end mb-4">
           <div className="flex items-center gap-2">
-            <label className="text-sm text-slate-400">Refresh Interval:</label>
+            <label className="text-[10px] tracking-[2px] uppercase text-ctext-dim">Refresh:</label>
             <select
               value={refreshInterval}
               onChange={(e) => setRefreshInterval(Number(e.target.value))}
-              className="bg-slate-800 text-slate-100 border border-slate-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+              className="glass-input px-3 py-1.5 text-xs"
             >
               <option value={2000}>2 seconds</option>
               <option value={5000}>5 seconds</option>
@@ -387,7 +391,7 @@ const Dashboard = () => {
         </div>
 
         {error && (
-          <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded mb-6">
+          <div className="glass-card border-red-500/30 text-red-300 px-4 py-3 mb-6">
             Error loading data: {error}
           </div>
         )}
@@ -401,7 +405,7 @@ const Dashboard = () => {
         />
 
         {/* Draggable Panels */}
-        <div className="mt-6 pl-0 md:pl-8">
+        <div className="mt-6 pl-0 md:pl-6">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}

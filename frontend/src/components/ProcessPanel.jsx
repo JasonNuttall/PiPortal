@@ -41,7 +41,7 @@ const VirtualizedRows = ({ parentRef, processes }) => {
           return (
             <tr
               key={proc.pid}
-              className="border-b border-slate-700/50 hover:bg-slate-700/30"
+              className="border-b border-glass-border hover:bg-glass-hover"
               style={{
                 position: "absolute",
                 top: 0,
@@ -54,26 +54,26 @@ const VirtualizedRows = ({ parentRef, processes }) => {
               }}
             >
               <td className="py-2 px-2">
-                <div className="font-medium text-slate-100 truncate max-w-xs">
+                <div className="font-medium text-ctext truncate max-w-xs">
                   {proc.name}
                 </div>
-                <div className="text-xs text-slate-500 truncate max-w-xs hidden xl:block">
+                <div className="text-xs text-ctext-dim truncate max-w-xs hidden xl:block">
                   {proc.command}
                 </div>
               </td>
-              <td className="py-2 px-2 text-slate-300 hidden md:table-cell">
+              <td className="py-2 px-2 text-ctext-mid hidden md:table-cell">
                 {proc.user}
               </td>
               <td className="py-2 px-2 text-right">
                 <span
-                  className={`font-mono ${
+                  className={`font-source-code ${
                     proc.cpu > 50
                       ? "text-red-400"
                       : proc.cpu > 20
-                      ? "text-orange-400"
+                      ? "text-crystal-teal"
                       : proc.cpu > 5
-                      ? "text-yellow-400"
-                      : "text-slate-300"
+                      ? "text-crystal-seafoam"
+                      : "text-crystal-blue"
                   }`}
                 >
                   {proc.cpu.toFixed(1)}%
@@ -81,23 +81,23 @@ const VirtualizedRows = ({ parentRef, processes }) => {
               </td>
               <td className="py-2 px-2 text-right">
                 <span
-                  className={`font-mono ${
+                  className={`font-source-code ${
                     proc.mem > 10
                       ? "text-red-400"
                       : proc.mem > 5
-                      ? "text-orange-400"
+                      ? "text-crystal-teal"
                       : proc.mem > 2
-                      ? "text-yellow-400"
-                      : "text-slate-300"
+                      ? "text-crystal-seafoam"
+                      : "text-crystal-blue"
                   }`}
                 >
                   {proc.mem.toFixed(1)}%
                 </span>
               </td>
-              <td className="py-2 px-2 text-right text-slate-300 font-mono text-xs hidden lg:table-cell">
+              <td className="py-2 px-2 text-right text-ctext-mid font-source-code text-xs hidden lg:table-cell">
                 {formatMem(proc.memRssMB)}
               </td>
-              <td className="py-2 px-2 text-center text-slate-400 font-mono text-xs hidden sm:table-cell">
+              <td className="py-2 px-2 text-center text-ctext-dim font-source-code text-xs hidden sm:table-cell">
                 {proc.pid}
               </td>
             </tr>
@@ -112,11 +112,11 @@ const ProcessList = ({ processData, searchTerm, sortBy, sortDirection, displayLi
   const parentRef = useRef(null);
   const getSortIcon = (column) => {
     if (sortBy !== column)
-      return <ArrowUpDown className="w-3 h-3 text-slate-500" />;
+      return <ArrowUpDown className="w-3 h-3 text-ctext-dim" />;
     return sortDirection === "asc" ? (
-      <ArrowUp className="w-3 h-3 text-blue-400" />
+      <ArrowUp className="w-3 h-3 text-crystal-blue" />
     ) : (
-      <ArrowDown className="w-3 h-3 text-blue-400" />
+      <ArrowDown className="w-3 h-3 text-crystal-blue" />
     );
   };
 
@@ -165,19 +165,19 @@ const ProcessList = ({ processData, searchTerm, sortBy, sortDirection, displayLi
       {/* Search and Controls */}
       <div className="flex gap-3 mb-4">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-ctext-dim" />
           <input
             type="text"
             placeholder="Search processes..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-700 text-slate-100 rounded-lg border border-slate-600 focus:border-blue-500 outline-none"
+            className="glass-input w-full pl-10"
           />
         </div>
         <select
           value={displayLimit}
           onChange={(e) => onLimitChange(Number(e.target.value))}
-          className="px-3 py-2 bg-slate-700 text-slate-100 rounded-lg border border-slate-600 focus:border-blue-500 outline-none"
+          className="glass-input"
         >
           <option value={10}>Top 10</option>
           <option value={20}>Top 20</option>
@@ -189,12 +189,12 @@ const ProcessList = ({ processData, searchTerm, sortBy, sortDirection, displayLi
       {/* Process Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="border-b border-slate-700">
-            <tr className="text-left text-slate-400">
+          <thead className="border-b border-glass-border">
+            <tr className="text-left text-ctext-dim">
               <th className="pb-3 font-medium">
                 <button
                   onClick={() => onSort("name")}
-                  className="flex items-center gap-1 hover:text-slate-200"
+                  className="flex items-center gap-1 hover:text-ctext"
                 >
                   Process {getSortIcon("name")}
                 </button>
@@ -205,7 +205,7 @@ const ProcessList = ({ processData, searchTerm, sortBy, sortDirection, displayLi
               <th className="pb-3 font-medium text-right">
                 <button
                   onClick={() => onSort("cpu")}
-                  className="flex items-center gap-1 hover:text-slate-200 ml-auto"
+                  className="flex items-center gap-1 hover:text-ctext ml-auto"
                 >
                   CPU % {getSortIcon("cpu")}
                 </button>
@@ -213,7 +213,7 @@ const ProcessList = ({ processData, searchTerm, sortBy, sortDirection, displayLi
               <th className="pb-3 font-medium text-right">
                 <button
                   onClick={() => onSort("mem")}
-                  className="flex items-center gap-1 hover:text-slate-200 ml-auto"
+                  className="flex items-center gap-1 hover:text-ctext ml-auto"
                 >
                   Memory % {getSortIcon("mem")}
                 </button>
@@ -240,7 +240,7 @@ const ProcessList = ({ processData, searchTerm, sortBy, sortDirection, displayLi
       </div>
 
       {/* Footer */}
-      <div className="mt-4 text-center text-sm text-slate-400">
+      <div className="mt-4 text-center text-sm text-ctext-dim">
         Showing {displayedProcesses.length} of {totalFiltered} processes
       </div>
     </>
@@ -274,7 +274,7 @@ const ProcessPanel = ({
     <BasePanel
       title="Process Monitor"
       icon={Activity}
-      iconColor="text-cyan-400"
+      iconColor="text-crystal-teal"
       data={data}
       isCollapsed={isCollapsed}
       onCollapseChange={onCollapseChange}

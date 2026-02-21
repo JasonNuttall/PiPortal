@@ -1,0 +1,1311 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Homelab — Midnight Garden</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Mono:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --deep: #020d06;
+        --void: #030e07;
+        --jade: #00a878;
+        --jade-dim: #006e50;
+        --gold: #e8c547;
+        --gold-dim: #a88a2a;
+        --moss: #3a5c3a;
+        --sage: #7ab87a;
+        --glass: rgba(0, 168, 120, 0.04);
+        --glass-hover: rgba(0, 168, 120, 0.08);
+        --glass-border: rgba(0, 168, 120, 0.14);
+        --glass-border-hover: rgba(0, 200, 150, 0.3);
+        --text: rgba(220, 255, 230, 0.92);
+        --text-mid: rgba(160, 220, 180, 0.55);
+        --text-dim: rgba(80, 140, 90, 0.4);
+      }
+
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--void);
+        color: var(--text);
+        font-family: "Lora", serif;
+        font-weight: 400;
+        font-size: 13px;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* === Garden background === */
+      .garden-bg {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        overflow: hidden;
+      }
+
+      /* Fog / mist layer */
+      .garden-bg::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            ellipse 70% 50% at 15% 20%,
+            rgba(0, 80, 50, 0.2) 0%,
+            transparent 60%
+          ),
+          radial-gradient(
+            ellipse 50% 70% at 85% 70%,
+            rgba(0, 60, 40, 0.15) 0%,
+            transparent 60%
+          ),
+          radial-gradient(
+            ellipse 60% 40% at 50% 90%,
+            rgba(0, 50, 30, 0.18) 0%,
+            transparent 60%
+          );
+      }
+
+      /* Jade blobs */
+      .jade-blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(90px);
+        opacity: 0.38;
+        will-change: transform;
+      }
+
+      .jb1 {
+        width: 700px;
+        height: 500px;
+        background: radial-gradient(ellipse, #003d28 0%, transparent 70%);
+        top: -150px;
+        left: -100px;
+        animation: garden-sway 22s ease-in-out infinite alternate;
+      }
+      .jb2 {
+        width: 500px;
+        height: 600px;
+        background: radial-gradient(ellipse, #002d20 0%, transparent 70%);
+        bottom: -100px;
+        right: -120px;
+        animation: garden-sway 28s ease-in-out infinite alternate;
+        animation-delay: -10s;
+      }
+      .jb3 {
+        width: 600px;
+        height: 400px;
+        background: radial-gradient(ellipse, #004030 0%, transparent 70%);
+        top: 40%;
+        left: 25%;
+        animation: garden-sway 18s ease-in-out infinite alternate;
+        animation-delay: -6s;
+      }
+
+      @keyframes garden-sway {
+        from {
+          transform: translate(0, 0) scale(1) rotate(-2deg);
+        }
+        to {
+          transform: translate(50px, 35px) scale(1.08) rotate(2deg);
+        }
+      }
+
+      /* Firefly dots - spawned by JS */
+      .firefly {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: var(--gold);
+        pointer-events: none;
+      }
+
+      /* === Header === */
+      header {
+        position: relative;
+        z-index: 10;
+        padding: 28px 42px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        border-bottom: 1px solid var(--glass-border);
+        backdrop-filter: blur(12px);
+      }
+
+      .logo-label {
+        font-family: "DM Mono", monospace;
+        font-size: 9px;
+        letter-spacing: 5px;
+        color: var(--jade);
+        text-transform: uppercase;
+        margin-bottom: 4px;
+        opacity: 0.7;
+      }
+
+      .logo-name {
+        font-family: "Lora", serif;
+        font-style: italic;
+        font-weight: 600;
+        font-size: 46px;
+        line-height: 1;
+        letter-spacing: 2px;
+        background: linear-gradient(
+          135deg,
+          var(--jade),
+          var(--sage),
+          var(--gold)
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        filter: drop-shadow(0 0 12px rgba(0, 168, 120, 0.3));
+      }
+
+      .header-pills {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 14px;
+        border-radius: 100px;
+        font-family: "DM Mono", monospace;
+        font-size: 10px;
+        border: 1px solid var(--glass-border);
+        background: var(--glass);
+        backdrop-filter: blur(10px);
+        letter-spacing: 1px;
+      }
+
+      .pill-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .pd-jade {
+        background: var(--jade);
+        box-shadow: 0 0 8px var(--jade);
+        animation: breathe 3s ease-in-out infinite;
+      }
+      .pd-gold {
+        background: var(--gold);
+        box-shadow: 0 0 6px var(--gold);
+      }
+      .pd-sage {
+        background: var(--sage);
+        box-shadow: 0 0 6px var(--sage);
+      }
+
+      @keyframes breathe {
+        0%,
+        100% {
+          box-shadow: 0 0 4px var(--jade);
+          transform: scale(1);
+        }
+        50% {
+          box-shadow:
+            0 0 14px var(--jade),
+            0 0 26px rgba(0, 168, 120, 0.4);
+          transform: scale(1.25);
+        }
+      }
+
+      .pill-label {
+        color: var(--text-mid);
+      }
+
+      /* === Main — asymmetric layout === */
+      main {
+        position: relative;
+        z-index: 10;
+        padding: 28px 42px;
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: 18px;
+        max-width: 1440px;
+        margin: 0 auto;
+      }
+
+      /* Wide right-column sub-grid */
+      .right-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+
+      .right-grid-wide {
+        grid-column: span 2;
+      }
+
+      /* === Cards === */
+      .card {
+        background: var(--glass);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.35s ease;
+        animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+
+      .card:hover {
+        background: var(--glass-hover);
+        border-color: var(--glass-border-hover);
+        transform: translateY(-2px);
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.5),
+          0 0 0 1px rgba(0, 168, 120, 0.1);
+      }
+
+      .card-jade::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--jade),
+          transparent
+        );
+        opacity: 0.8;
+      }
+      .card-gold::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--gold),
+          transparent
+        );
+        opacity: 0.7;
+      }
+      .card-sage::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--sage),
+          transparent
+        );
+        opacity: 0.6;
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(20px) scale(0.99);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .card-header {
+        padding: 16px 20px 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        border-bottom: 1px solid var(--glass-border);
+      }
+
+      .card-title {
+        font-family: "Lora", serif;
+        font-style: italic;
+        font-weight: 500;
+        font-size: 16px;
+        color: var(--text);
+        letter-spacing: 0.5px;
+      }
+
+      .card-badge {
+        font-family: "DM Mono", monospace;
+        font-size: 9px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 100px;
+        border: 1px solid currentColor;
+      }
+      .badge-jade {
+        color: var(--jade);
+      }
+      .badge-gold {
+        color: var(--gold);
+      }
+      .badge-sage {
+        color: var(--sage);
+      }
+
+      .card-body {
+        padding: 16px 20px;
+      }
+
+      /* === Tall system card (left column) === */
+      .system-tall {
+        grid-row: span 3;
+      }
+
+      /* Big orb metrics for the tall card */
+      .stat-orb {
+        background: rgba(0, 168, 120, 0.04);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        padding: 16px 14px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 10px;
+      }
+
+      .stat-orb:last-child {
+        margin-bottom: 0;
+      }
+
+      .stat-orb::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 30px;
+        border-radius: 50%;
+        filter: blur(20px);
+        background: var(--orb-glow, var(--jade));
+        opacity: 0.4;
+      }
+
+      .og-jade {
+        --orb-glow: var(--jade);
+      }
+      .og-gold {
+        --orb-glow: var(--gold);
+      }
+      .og-sage {
+        --orb-glow: var(--sage);
+      }
+
+      .stat-name {
+        font-family: "DM Mono", monospace;
+        font-size: 8px;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-bottom: 8px;
+      }
+
+      .stat-val {
+        font-family: "Lora", serif;
+        font-weight: 600;
+        font-size: 40px;
+        line-height: 1;
+      }
+      .sv-jade {
+        color: var(--jade);
+        text-shadow: 0 0 24px rgba(0, 168, 120, 0.45);
+      }
+      .sv-gold {
+        color: var(--gold);
+        text-shadow: 0 0 24px rgba(232, 197, 71, 0.45);
+      }
+      .sv-sage {
+        color: var(--sage);
+        text-shadow: 0 0 24px rgba(122, 184, 122, 0.4);
+      }
+
+      .stat-unit {
+        font-size: 18px;
+        font-weight: 400;
+      }
+      .stat-sub {
+        font-family: "DM Mono", monospace;
+        font-size: 9px;
+        color: var(--text-mid);
+        margin-top: 4px;
+      }
+
+      /* Leaf bars */
+      .lbar-wrap {
+        margin-top: 10px;
+        height: 3px;
+        background: rgba(0, 168, 120, 0.08);
+        border-radius: 2px;
+        overflow: visible;
+        position: relative;
+      }
+      .lbar {
+        height: 100%;
+        border-radius: 2px;
+        position: relative;
+        transition: width 1.2s ease;
+      }
+      .lbar::after {
+        content: "";
+        position: absolute;
+        right: -2px;
+        top: -4px;
+        width: 8px;
+        height: 12px;
+        border-radius: 4px;
+        background: currentColor;
+        filter: blur(2px);
+        opacity: 0.9;
+      }
+      .lb-jade {
+        background: linear-gradient(90deg, rgba(0, 168, 120, 0.2), var(--jade));
+        color: var(--jade);
+      }
+      .lb-gold {
+        background: linear-gradient(
+          90deg,
+          rgba(232, 197, 71, 0.2),
+          var(--gold)
+        );
+        color: var(--gold);
+      }
+      .lb-sage {
+        background: linear-gradient(
+          90deg,
+          rgba(122, 184, 122, 0.2),
+          var(--sage)
+        );
+        color: var(--sage);
+      }
+      .lb-red {
+        background: linear-gradient(90deg, rgba(255, 80, 80, 0.2), #ff5050);
+        color: #ff5050;
+      }
+
+      /* === Network === */
+      .net-pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .net-card {
+        background: rgba(0, 168, 120, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        padding: 12px;
+        text-align: center;
+      }
+      .net-label {
+        font-family: "DM Mono", monospace;
+        font-size: 8px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-bottom: 6px;
+      }
+      .net-big {
+        font-family: "Lora", serif;
+        font-weight: 600;
+        font-size: 28px;
+        line-height: 1;
+      }
+      .net-unit {
+        font-size: 12px;
+        font-weight: 400;
+      }
+      .net-total {
+        font-family: "DM Mono", monospace;
+        font-size: 9px;
+        color: var(--text-mid);
+        margin-top: 4px;
+      }
+
+      /* === Storage === */
+      .disk-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .disk-meta {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+      }
+      .disk-mount-label {
+        font-family: "DM Mono", monospace;
+        font-size: 11px;
+        color: var(--text);
+      }
+      .disk-pct {
+        font-family: "DM Mono", monospace;
+        font-size: 10px;
+        font-weight: 500;
+      }
+
+      /* === Services === */
+      .svc-mosaic {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .svc-gem {
+        padding: 14px 8px;
+        background: rgba(0, 168, 120, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        text-decoration: none;
+        display: block;
+        text-align: center;
+        transition: all 0.3s;
+      }
+      .svc-gem:hover {
+        background: rgba(0, 168, 120, 0.08);
+        border-color: var(--glass-border-hover);
+        transform: translateY(-3px);
+      }
+      .svc-gem-icon {
+        font-size: 22px;
+        margin-bottom: 6px;
+        display: block;
+      }
+      .svc-gem-name {
+        font-family: "Lora", serif;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text);
+        display: block;
+      }
+      .svc-gem-cat {
+        font-family: "DM Mono", monospace;
+        font-size: 8px;
+        color: var(--text-dim);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-top: 2px;
+        display: block;
+      }
+
+      /* === Containers === */
+      .dc-list {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      .dc-item {
+        display: grid;
+        grid-template-columns: 8px 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 8px 10px;
+        background: rgba(0, 168, 120, 0.02);
+        border: 1px solid var(--glass-border);
+        border-radius: 8px;
+      }
+      .dc-live {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--jade);
+        box-shadow: 0 0 8px var(--jade);
+      }
+      .dc-off {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(255, 100, 80, 0.6);
+      }
+      .dc-name {
+        font-family: "DM Mono", monospace;
+        font-size: 11px;
+        color: var(--text);
+      }
+      .dc-img {
+        font-size: 9px;
+        color: var(--text-dim);
+        margin-top: 1px;
+      }
+      .dc-port {
+        font-family: "DM Mono", monospace;
+        font-size: 10px;
+        color: var(--gold);
+      }
+
+      /* === Processes === */
+      .proc-list {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .proc-item {
+        display: grid;
+        grid-template-columns: 1fr 46px 46px;
+        align-items: center;
+        gap: 10px;
+        padding: 7px 10px;
+        background: rgba(0, 168, 120, 0.02);
+        border: 1px solid var(--glass-border);
+        border-radius: 7px;
+      }
+      .proc-name {
+        font-family: "DM Mono", monospace;
+        font-size: 11px;
+        color: var(--text);
+      }
+      .proc-pid {
+        font-family: "DM Mono", monospace;
+        font-size: 8px;
+        color: var(--text-dim);
+        margin-top: 1px;
+      }
+      .proc-stat {
+        text-align: right;
+      }
+      .proc-stat-nm {
+        font-family: "DM Mono", monospace;
+        font-size: 7px;
+        color: var(--text-dim);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .proc-stat-v {
+        font-family: "Lora", serif;
+        font-weight: 600;
+        font-size: 12px;
+      }
+      .pv-hi {
+        color: #ff7060;
+      }
+      .pv-med {
+        color: var(--gold);
+      }
+      .pv-ok {
+        color: var(--jade);
+      }
+
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(0, 168, 120, 0.2);
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="garden-bg" id="gardenBg">
+      <div class="jade-blob jb1"></div>
+      <div class="jade-blob jb2"></div>
+      <div class="jade-blob jb3"></div>
+    </div>
+
+    <header>
+      <div>
+        <div class="logo-label">Midnight Garden — Private Infrastructure</div>
+        <div class="logo-name">Homelab</div>
+      </div>
+      <div class="header-pills">
+        <div class="pill">
+          <div class="pill-dot pd-jade"></div>
+          <span class="pill-label">raspberrypi.local</span>
+        </div>
+        <div class="pill">
+          <div class="pill-dot pd-jade"></div>
+          <span class="pill-label">5 containers running</span>
+        </div>
+        <div class="pill">
+          <div class="pill-dot pd-gold"></div>
+          <span class="pill-label">Storage ≥ 89%</span>
+        </div>
+        <div class="pill">
+          <div class="pill-dot pd-sage"></div>
+          <span class="pill-label">Uptime 14d 3h</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- Left: Tall system card -->
+      <div class="card card-jade system-tall">
+        <div class="card-header">
+          <span class="card-title">System</span>
+          <span class="card-badge badge-jade">Live</span>
+        </div>
+        <div class="card-body">
+          <div class="stat-orb og-jade">
+            <div class="stat-name">CPU Load</div>
+            <div class="stat-val sv-jade" id="cpuVal">
+              34<span class="stat-unit">%</span>
+            </div>
+            <div class="lbar-wrap">
+              <div class="lbar lb-jade" id="cpuBar" style="width: 34%"></div>
+            </div>
+          </div>
+          <div class="stat-orb og-gold">
+            <div class="stat-name">Memory</div>
+            <div class="stat-val sv-gold" id="memVal">
+              67<span class="stat-unit">%</span>
+            </div>
+            <div class="stat-sub">3.4 / 5.1 GB</div>
+            <div class="lbar-wrap">
+              <div class="lbar lb-gold" id="memBar" style="width: 67%"></div>
+            </div>
+          </div>
+          <div class="stat-orb og-sage">
+            <div class="stat-name">Temperature</div>
+            <div class="stat-val sv-sage">
+              52<span class="stat-unit">°C</span>
+            </div>
+            <div class="lbar-wrap">
+              <div class="lbar lb-sage" style="width: 52%"></div>
+            </div>
+          </div>
+          <div class="stat-orb" style="--orb-glow: rgba(122, 184, 122, 0.4)">
+            <div class="stat-name">Processes</div>
+            <div class="stat-val" style="color: var(--sage); font-size: 38px">
+              148
+            </div>
+            <div class="stat-sub">running</div>
+          </div>
+          <div
+            style="
+              margin-top: 16px;
+              padding-top: 14px;
+              border-top: 1px solid var(--glass-border);
+            "
+          >
+            <div
+              style="
+                font-family: &quot;DM Mono&quot;, monospace;
+                font-size: 9px;
+                letter-spacing: 3px;
+                text-transform: uppercase;
+                color: var(--text-dim);
+                margin-bottom: 10px;
+              "
+            >
+              Network
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-family: &quot;DM Mono&quot;, monospace;
+                font-size: 10px;
+                margin-bottom: 7px;
+              "
+            >
+              <span style="color: var(--jade)">eth0</span>
+              <span style="color: var(--text-dim)">192.168.1.42</span>
+              <span style="color: var(--sage)">1 Gbps</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-family: &quot;DM Mono&quot;, monospace;
+                font-size: 10px;
+              "
+            >
+              <span style="color: var(--text-dim)">wlan0</span>
+              <span style="color: var(--text-dim)">—</span>
+              <span style="color: #ff7060">Offline</span>
+            </div>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                margin-top: 14px;
+              "
+            >
+              <div
+                style="
+                  background: rgba(0, 168, 120, 0.04);
+                  border: 1px solid var(--glass-border);
+                  border-radius: 8px;
+                  padding: 10px;
+                  text-align: center;
+                "
+              >
+                <div
+                  style="
+                    font-family: &quot;DM Mono&quot;, monospace;
+                    font-size: 8px;
+                    letter-spacing: 2px;
+                    color: var(--text-dim);
+                    margin-bottom: 4px;
+                  "
+                >
+                  ↓ RX
+                </div>
+                <div
+                  style="
+                    font-family: &quot;Lora&quot;, serif;
+                    font-weight: 600;
+                    font-size: 20px;
+                    color: var(--jade);
+                  "
+                  id="rxVal"
+                >
+                  1.24<span style="font-size: 11px; font-weight: 400">
+                    MB/s</span
+                  >
+                </div>
+              </div>
+              <div
+                style="
+                  background: rgba(0, 168, 120, 0.04);
+                  border: 1px solid var(--glass-border);
+                  border-radius: 8px;
+                  padding: 10px;
+                  text-align: center;
+                "
+              >
+                <div
+                  style="
+                    font-family: &quot;DM Mono&quot;, monospace;
+                    font-size: 8px;
+                    letter-spacing: 2px;
+                    color: var(--text-dim);
+                    margin-bottom: 4px;
+                  "
+                >
+                  ↑ TX
+                </div>
+                <div
+                  style="
+                    font-family: &quot;Lora&quot;, serif;
+                    font-weight: 600;
+                    font-size: 20px;
+                    color: var(--gold);
+                  "
+                  id="txVal"
+                >
+                  0.38<span style="font-size: 11px; font-weight: 400">
+                    MB/s</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right grid -->
+      <div class="right-grid">
+        <!-- Storage -->
+        <div class="card card-gold right-grid-wide">
+          <div class="card-header">
+            <span class="card-title">Storage</span>
+            <span class="card-badge badge-gold">5 Volumes</span>
+          </div>
+          <div class="card-body">
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 14px 20px;
+              "
+            >
+              <div>
+                <div class="disk-meta">
+                  <span class="disk-mount-label">/</span
+                  ><span class="disk-pct" style="color: var(--jade)">38%</span>
+                </div>
+                <div class="lbar-wrap">
+                  <div class="lbar lb-jade" style="width: 38%"></div>
+                </div>
+                <div
+                  style="
+                    font-family: &quot;DM Mono&quot;, monospace;
+                    font-size: 9px;
+                    color: var(--text-dim);
+                    margin-top: 3px;
+                  "
+                >
+                  45.2 / 118 GB
+                </div>
+              </div>
+              <div>
+                <div class="disk-meta">
+                  <span class="disk-mount-label">/boot</span
+                  ><span class="disk-pct" style="color: var(--jade)">18%</span>
+                </div>
+                <div class="lbar-wrap">
+                  <div class="lbar lb-jade" style="width: 18%"></div>
+                </div>
+                <div
+                  style="
+                    font-family: &quot;DM Mono&quot;, monospace;
+                    font-size: 9px;
+                    color: var(--text-dim);
+                    margin-top: 3px;
+                  "
+                >
+                  90 / 500 MB
+                </div>
+              </div>
+              <div>
+                <div class="disk-meta">
+                  <span class="disk-mount-label">/boot/firmware</span
+                  ><span class="disk-pct" style="color: var(--jade)">12%</span>
+                </div>
+                <div class="lbar-wrap">
+                  <div class="lbar lb-jade" style="width: 12%"></div>
+                </div>
+                <div
+                  style="
+                    font-family: &quot;DM Mono&quot;, monospace;
+                    font-size: 9px;
+                    color: var(--text-dim);
+                    margin-top: 3px;
+                  "
+                >
+                  60 / 500 MB
+                </div>
+              </div>
+              <div>
+                <div class="disk-meta">
+                  <span class="disk-mount-label" style="color: #ff7060"
+                    >/mnt/storage ⚠</span
+                  ><span class="disk-pct" style="color: #ff7060">89%</span>
+                </div>
+                <div class="lbar-wrap">
+                  <div class="lbar lb-red" style="width: 89%"></div>
+                </div>
+                <div
+                  style="
+                    font-family: &quot;DM Mono&quot;, monospace;
+                    font-size: 9px;
+                    color: #ff7060;
+                    margin-top: 3px;
+                  "
+                >
+                  892 / 1000 GB
+                </div>
+              </div>
+              <div>
+                <div class="disk-meta">
+                  <span class="disk-mount-label">/mnt/backup</span
+                  ><span class="disk-pct" style="color: var(--gold)">54%</span>
+                </div>
+                <div class="lbar-wrap">
+                  <div class="lbar lb-gold" style="width: 54%"></div>
+                </div>
+                <div
+                  style="
+                    font-family: &quot;DM Mono&quot;, monospace;
+                    font-size: 9px;
+                    color: var(--text-dim);
+                    margin-top: 3px;
+                  "
+                >
+                  270 / 500 GB
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Services -->
+        <div class="card card-sage right-grid-wide">
+          <div class="card-header">
+            <span class="card-title">Services</span>
+            <span class="card-badge badge-sage">6 active</span>
+          </div>
+          <div class="card-body">
+            <div class="svc-mosaic">
+              <a class="svc-gem" href="#"
+                ><span class="svc-gem-icon">🏠</span
+                ><span class="svc-gem-name">Home Assistant</span
+                ><span class="svc-gem-cat">Home Auto</span></a
+              >
+              <a class="svc-gem" href="#"
+                ><span class="svc-gem-icon">🐳</span
+                ><span class="svc-gem-name">Portainer</span
+                ><span class="svc-gem-cat">Infra</span></a
+              >
+              <a class="svc-gem" href="#"
+                ><span class="svc-gem-icon">🛡️</span
+                ><span class="svc-gem-name">Pi-hole</span
+                ><span class="svc-gem-cat">Network</span></a
+              >
+              <a class="svc-gem" href="#"
+                ><span class="svc-gem-icon">📊</span
+                ><span class="svc-gem-name">Grafana</span
+                ><span class="svc-gem-cat">Monitor</span></a
+              >
+              <a class="svc-gem" href="#"
+                ><span class="svc-gem-icon">☁️</span
+                ><span class="svc-gem-name">Nextcloud</span
+                ><span class="svc-gem-cat">Storage</span></a
+              >
+              <a class="svc-gem" href="#"
+                ><span class="svc-gem-icon">🎬</span
+                ><span class="svc-gem-name">Jellyfin</span
+                ><span class="svc-gem-cat">Media</span></a
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Processes -->
+        <div class="card card-jade">
+          <div class="card-header">
+            <span class="card-title">Processes</span>
+            <span class="card-badge badge-jade">Top 6</span>
+          </div>
+          <div class="card-body">
+            <div class="proc-list">
+              <div class="proc-item">
+                <div>
+                  <div class="proc-name">homeassistant</div>
+                  <div class="proc-pid">PID 1247</div>
+                </div>
+                <div class="proc-stat">
+                  <div class="proc-stat-nm">CPU</div>
+                  <div class="proc-stat-v pv-hi">8.2%</div>
+                </div>
+                <div class="proc-stat">
+                  <div class="proc-stat-nm">MEM</div>
+                  <div class="proc-stat-v pv-med">12.4%</div>
+                </div>
+              </div>
+              <div class="proc-item">
+                <div>
+                  <div class="proc-name">node</div>
+                  <div class="proc-pid">PID 892</div>
+                </div>
+                <div class="proc-stat">
+                  <div class="proc-stat-nm">CPU</div>
+                  <div class="proc-stat-v pv-med">4.1%</div>
+                </div>
+                <div class="proc-stat">
+                  <div class="proc-stat-nm">MEM</div>
+                  <div class="proc-stat-v pv-ok">5.8%</div>
+                </div>
+              </div>
+              <div class="proc-item">
+                <div>
+                  <div class="proc-name">python3</div>
+                  <div class="proc-pid">PID 1455</div>
+                </div>
+                <div class="proc-stat">
+                  <div class="proc-stat-nm">CPU</div>
+                  <div class="proc-stat-v pv-ok">2.8%</div>
+                </div>
+                <div class="proc-stat">
+                  <div class="proc-stat-nm">MEM</div>
+                  <div class="proc-stat-v pv-ok">3.2%</div>
+                </div>
+              </div>
+              <div class="proc-item">
+                <div>
+                  <div class="proc-name">influxd</div>
+                  <div class="proc-pid">PID 743</div>
+                </div>
+                <div class="proc-stat">
+                  <div class="proc-stat-nm">CPU</div>
+                  <div class="proc-stat-v pv-ok">1.9%</div>
+                </div>
+                <div class="proc-stat">
+                  <div class="proc-stat-nm">MEM</div>
+                  <div class="proc-stat-v pv-ok">4.1%</div>
+                </div>
+              </div>
+              <div class="proc-item">
+                <div>
+                  <div class="proc-name">nginx</div>
+                  <div class="proc-pid">PID 412</div>
+                </div>
+                <div class="proc-stat">
+                  <div class="proc-stat-nm">CPU</div>
+                  <div class="proc-stat-v pv-ok">0.3%</div>
+                </div>
+                <div class="proc-stat">
+                  <div class="proc-stat-nm">MEM</div>
+                  <div class="proc-stat-v pv-ok">0.8%</div>
+                </div>
+              </div>
+              <div class="proc-item">
+                <div>
+                  <div class="proc-name">pihole-FTL</div>
+                  <div class="proc-pid">PID 321</div>
+                </div>
+                <div class="proc-stat">
+                  <div class="proc-stat-nm">CPU</div>
+                  <div class="proc-stat-v pv-ok">0.2%</div>
+                </div>
+                <div class="proc-stat">
+                  <div class="proc-stat-nm">MEM</div>
+                  <div class="proc-stat-v pv-ok">1.1%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Containers -->
+        <div class="card card-gold">
+          <div class="card-header">
+            <span class="card-title">Containers</span>
+            <span class="card-badge badge-gold">5 running</span>
+          </div>
+          <div class="card-body">
+            <div class="dc-list">
+              <div class="dc-item">
+                <div class="dc-live"></div>
+                <div>
+                  <div class="dc-name">nginx</div>
+                  <div class="dc-img">nginx:latest</div>
+                </div>
+                <div class="dc-port">:80 :443</div>
+              </div>
+              <div class="dc-item">
+                <div class="dc-live"></div>
+                <div>
+                  <div class="dc-name">homeassistant</div>
+                  <div class="dc-img">home-assistant:stable</div>
+                </div>
+                <div class="dc-port">:8123</div>
+              </div>
+              <div class="dc-item">
+                <div class="dc-live"></div>
+                <div>
+                  <div class="dc-name">pihole</div>
+                  <div class="dc-img">pihole/pihole:latest</div>
+                </div>
+                <div class="dc-port">:53 :80</div>
+              </div>
+              <div class="dc-item">
+                <div class="dc-live"></div>
+                <div>
+                  <div class="dc-name">portainer</div>
+                  <div class="dc-img">portainer-ce:latest</div>
+                </div>
+                <div class="dc-port">:9000</div>
+              </div>
+              <div class="dc-item">
+                <div class="dc-off"></div>
+                <div>
+                  <div class="dc-name" style="color: #ff7060">grafana</div>
+                  <div class="dc-img">grafana:latest</div>
+                </div>
+                <div class="dc-port" style="color: var(--text-dim)">
+                  stopped
+                </div>
+              </div>
+              <div class="dc-item">
+                <div class="dc-live"></div>
+                <div>
+                  <div class="dc-name">influxdb</div>
+                  <div class="dc-img">influxdb:latest</div>
+                </div>
+                <div class="dc-port">:8086</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      // Spawn fireflies
+      (function () {
+        const bg = document.getElementById("gardenBg");
+        const count = 18;
+        for (let i = 0; i < count; i++) {
+          const f = document.createElement("div");
+          f.className = "firefly";
+          const x = Math.random() * 100;
+          const y = Math.random() * 100;
+          const floatDur = 6 + Math.random() * 12;
+          const glowDur = 1.5 + Math.random() * 3;
+          const floatDelay = -(Math.random() * floatDur);
+          const glowDelay = -(Math.random() * glowDur);
+          const dx = (Math.random() - 0.5) * 120;
+          const dy = (Math.random() - 0.5) * 80;
+
+          f.style.cssText = `
+      left: ${x}%;
+      top: ${y}%;
+      animation:
+        firefly-float-${i} ${floatDur}s ${floatDelay}s ease-in-out infinite alternate,
+        firefly-glow ${glowDur}s ${glowDelay}s ease-in-out infinite alternate;
+    `;
+
+          // Inject keyframe for this firefly
+          const style = document.createElement("style");
+          style.textContent = `
+      @keyframes firefly-float-${i} {
+        from { transform: translate(0, 0); }
+        to   { transform: translate(${dx}px, ${dy}px); }
+      }
+    `;
+          document.head.appendChild(style);
+          bg.appendChild(f);
+        }
+
+        // Shared glow keyframe
+        const glowStyle = document.createElement("style");
+        glowStyle.textContent = `
+    @keyframes firefly-glow {
+      from { opacity: 0.05; box-shadow: 0 0 2px 1px rgba(232,197,71,0.3); transform: scale(1); }
+      to   { opacity: 0.9;  box-shadow: 0 0 8px 4px rgba(232,197,71,0.7), 0 0 18px 8px rgba(232,197,71,0.25); transform: scale(1.6); }
+    }
+  `;
+        document.head.appendChild(glowStyle);
+      })();
+
+      // Live data
+      setInterval(() => {
+        const cpu = Math.max(8, Math.min(90, 34 + (Math.random() - 0.5) * 22));
+        const mem = Math.max(55, Math.min(85, 67 + (Math.random() - 0.5) * 8));
+        document.getElementById("cpuVal").innerHTML =
+          cpu.toFixed(0) + '<span class="stat-unit">%</span>';
+        document.getElementById("cpuBar").style.width = cpu + "%";
+        document.getElementById("memVal").innerHTML =
+          mem.toFixed(0) + '<span class="stat-unit">%</span>';
+        document.getElementById("memBar").style.width = mem + "%";
+        const rx = (Math.random() * 3.5).toFixed(2);
+        const tx = (Math.random() * 1.1).toFixed(2);
+        document.getElementById("rxVal").innerHTML =
+          rx + '<span style="font-size:11px;font-weight:400"> MB/s</span>';
+        document.getElementById("txVal").innerHTML =
+          tx + '<span style="font-size:11px;font-weight:400"> MB/s</span>';
+      }, 3000);
+    </script>
+  </body>
+</html>

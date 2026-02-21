@@ -84,9 +84,9 @@ const ServicesPanel = ({
   const addButton = (
     <button
       onClick={handleAdd}
-      className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
+      className="flex items-center gap-1.5 px-2.5 py-1 bg-crystal-blue/15 hover:bg-crystal-blue/25 text-crystal-blue border border-crystal-blue/30 rounded-sm text-xs font-medium transition-colors"
     >
-      <Plus className="w-4 h-4" />
+      <Plus className="w-3.5 h-3.5" />
       Add Service
     </button>
   );
@@ -95,7 +95,7 @@ const ServicesPanel = ({
     <BasePanel
       title="Quick Links"
       icon={Link}
-      iconColor="text-blue-400"
+      iconColor="text-crystal-blue"
       data={services}
       isCollapsed={isCollapsed}
       onCollapseChange={onCollapseChange}
@@ -109,7 +109,7 @@ const ServicesPanel = ({
       {(data) => (
         <>
           {isAdding && (
-            <div className="bg-slate-700/50 rounded-lg p-4 mb-4">
+            <div className="bg-glass border border-glass-border rounded-sm p-4 mb-4">
               <div className="space-y-3">
                 <input
                   type="text"
@@ -118,7 +118,7 @@ const ServicesPanel = ({
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  className="w-full bg-slate-600 text-slate-100 px-3 py-2 rounded border border-slate-500 focus:border-blue-500 outline-none"
+                  className="glass-input w-full"
                 />
                 <input
                   type="text"
@@ -127,7 +127,7 @@ const ServicesPanel = ({
                   onChange={(e) =>
                     setFormData({ ...formData, url: e.target.value })
                   }
-                  className="w-full bg-slate-600 text-slate-100 px-3 py-2 rounded border border-slate-500 focus:border-blue-500 outline-none"
+                  className="glass-input w-full"
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <input
@@ -137,7 +137,7 @@ const ServicesPanel = ({
                     onChange={(e) =>
                       setFormData({ ...formData, icon: e.target.value })
                     }
-                    className="bg-slate-600 text-slate-100 px-3 py-2 rounded border border-slate-500 focus:border-blue-500 outline-none"
+                    className="glass-input"
                   />
                   <input
                     type="text"
@@ -146,20 +146,20 @@ const ServicesPanel = ({
                     onChange={(e) =>
                       setFormData({ ...formData, category: e.target.value })
                     }
-                    className="bg-slate-600 text-slate-100 px-3 py-2 rounded border border-slate-500 focus:border-blue-500 outline-none"
+                    className="glass-input"
                   />
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={handleSave}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-crystal-teal/20 hover:bg-crystal-teal/30 text-crystal-teal border border-crystal-teal/30 rounded-sm text-sm transition-colors"
                   >
                     <Save className="w-4 h-4" />
                     Save
                   </button>
                   <button
                     onClick={handleCancel}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-slate-600 hover:bg-slate-500 text-white rounded text-sm"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-glass hover:bg-glass-hover text-ctext-mid border border-glass-border rounded-sm text-sm transition-colors"
                   >
                     <X className="w-4 h-4" />
                     Cancel
@@ -172,14 +172,14 @@ const ServicesPanel = ({
           {Object.entries(groupedServices).map(
             ([category, categoryServices]) => (
               <div key={category} className="mb-6 last:mb-0">
-                <h3 className="text-sm font-semibold text-slate-400 mb-3">
+                <h3 className="text-[8px] tracking-[2px] uppercase font-source-code text-ctext-dim mb-3">
                   {category}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {categoryServices.map((service) => (
                     <div key={service.id}>
                       {editingService === service.id ? (
-                        <div className="bg-slate-700/50 rounded-lg p-3">
+                        <div className="bg-glass border border-glass-border rounded-sm p-3">
                           <div className="space-y-2">
                             <input
                               type="text"
@@ -190,7 +190,7 @@ const ServicesPanel = ({
                                   name: e.target.value,
                                 })
                               }
-                              className="w-full bg-slate-600 text-slate-100 px-2 py-1 rounded text-sm border border-slate-500 outline-none"
+                              className="glass-input w-full text-sm"
                             />
                             <input
                               type="text"
@@ -201,7 +201,7 @@ const ServicesPanel = ({
                                   url: e.target.value,
                                 })
                               }
-                              className="w-full bg-slate-600 text-slate-100 px-2 py-1 rounded text-sm border border-slate-500 outline-none"
+                              className="glass-input w-full text-sm"
                             />
                             <div className="grid grid-cols-2 gap-2">
                               <input
@@ -213,7 +213,7 @@ const ServicesPanel = ({
                                     icon: e.target.value,
                                   })
                                 }
-                                className="bg-slate-600 text-slate-100 px-2 py-1 rounded text-sm border border-slate-500 outline-none"
+                                className="glass-input text-sm"
                               />
                               <input
                                 type="text"
@@ -224,20 +224,20 @@ const ServicesPanel = ({
                                     category: e.target.value,
                                   })
                                 }
-                                className="bg-slate-600 text-slate-100 px-2 py-1 rounded text-sm border border-slate-500 outline-none"
+                                className="glass-input text-sm"
                               />
                             </div>
                             <div className="flex gap-2">
                               <button
                                 onClick={handleSave}
-                                className="flex items-center gap-1 px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs"
+                                className="flex items-center gap-1 px-2 py-1 bg-crystal-teal/20 hover:bg-crystal-teal/30 text-crystal-teal border border-crystal-teal/30 rounded-sm text-xs transition-colors"
                               >
                                 <Save className="w-3 h-3" />
                                 Save
                               </button>
                               <button
                                 onClick={handleCancel}
-                                className="flex items-center gap-1 px-2 py-1 bg-slate-600 hover:bg-slate-500 text-white rounded text-xs"
+                                className="flex items-center gap-1 px-2 py-1 bg-glass hover:bg-glass-hover text-ctext-mid border border-glass-border rounded-sm text-xs transition-colors"
                               >
                                 <X className="w-3 h-3" />
                                 Cancel
@@ -250,14 +250,14 @@ const ServicesPanel = ({
                           href={service.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="block bg-slate-700/50 hover:bg-slate-700 rounded-lg p-3 transition-colors group"
+                          className="block bg-glass hover:bg-glass-hover border border-glass-border hover:border-glass-border-hover rounded-sm p-3 transition-colors group"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 flex-1">
                               <span className="text-xl">
-                                {service.icon || "🔗"}
+                                {service.icon || "\uD83D\uDD17"}
                               </span>
-                              <span className="text-slate-100 font-medium group-hover:text-blue-300 transition-colors">
+                              <span className="text-ctext font-medium group-hover:text-crystal-blue transition-colors">
                                 {service.name}
                               </span>
                             </div>
@@ -267,16 +267,16 @@ const ServicesPanel = ({
                                   e.preventDefault();
                                   handleEdit(service);
                                 }}
-                                className="p-1 hover:bg-slate-600 rounded"
+                                className="p-1 hover:bg-glass-hover rounded-sm"
                               >
-                                <Pencil className="w-3 h-3 text-blue-400" />
+                                <Pencil className="w-3 h-3 text-crystal-blue" />
                               </button>
                               <button
                                 onClick={(e) => {
                                   e.preventDefault();
                                   handleDelete(service.id);
                                 }}
-                                className="p-1 hover:bg-slate-600 rounded"
+                                className="p-1 hover:bg-red-900/30 rounded-sm"
                               >
                                 <Trash2 className="w-3 h-3 text-red-400" />
                               </button>

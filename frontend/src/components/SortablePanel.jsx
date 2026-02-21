@@ -24,10 +24,10 @@ const SortablePanel = ({ id, children }) => {
       <div
         {...attributes}
         {...listeners}
-        className="absolute -left-8 top-4 p-2 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity z-10 hidden md:block"
+        className="absolute -left-6 top-3 p-1.5 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity z-10 hidden md:block"
         title="Drag to reorder"
       >
-        <GripVertical className="w-5 h-5 text-slate-400 hover:text-slate-200" />
+        <GripVertical className="w-4 h-4 text-ctext-dim hover:text-ctext-mid" />
       </div>
 
       <div className="h-full">{children}</div>

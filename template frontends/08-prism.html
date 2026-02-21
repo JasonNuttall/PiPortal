@@ -1,0 +1,1251 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Homelab — Prism</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;800&family=JetBrains+Mono:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --deep: #06060f;
+        --void: #08080e;
+        --glass: rgba(255, 255, 255, 0.04);
+        --glass-hover: rgba(255, 255, 255, 0.07);
+        --glass-border: rgba(255, 255, 255, 0.09);
+        --glass-border-hover: rgba(255, 255, 255, 0.2);
+        --text: rgba(255, 255, 255, 0.92);
+        --text-mid: rgba(255, 255, 255, 0.5);
+        --text-dim: rgba(255, 255, 255, 0.28);
+      }
+
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--void);
+        color: var(--text);
+        font-family: "Outfit", sans-serif;
+        font-weight: 300;
+        font-size: 13px;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* === Prism background === */
+      .prism-bg {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        overflow: hidden;
+      }
+
+      /* Diagonal spectrum beam */
+      .prism-beam {
+        position: absolute;
+        top: -20%;
+        left: -10%;
+        width: 120%;
+        height: 140%;
+        background: linear-gradient(
+          105deg,
+          transparent 0%,
+          transparent 18%,
+          rgba(255, 0, 100, 0.04) 22%,
+          rgba(255, 80, 0, 0.05) 26%,
+          rgba(255, 200, 0, 0.04) 30%,
+          rgba(80, 255, 80, 0.04) 34%,
+          rgba(0, 200, 255, 0.05) 38%,
+          rgba(80, 80, 255, 0.04) 42%,
+          rgba(180, 0, 255, 0.04) 46%,
+          transparent 50%,
+          transparent 100%
+        );
+        animation: beam-shift 12s ease-in-out infinite alternate;
+        transform-origin: center;
+      }
+
+      @keyframes beam-shift {
+        from {
+          transform: rotate(-3deg) scaleX(0.95);
+          opacity: 0.7;
+        }
+        to {
+          transform: rotate(3deg) scaleX(1.05);
+          opacity: 1;
+        }
+      }
+
+      /* Bokeh dots */
+      .bokeh {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(30px);
+        animation: bokeh-pulse ease-in-out infinite alternate;
+      }
+
+      .bk1 {
+        width: 120px;
+        height: 120px;
+        top: 8%;
+        left: 12%;
+        background: rgba(255, 0, 120, 0.12);
+        animation-duration: 5s;
+        animation-delay: 0s;
+      }
+      .bk2 {
+        width: 90px;
+        height: 90px;
+        top: 15%;
+        left: 45%;
+        background: rgba(255, 120, 0, 0.1);
+        animation-duration: 7s;
+        animation-delay: -0.8s;
+      }
+      .bk3 {
+        width: 150px;
+        height: 150px;
+        top: 5%;
+        right: 10%;
+        background: rgba(200, 255, 0, 0.08);
+        animation-duration: 6s;
+        animation-delay: -1.5s;
+      }
+      .bk4 {
+        width: 80px;
+        height: 80px;
+        top: 55%;
+        left: 8%;
+        background: rgba(0, 200, 255, 0.1);
+        animation-duration: 8s;
+        animation-delay: -2s;
+      }
+      .bk5 {
+        width: 110px;
+        height: 110px;
+        top: 60%;
+        right: 15%;
+        background: rgba(80, 80, 255, 0.1);
+        animation-duration: 5.5s;
+        animation-delay: -3s;
+      }
+      .bk6 {
+        width: 70px;
+        height: 70px;
+        top: 80%;
+        left: 35%;
+        background: rgba(200, 0, 255, 0.09);
+        animation-duration: 9s;
+        animation-delay: -4s;
+      }
+      .bk7 {
+        width: 130px;
+        height: 130px;
+        top: 40%;
+        left: 30%;
+        background: rgba(0, 255, 180, 0.07);
+        animation-duration: 6.5s;
+        animation-delay: -1s;
+      }
+      .bk8 {
+        width: 95px;
+        height: 95px;
+        top: 75%;
+        right: 5%;
+        background: rgba(255, 200, 0, 0.08);
+        animation-duration: 7.5s;
+        animation-delay: -5s;
+      }
+
+      @keyframes bokeh-pulse {
+        from {
+          transform: scale(1);
+          opacity: 0.7;
+        }
+        to {
+          transform: scale(1.35);
+          opacity: 1;
+        }
+      }
+
+      /* === Header === */
+      header {
+        position: relative;
+        z-index: 10;
+        padding: 24px 36px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        border-bottom: 1px solid var(--glass-border);
+        backdrop-filter: blur(12px);
+      }
+
+      .logo-label {
+        font-size: 9px;
+        letter-spacing: 6px;
+        color: rgba(255, 255, 255, 0.35);
+        text-transform: uppercase;
+        margin-bottom: 2px;
+      }
+
+      .logo-name {
+        font-family: "Outfit", sans-serif;
+        font-weight: 800;
+        font-size: 42px;
+        line-height: 1;
+        letter-spacing: 3px;
+        background: linear-gradient(
+          90deg,
+          hsl(0, 100%, 70%),
+          hsl(40, 100%, 70%),
+          hsl(80, 100%, 70%),
+          hsl(160, 100%, 70%),
+          hsl(200, 100%, 70%),
+          hsl(260, 100%, 80%),
+          hsl(300, 100%, 80%)
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: hue-shift 8s linear infinite;
+      }
+
+      @keyframes hue-shift {
+        from {
+          filter: hue-rotate(0deg);
+        }
+        to {
+          filter: hue-rotate(360deg);
+        }
+      }
+
+      .header-pills {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: 100px;
+        font-size: 11px;
+        border: 1px solid var(--glass-border);
+        background: var(--glass);
+        backdrop-filter: blur(10px);
+      }
+
+      .pill-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .pd1 {
+        background: hsl(160, 100%, 60%);
+        box-shadow: 0 0 8px hsl(160, 100%, 60%);
+      }
+      .pd2 {
+        background: hsl(200, 100%, 65%);
+        box-shadow: 0 0 8px hsl(200, 100%, 65%);
+        animation: dot-hue 4s linear infinite;
+      }
+      .pd3 {
+        background: hsl(30, 100%, 65%);
+        box-shadow: 0 0 8px hsl(30, 100%, 65%);
+      }
+
+      @keyframes dot-hue {
+        from {
+          filter: hue-rotate(0deg);
+        }
+        to {
+          filter: hue-rotate(360deg);
+        }
+      }
+
+      .pill-label {
+        color: var(--text-mid);
+      }
+
+      /* === Main grid === */
+      main {
+        position: relative;
+        z-index: 10;
+        padding: 24px 36px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        max-width: 1440px;
+        margin: 0 auto;
+      }
+
+      /* === Cards with cycling rainbow top borders === */
+      .card {
+        background: var(--glass);
+        border: 1px solid var(--glass-border);
+        border-radius: 14px;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+
+      .card:hover {
+        background: var(--glass-hover);
+        border-color: var(--glass-border-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 18px 55px rgba(0, 0, 0, 0.5);
+      }
+
+      /* Rainbow top border cycling per card */
+      .card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(
+          90deg,
+          hsl(0, 100%, 65%),
+          hsl(45, 100%, 65%),
+          hsl(90, 100%, 60%),
+          hsl(180, 100%, 60%),
+          hsl(220, 100%, 70%),
+          hsl(270, 100%, 75%),
+          hsl(320, 100%, 70%),
+          hsl(360, 100%, 65%)
+        );
+        background-size: 200% 100%;
+        animation: rainbow-slide 3s linear infinite;
+        opacity: 0.85;
+      }
+
+      .card:nth-child(1)::before {
+        animation-delay: 0s;
+      }
+      .card:nth-child(2)::before {
+        animation-delay: -0.4s;
+      }
+      .card:nth-child(3)::before {
+        animation-delay: -0.8s;
+      }
+      .card:nth-child(4)::before {
+        animation-delay: -1.2s;
+      }
+      .card:nth-child(5)::before {
+        animation-delay: -1.6s;
+      }
+      .card:nth-child(6)::before {
+        animation-delay: -2s;
+      }
+      .card:nth-child(7)::before {
+        animation-delay: -2.4s;
+      }
+      .card:nth-child(8)::before {
+        animation-delay: -2.8s;
+      }
+
+      @keyframes rainbow-slide {
+        from {
+          background-position: 200% 0;
+        }
+        to {
+          background-position: -200% 0;
+        }
+      }
+
+      .card:nth-child(1) {
+        animation-delay: 0.05s;
+      }
+      .card:nth-child(2) {
+        animation-delay: 0.1s;
+      }
+      .card:nth-child(3) {
+        animation-delay: 0.15s;
+      }
+      .card:nth-child(4) {
+        animation-delay: 0.2s;
+      }
+      .card:nth-child(5) {
+        animation-delay: 0.25s;
+      }
+      .card:nth-child(6) {
+        animation-delay: 0.3s;
+      }
+      .card:nth-child(7) {
+        animation-delay: 0.35s;
+      }
+      .card:nth-child(8) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(18px) scale(0.99);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .card-header {
+        padding: 14px 16px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--glass-border);
+      }
+
+      .card-title {
+        font-family: "Outfit", sans-serif;
+        font-weight: 800;
+        font-size: 14px;
+        color: var(--text);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+
+      .card-badge {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 9px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 100px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: var(--text-mid);
+      }
+
+      .card-body {
+        padding: 14px 16px;
+      }
+
+      /* === Stats 2x2 === */
+      .stats-2x2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .stat-cell {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        padding: 12px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .stat-cell::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 50px;
+        height: 28px;
+        border-radius: 50%;
+        filter: blur(18px);
+        background: var(--cell-glow, rgba(255, 255, 255, 0.1));
+        opacity: 0.5;
+      }
+
+      .cell-1 {
+        --cell-glow: hsl(160, 100%, 60%);
+      }
+      .cell-2 {
+        --cell-glow: hsl(35, 100%, 65%);
+      }
+      .cell-3 {
+        --cell-glow: hsl(200, 100%, 70%);
+      }
+      .cell-4 {
+        --cell-glow: hsl(270, 100%, 75%);
+      }
+
+      .stat-name {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 8px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-bottom: 6px;
+      }
+
+      .stat-val {
+        font-family: "Outfit", sans-serif;
+        font-weight: 800;
+        font-size: 34px;
+        line-height: 1;
+      }
+      .sv-1 {
+        color: hsl(160, 100%, 65%);
+        text-shadow: 0 0 20px rgba(0, 255, 180, 0.4);
+      }
+      .sv-2 {
+        color: hsl(35, 100%, 65%);
+        text-shadow: 0 0 20px rgba(255, 160, 0, 0.4);
+      }
+      .sv-3 {
+        color: hsl(200, 100%, 70%);
+        text-shadow: 0 0 20px rgba(0, 180, 255, 0.4);
+      }
+      .sv-4 {
+        color: hsl(270, 100%, 80%);
+        text-shadow: 0 0 20px rgba(150, 100, 255, 0.4);
+      }
+
+      .stat-unit {
+        font-size: 14px;
+        font-weight: 400;
+      }
+      .stat-sub {
+        font-size: 9px;
+        color: var(--text-mid);
+        margin-top: 3px;
+      }
+
+      /* Prism bars */
+      .pbar-wrap {
+        margin-top: 8px;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 2px;
+        overflow: visible;
+        position: relative;
+      }
+      .pbar {
+        height: 100%;
+        border-radius: 2px;
+        position: relative;
+        transition: width 1s ease;
+      }
+      .pbar::after {
+        content: "";
+        position: absolute;
+        right: -2px;
+        top: -4px;
+        width: 7px;
+        height: 11px;
+        border-radius: 4px;
+        background: currentColor;
+        filter: blur(2px);
+      }
+      .pb-1 {
+        background: linear-gradient(
+          90deg,
+          rgba(0, 255, 150, 0.2),
+          hsl(160, 100%, 60%)
+        );
+        color: hsl(160, 100%, 60%);
+      }
+      .pb-2 {
+        background: linear-gradient(
+          90deg,
+          rgba(255, 150, 0, 0.2),
+          hsl(35, 100%, 65%)
+        );
+        color: hsl(35, 100%, 65%);
+      }
+      .pb-3 {
+        background: linear-gradient(
+          90deg,
+          rgba(0, 180, 255, 0.2),
+          hsl(200, 100%, 65%)
+        );
+        color: hsl(200, 100%, 65%);
+      }
+      .pb-4 {
+        background: linear-gradient(
+          90deg,
+          rgba(150, 100, 255, 0.2),
+          hsl(270, 100%, 80%)
+        );
+        color: hsl(270, 100%, 80%);
+      }
+      .pb-5 {
+        background: linear-gradient(
+          90deg,
+          rgba(255, 0, 100, 0.2),
+          hsl(340, 100%, 70%)
+        );
+        color: hsl(340, 100%, 70%);
+      }
+
+      /* === Network === */
+      .net-pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .net-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        padding: 12px;
+        text-align: center;
+      }
+      .net-label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 8px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-bottom: 6px;
+      }
+      .net-big {
+        font-family: "Outfit", sans-serif;
+        font-weight: 800;
+        font-size: 28px;
+        line-height: 1;
+      }
+      .net-unit {
+        font-size: 12px;
+        font-weight: 400;
+      }
+      .net-total {
+        font-size: 9px;
+        color: var(--text-mid);
+        margin-top: 4px;
+      }
+
+      /* === Storage === */
+      .disk-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .disk-meta {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+      }
+      .disk-mount-label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px;
+        color: var(--text);
+      }
+      .disk-pct {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10px;
+        font-weight: 500;
+      }
+
+      /* === Services === */
+      .svc-mosaic {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .svc-gem {
+        padding: 12px 8px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        text-decoration: none;
+        display: block;
+        text-align: center;
+        transition: all 0.25s;
+      }
+      .svc-gem:hover {
+        background: rgba(255, 255, 255, 0.07);
+        border-color: var(--glass-border-hover);
+        transform: translateY(-3px);
+      }
+      .svc-gem-icon {
+        font-size: 22px;
+        margin-bottom: 4px;
+        display: block;
+      }
+      .svc-gem-name {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text);
+        display: block;
+      }
+      .svc-gem-cat {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 8px;
+        color: var(--text-dim);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-top: 2px;
+        display: block;
+      }
+
+      /* === Containers === */
+      .dc-list {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      .dc-item {
+        display: grid;
+        grid-template-columns: 8px 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 8px 10px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--glass-border);
+        border-radius: 8px;
+      }
+      .dc-live {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: hsl(160, 100%, 55%);
+        box-shadow: 0 0 8px hsl(160, 100%, 55%);
+      }
+      .dc-off {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: hsl(340, 90%, 55%);
+      }
+      .dc-name {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px;
+        color: var(--text);
+      }
+      .dc-img {
+        font-size: 9px;
+        color: var(--text-dim);
+        margin-top: 1px;
+      }
+      .dc-port {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10px;
+        color: hsl(200, 100%, 70%);
+      }
+
+      /* === Processes === */
+      .proc-list {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .proc-item {
+        display: grid;
+        grid-template-columns: 1fr 46px 46px;
+        align-items: center;
+        gap: 10px;
+        padding: 7px 10px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--glass-border);
+        border-radius: 7px;
+      }
+      .proc-name {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px;
+        color: var(--text);
+      }
+      .proc-pid {
+        font-size: 8px;
+        color: var(--text-dim);
+        margin-top: 1px;
+      }
+      .proc-stat {
+        text-align: right;
+      }
+      .proc-stat-nm {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 7px;
+        color: var(--text-dim);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .proc-stat-v {
+        font-family: "Outfit", sans-serif;
+        font-weight: 600;
+        font-size: 12px;
+      }
+      .pv-hi {
+        color: hsl(340, 90%, 65%);
+      }
+      .pv-med {
+        color: hsl(35, 100%, 65%);
+      }
+      .pv-ok {
+        color: hsl(160, 100%, 60%);
+      }
+
+      .span2 {
+        grid-column: span 2;
+      }
+      .span3 {
+        grid-column: span 3;
+      }
+      .span4 {
+        grid-column: span 4;
+      }
+
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="prism-bg">
+      <div class="prism-beam"></div>
+      <div class="bokeh bk1"></div>
+      <div class="bokeh bk2"></div>
+      <div class="bokeh bk3"></div>
+      <div class="bokeh bk4"></div>
+      <div class="bokeh bk5"></div>
+      <div class="bokeh bk6"></div>
+      <div class="bokeh bk7"></div>
+      <div class="bokeh bk8"></div>
+    </div>
+
+    <header>
+      <div>
+        <div class="logo-label">Prism — Private Infrastructure</div>
+        <div class="logo-name">Homelab</div>
+      </div>
+      <div class="header-pills">
+        <div class="pill">
+          <div class="pill-dot pd1"></div>
+          <span class="pill-label">raspberrypi.local</span>
+        </div>
+        <div class="pill">
+          <div class="pill-dot pd2"></div>
+          <span class="pill-label">5 containers running</span>
+        </div>
+        <div class="pill">
+          <div class="pill-dot pd3"></div>
+          <span class="pill-label">Storage ≥ 89%</span>
+        </div>
+        <div class="pill">
+          <div class="pill-dot pd1"></div>
+          <span class="pill-label">Uptime 14d 3h</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- System Metrics -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">System</span>
+          <span class="card-badge">Live</span>
+        </div>
+        <div class="card-body">
+          <div class="stats-2x2">
+            <div class="stat-cell cell-1">
+              <div class="stat-name">CPU</div>
+              <div class="stat-val sv-1" id="cpuVal">
+                34<span class="stat-unit">%</span>
+              </div>
+              <div class="pbar-wrap">
+                <div class="pbar pb-1" id="cpuBar" style="width: 34%"></div>
+              </div>
+            </div>
+            <div class="stat-cell cell-2">
+              <div class="stat-name">Memory</div>
+              <div class="stat-val sv-2" id="memVal">
+                67<span class="stat-unit">%</span>
+              </div>
+              <div class="pbar-wrap">
+                <div class="pbar pb-2" id="memBar" style="width: 67%"></div>
+              </div>
+            </div>
+            <div class="stat-cell cell-3">
+              <div class="stat-name">Temp</div>
+              <div class="stat-val sv-3">
+                52<span class="stat-unit">°C</span>
+              </div>
+              <div class="pbar-wrap">
+                <div class="pbar pb-3" style="width: 52%"></div>
+              </div>
+            </div>
+            <div class="stat-cell cell-4">
+              <div class="stat-name">Processes</div>
+              <div class="stat-val sv-4">148</div>
+              <div class="stat-sub">running</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Network -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Network</span>
+          <span class="card-badge">eth0</span>
+        </div>
+        <div class="card-body">
+          <div class="net-pair">
+            <div class="net-card">
+              <div class="net-label">↓ Inbound</div>
+              <div
+                class="net-big"
+                style="color: hsl(160, 100%, 65%)"
+                id="rxVal"
+              >
+                1.24<span class="net-unit"> MB/s</span>
+              </div>
+              <div class="net-total">248.3 GB total</div>
+            </div>
+            <div class="net-card">
+              <div class="net-label">↑ Outbound</div>
+              <div
+                class="net-big"
+                style="color: hsl(200, 100%, 70%)"
+                id="txVal"
+              >
+                0.38<span class="net-unit"> MB/s</span>
+              </div>
+              <div class="net-total">89.1 GB total</div>
+            </div>
+          </div>
+          <div
+            style="
+              margin-top: 12px;
+              border-top: 1px solid var(--glass-border);
+              padding-top: 10px;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 10px;
+                font-family: &quot;JetBrains Mono&quot;, monospace;
+                margin-bottom: 5px;
+              "
+            >
+              <span style="color: hsl(160, 100%, 65%)">eth0</span>
+              <span style="color: var(--text-dim)">192.168.1.42</span>
+              <span style="color: var(--text-mid)">1 Gbps</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 10px;
+                font-family: &quot;JetBrains Mono&quot;, monospace;
+              "
+            >
+              <span style="color: var(--text-dim)">wlan0</span>
+              <span style="color: var(--text-dim)">—</span>
+              <span style="color: hsl(340, 90%, 65%)">Offline</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Storage -->
+      <div class="card span2">
+        <div class="card-header">
+          <span class="card-title">Storage</span>
+          <span class="card-badge">5 Volumes</span>
+        </div>
+        <div class="card-body">
+          <div class="disk-rows">
+            <div>
+              <div class="disk-meta">
+                <span class="disk-mount-label">/</span
+                ><span class="disk-pct" style="color: hsl(160, 100%, 60%)"
+                  >38% · 45.2 / 118 GB</span
+                >
+              </div>
+              <div class="pbar-wrap">
+                <div class="pbar pb-1" style="width: 38%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="disk-meta">
+                <span class="disk-mount-label">/boot</span
+                ><span class="disk-pct" style="color: hsl(160, 100%, 60%)"
+                  >18% · 90 / 500 MB</span
+                >
+              </div>
+              <div class="pbar-wrap">
+                <div class="pbar pb-1" style="width: 18%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="disk-meta">
+                <span class="disk-mount-label">/boot/firmware</span
+                ><span class="disk-pct" style="color: hsl(160, 100%, 60%)"
+                  >12% · 60 / 500 MB</span
+                >
+              </div>
+              <div class="pbar-wrap">
+                <div class="pbar pb-1" style="width: 12%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="disk-meta">
+                <span class="disk-mount-label" style="color: hsl(340, 90%, 65%)"
+                  >/mnt/storage ⚠</span
+                ><span class="disk-pct" style="color: hsl(340, 90%, 65%)"
+                  >89% · 892 / 1000 GB</span
+                >
+              </div>
+              <div class="pbar-wrap">
+                <div class="pbar pb-5" style="width: 89%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="disk-meta">
+                <span class="disk-mount-label">/mnt/backup</span
+                ><span class="disk-pct" style="color: hsl(35, 100%, 65%)"
+                  >54% · 270 / 500 GB</span
+                >
+              </div>
+              <div class="pbar-wrap">
+                <div class="pbar pb-2" style="width: 54%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Services -->
+      <div class="card span2">
+        <div class="card-header">
+          <span class="card-title">Services</span>
+          <span class="card-badge">6 active</span>
+        </div>
+        <div class="card-body">
+          <div class="svc-mosaic">
+            <a class="svc-gem" href="#"
+              ><span class="svc-gem-icon">🏠</span
+              ><span class="svc-gem-name">Home Assistant</span
+              ><span class="svc-gem-cat">Home Auto</span></a
+            >
+            <a class="svc-gem" href="#"
+              ><span class="svc-gem-icon">🐳</span
+              ><span class="svc-gem-name">Portainer</span
+              ><span class="svc-gem-cat">Infra</span></a
+            >
+            <a class="svc-gem" href="#"
+              ><span class="svc-gem-icon">🛡️</span
+              ><span class="svc-gem-name">Pi-hole</span
+              ><span class="svc-gem-cat">Network</span></a
+            >
+            <a class="svc-gem" href="#"
+              ><span class="svc-gem-icon">📊</span
+              ><span class="svc-gem-name">Grafana</span
+              ><span class="svc-gem-cat">Monitor</span></a
+            >
+            <a class="svc-gem" href="#"
+              ><span class="svc-gem-icon">☁️</span
+              ><span class="svc-gem-name">Nextcloud</span
+              ><span class="svc-gem-cat">Storage</span></a
+            >
+            <a class="svc-gem" href="#"
+              ><span class="svc-gem-icon">🎬</span
+              ><span class="svc-gem-name">Jellyfin</span
+              ><span class="svc-gem-cat">Media</span></a
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- Processes -->
+      <div class="card span2">
+        <div class="card-header">
+          <span class="card-title">Processes</span>
+          <span class="card-badge">Top 6</span>
+        </div>
+        <div class="card-body">
+          <div class="proc-list">
+            <div class="proc-item">
+              <div>
+                <div class="proc-name">homeassistant</div>
+                <div class="proc-pid">PID 1247</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">CPU</div>
+                <div class="proc-stat-v pv-hi">8.2%</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">MEM</div>
+                <div class="proc-stat-v pv-med">12.4%</div>
+              </div>
+            </div>
+            <div class="proc-item">
+              <div>
+                <div class="proc-name">node</div>
+                <div class="proc-pid">PID 892</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">CPU</div>
+                <div class="proc-stat-v pv-med">4.1%</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">MEM</div>
+                <div class="proc-stat-v pv-ok">5.8%</div>
+              </div>
+            </div>
+            <div class="proc-item">
+              <div>
+                <div class="proc-name">python3</div>
+                <div class="proc-pid">PID 1455</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">CPU</div>
+                <div class="proc-stat-v pv-ok">2.8%</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">MEM</div>
+                <div class="proc-stat-v pv-ok">3.2%</div>
+              </div>
+            </div>
+            <div class="proc-item">
+              <div>
+                <div class="proc-name">influxd</div>
+                <div class="proc-pid">PID 743</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">CPU</div>
+                <div class="proc-stat-v pv-ok">1.9%</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">MEM</div>
+                <div class="proc-stat-v pv-ok">4.1%</div>
+              </div>
+            </div>
+            <div class="proc-item">
+              <div>
+                <div class="proc-name">nginx</div>
+                <div class="proc-pid">PID 412</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">CPU</div>
+                <div class="proc-stat-v pv-ok">0.3%</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">MEM</div>
+                <div class="proc-stat-v pv-ok">0.8%</div>
+              </div>
+            </div>
+            <div class="proc-item">
+              <div>
+                <div class="proc-name">pihole-FTL</div>
+                <div class="proc-pid">PID 321</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">CPU</div>
+                <div class="proc-stat-v pv-ok">0.2%</div>
+              </div>
+              <div class="proc-stat">
+                <div class="proc-stat-nm">MEM</div>
+                <div class="proc-stat-v pv-ok">1.1%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Containers -->
+      <div class="card span2">
+        <div class="card-header">
+          <span class="card-title">Containers</span>
+          <span class="card-badge">5 running</span>
+        </div>
+        <div class="card-body">
+          <div class="dc-list">
+            <div class="dc-item">
+              <div class="dc-live"></div>
+              <div>
+                <div class="dc-name">nginx</div>
+                <div class="dc-img">nginx:latest</div>
+              </div>
+              <div class="dc-port">:80 :443</div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-live"></div>
+              <div>
+                <div class="dc-name">homeassistant</div>
+                <div class="dc-img">home-assistant:stable</div>
+              </div>
+              <div class="dc-port">:8123</div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-live"></div>
+              <div>
+                <div class="dc-name">pihole</div>
+                <div class="dc-img">pihole/pihole:latest</div>
+              </div>
+              <div class="dc-port">:53 :80</div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-live"></div>
+              <div>
+                <div class="dc-name">portainer</div>
+                <div class="dc-img">portainer-ce:latest</div>
+              </div>
+              <div class="dc-port">:9000</div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-off"></div>
+              <div>
+                <div class="dc-name" style="color: hsl(340, 90%, 65%)">
+                  grafana
+                </div>
+                <div class="dc-img">grafana:latest</div>
+              </div>
+              <div class="dc-port" style="color: var(--text-dim)">stopped</div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-live"></div>
+              <div>
+                <div class="dc-name">influxdb</div>
+                <div class="dc-img">influxdb:latest</div>
+              </div>
+              <div class="dc-port">:8086</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      setInterval(() => {
+        const cpu = Math.max(8, Math.min(90, 34 + (Math.random() - 0.5) * 22));
+        const mem = Math.max(55, Math.min(85, 67 + (Math.random() - 0.5) * 8));
+        document.getElementById("cpuVal").innerHTML =
+          cpu.toFixed(0) + '<span class="stat-unit">%</span>';
+        document.getElementById("cpuBar").style.width = cpu + "%";
+        document.getElementById("memVal").innerHTML =
+          mem.toFixed(0) + '<span class="stat-unit">%</span>';
+        document.getElementById("memBar").style.width = mem + "%";
+        const rx = (Math.random() * 3.5).toFixed(2);
+        const tx = (Math.random() * 1.1).toFixed(2);
+        document.getElementById("rxVal").innerHTML =
+          rx + '<span class="net-unit"> MB/s</span>';
+        document.getElementById("txVal").innerHTML =
+          tx + '<span class="net-unit"> MB/s</span>';
+      }, 3000);
+    </script>
+  </body>
+</html>

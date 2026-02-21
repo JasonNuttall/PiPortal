@@ -15,7 +15,6 @@ const NetworkPanel = ({
   const previousDataRef = useRef(null);
   const previousTimeRef = useRef(null);
 
-  // Calculate speeds when data changes
   useEffect(() => {
     if (!data || !data.stats) return;
 
@@ -23,24 +22,20 @@ const NetworkPanel = ({
     const speeds = {};
 
     data.stats.forEach((stat) => {
-      // First check if the backend provided valid speed values
       const hasBackendSpeed = stat.rx_sec > 0 || stat.tx_sec > 0;
 
       if (hasBackendSpeed) {
-        // Use backend-calculated speeds when available
         speeds[stat.interface] = {
           rx_speed: stat.rx_sec,
           tx_speed: stat.tx_sec,
         };
       } else if (previousDataRef.current && previousTimeRef.current) {
-        // Fall back to calculating from byte differences
         const timeDiff = (currentTime - previousTimeRef.current) / 1000;
         const prevStat = previousDataRef.current.stats?.find(
           (s) => s.interface === stat.interface,
         );
 
         if (prevStat && timeDiff > 0 && timeDiff < 10) {
-          // Only use if time diff is reasonable (< 10 seconds)
           const rxDiff = Math.max(0, stat.rx_bytes - prevStat.rx_bytes);
           const txDiff = Math.max(0, stat.tx_bytes - prevStat.tx_bytes);
 
@@ -82,7 +77,7 @@ const NetworkPanel = ({
     <BasePanel
       title="Live Network Traffic"
       icon={Activity}
-      iconColor="text-blue-400"
+      iconColor="text-crystal-blue"
       data={data}
       isCollapsed={isCollapsed}
       onCollapseChange={onCollapseChange}
@@ -103,32 +98,32 @@ const NetworkPanel = ({
             return (
               <div
                 key={stat.interface}
-                className={`p-4 rounded-lg border ${
+                className={`p-3 rounded-sm border transition-colors ${
                   hasTraffic
-                    ? "bg-green-900/20 border-green-700"
-                    : "bg-slate-700/30 border-slate-600"
+                    ? "bg-crystal-teal/5 border-crystal-teal/20"
+                    : "bg-glass border-glass-border"
                 }`}
               >
-                <div className="font-semibold text-slate-100 mb-3">
+                <div className="text-sm font-medium text-ctext mb-3">
                   {stat.interface}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   {/* Download */}
                   <div>
-                    <div className="flex items-center text-green-400 mb-2">
-                      <ArrowDown className="w-4 h-4 mr-1" />
-                      <span className="font-semibold text-sm">Download</span>
+                    <div className="flex items-center text-crystal-blue mb-2">
+                      <ArrowDown className="w-3.5 h-3.5 mr-1" />
+                      <span className="font-medium text-xs">Download</span>
                     </div>
-                    <div className="space-y-1 text-xs text-slate-300">
+                    <div className="space-y-1 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-slate-400">Speed:</span>
-                        <span className="font-mono">
+                        <span className="text-ctext-dim">Speed:</span>
+                        <span className="font-source-code text-ctext">
                           {formatSpeed(speed.rx_speed)}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-400">Total:</span>
-                        <span className="font-mono">
+                        <span className="text-ctext-dim">Total:</span>
+                        <span className="font-source-code text-ctext-mid">
                           {formatBytes(stat.rx_bytes)}
                         </span>
                       </div>
@@ -143,20 +138,20 @@ const NetworkPanel = ({
 
                   {/* Upload */}
                   <div>
-                    <div className="flex items-center text-blue-400 mb-2">
-                      <ArrowUp className="w-4 h-4 mr-1" />
-                      <span className="font-semibold text-sm">Upload</span>
+                    <div className="flex items-center text-crystal-teal mb-2">
+                      <ArrowUp className="w-3.5 h-3.5 mr-1" />
+                      <span className="font-medium text-xs">Upload</span>
                     </div>
-                    <div className="space-y-1 text-xs text-slate-300">
+                    <div className="space-y-1 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-slate-400">Speed:</span>
-                        <span className="font-mono">
+                        <span className="text-ctext-dim">Speed:</span>
+                        <span className="font-source-code text-ctext">
                           {formatSpeed(speed.tx_speed)}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-400">Total:</span>
-                        <span className="font-mono">
+                        <span className="text-ctext-dim">Total:</span>
+                        <span className="font-source-code text-ctext-mid">
                           {formatBytes(stat.tx_bytes)}
                         </span>
                       </div>

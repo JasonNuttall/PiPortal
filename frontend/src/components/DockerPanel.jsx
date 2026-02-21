@@ -59,13 +59,13 @@ const DockerPanel = ({
   const getStatusColor = (state) => {
     switch (state.toLowerCase()) {
       case "running":
-        return "text-green-400";
+        return "text-crystal-blue";
       case "exited":
         return "text-red-400";
       case "paused":
         return "text-yellow-400";
       default:
-        return "text-slate-400";
+        return "text-ctext-dim";
     }
   };
 
@@ -89,7 +89,7 @@ const DockerPanel = ({
     <BasePanel
       title="Docker Containers"
       icon={Container}
-      iconColor="text-blue-400"
+      iconColor="text-crystal-blue"
       data={containers}
       isCollapsed={isCollapsed}
       onCollapseChange={onCollapseChange}
@@ -102,11 +102,11 @@ const DockerPanel = ({
       {(data) => (
         <>
           {data.length === 0 ? (
-            <p className="text-slate-400 text-center py-8">
+            <p className="text-ctext-mid text-center py-8 text-xs">
               No containers found
             </p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {data.map((container) => {
                 const loading = !!actionLoading[container.id];
                 const actions = getAvailableActions(container.state);
@@ -114,31 +114,36 @@ const DockerPanel = ({
                 return (
                   <div
                     key={container.id}
-                    className="bg-slate-700/50 rounded-lg p-4 hover:bg-slate-700 transition-colors"
+                    className="bg-glass border border-glass-border rounded-sm p-3 hover:bg-glass-hover transition-colors"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <Circle
-                            className={`w-3 h-3 fill-current ${getStatusColor(
+                            className={`w-2.5 h-2.5 fill-current ${getStatusColor(
                               container.state
                             )}`}
+                            style={
+                              container.state === "running"
+                                ? { filter: "drop-shadow(0 0 4px rgba(56, 189, 248, 0.6))" }
+                                : undefined
+                            }
                           />
-                          <h3 className="font-semibold text-slate-100">
+                          <h3 className="text-[10px] font-medium text-ctext">
                             {container.name}
                           </h3>
                         </div>
-                        <p className="text-sm text-slate-400">
+                        <p className="text-[8px] text-ctext-dim ml-[18px]">
                           {container.image}
                         </p>
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-[8px] text-ctext-dim ml-[18px] mt-0.5">
                           {container.status}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
                           {loading ? (
-                            <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+                            <Loader2 className="w-3.5 h-3.5 text-crystal-blue animate-spin" />
                           ) : (
                             actions.map((action) => {
                               const config = ACTION_CONFIG[action];
@@ -149,20 +154,20 @@ const DockerPanel = ({
                                   onClick={() =>
                                     handleAction(container.id, action)
                                   }
-                                  className={`p-1.5 rounded ${config.color} ${config.bgHover} transition-colors`}
+                                  className={`p-1 rounded-sm ${config.color} ${config.bgHover} transition-colors`}
                                   title={config.label}
                                 >
-                                  <Icon className="w-4 h-4" />
+                                  <Icon className="w-3.5 h-3.5" />
                                 </button>
                               );
                             })
                           )}
                         </div>
                         <span
-                          className={`text-xs px-2 py-1 rounded ${
+                          className={`glass-pill text-[8px] ${
                             container.state === "running"
-                              ? "bg-green-900/50 text-green-300"
-                              : "bg-red-900/50 text-red-300"
+                              ? "text-crystal-blue border-crystal-blue/30"
+                              : "text-red-400 border-red-400/30"
                           }`}
                         >
                           {container.state}
@@ -170,15 +175,15 @@ const DockerPanel = ({
                       </div>
                     </div>
                     {container.ports && container.ports.length > 0 && (
-                      <div className="mt-2 flex gap-2 flex-wrap">
+                      <div className="mt-2 ml-[18px] flex gap-1.5 flex-wrap">
                         {container.ports
                           .filter((p) => p.public)
                           .map((port, idx) => (
                             <span
                               key={idx}
-                              className="text-xs bg-slate-600 px-2 py-1 rounded"
+                              className="glass-pill text-[8px] text-crystal-blue"
                             >
-                              {port.public}→{port.private}
+                              {port.public}&rarr;{port.private}
                             </span>
                           ))}
                       </div>

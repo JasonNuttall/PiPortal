@@ -17,6 +17,14 @@ const iconColorClasses = {
   cyan: "text-cyan-400",
 };
 
+const getBarClass = (percentage) => {
+  if (percentage === undefined) return "crystal-bar-blue";
+  if (percentage < 50) return "crystal-bar-teal";
+  if (percentage < 75) return "crystal-bar-seafoam";
+  if (percentage < 90) return "crystal-bar-blue";
+  return "crystal-bar-warn";
+};
+
 const MetricCard = ({
   title,
   value,
@@ -25,36 +33,29 @@ const MetricCard = ({
   color = "blue",
   percentage,
 }) => {
-  // Determine bar color based on percentage
-  const getBarColor = () => {
-    if (percentage === undefined) return "bg-blue-500";
-
-    if (percentage < 50) {
-      return "bg-green-500";
-    } else if (percentage < 75) {
-      return "bg-yellow-500";
-    } else if (percentage < 90) {
-      return "bg-orange-500";
-    } else {
-      return "bg-red-500";
-    }
-  };
-
   return (
-    <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-slate-400 text-sm font-medium">{title}</h3>
-        <Icon className={`w-5 h-5 ${iconColorClasses[color] || "text-blue-400"}`} />
+    <div className="glass-card glass-card-accent-blue p-4 text-center relative overflow-hidden">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-[7px] tracking-[3px] uppercase text-ctext-dim font-source-code">
+          {title}
+        </h3>
+        <Icon
+          className={`w-4 h-4 ${iconColorClasses[color] || "text-blue-400"}`}
+        />
       </div>
-      <div className="flex items-baseline gap-2">
-        <span className="text-3xl font-bold text-slate-100">{value}</span>
-        {unit && <span className="text-slate-400 text-lg">{unit}</span>}
+      <div className="flex items-baseline gap-1">
+        <span className="font-spectral text-3xl text-crystal-blue" style={{ textShadow: "0 0 18px rgba(56, 189, 248, 0.5)" }}>
+          {value}
+        </span>
+        {unit && (
+          <span className="text-ctext-mid text-sm font-source-code">{unit}</span>
+        )}
       </div>
       {percentage !== undefined && (
         <div className="mt-3">
-          <div className="w-full bg-slate-700 rounded-full h-2">
+          <div className="crystal-bar-track">
             <div
-              className={`${getBarColor()} h-2 rounded-full transition-all duration-300`}
+              className={`crystal-bar-fill ${getBarClass(percentage)}`}
               style={{ width: `${Math.min(percentage, 100)}%` }}
             />
           </div>
@@ -77,7 +78,6 @@ const MetricsPanel = ({
   dockerInfo,
   networkStats,
 }) => {
-  // Calculate network speed as percentage of 1000 Mb/s (125 MB/s)
   const downloadMbps = networkStats?.downloadSpeed
     ? ((networkStats.downloadSpeed * 8) / 1000000).toFixed(1)
     : "0";
@@ -92,7 +92,7 @@ const MetricsPanel = ({
     : 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
       <MetricCard
         title="CPU Load"
         value={systemMetrics?.cpu?.currentLoad || "0"}
@@ -114,7 +114,7 @@ const MetricsPanel = ({
       <MetricCard
         title="CPU Temperature"
         value={temperature?.cpu || "N/A"}
-        unit={temperature?.cpu ? "°C" : ""}
+        unit={temperature?.cpu ? "\u00B0C" : ""}
         icon={Thermometer}
         color="orange"
         percentage={
