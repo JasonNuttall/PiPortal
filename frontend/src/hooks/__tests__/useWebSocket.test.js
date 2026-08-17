@@ -1,124 +1,258 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, act, waitFor } from "@testing-library/react";
 
-// Mock WebSocket before importing the module
+/**
+ * Exercises the real module. The previous version asserted a string against
+ * itself and never imported the code it claimed to cover.
+ */
+let sockets;
+
 class MockWebSocket {
+  static CONNECTING = 0;
   static OPEN = 1;
+  static CLOSING = 2;
   static CLOSED = 3;
 
   constructor(url) {
     this.url = url;
+    this.readyState = MockWebSocket.CONNECTING;
+    this.sent = [];
+    sockets.push(this);
+  }
+
+  send(payload) {
+    this.sent.push(JSON.parse(payload));
+  }
+
+  close() {
+    this.readyState = MockWebSocket.CLOSED;
+    this.onclose?.();
+  }
+
+  /* -- helpers for driving the socket from a test -- */
+  open() {
     this.readyState = MockWebSocket.OPEN;
-    this.send = vi.fn();
-    this.close = vi.fn();
-    // Auto-trigger onopen
-    setTimeout(() => this.onopen?.(), 0);
+    this.onopen?.();
+  }
+
+  deliver(channel, data, timestamp = 1) {
+    this.onmessage?.({
+      data: JSON.stringify({ type: "data", channel, data, timestamp }),
+    });
+  }
+
+  /** Every channel name this socket was asked to subscribe to. */
+  get subscribed() {
+    return this.sent
+      .filter((m) => m.type === "subscribe")
+      .flatMap((m) => m.channels);
+  }
+
+  get unsubscribed() {
+    return this.sent
+      .filter((m) => m.type === "unsubscribe")
+      .flatMap((m) => m.channels);
   }
 }
 
-globalThis.WebSocket = MockWebSocket;
+/** Fresh module state per test, since the connection is a module singleton. */
+const loadModule = async () => {
+  vi.resetModules();
+  return import("../useWebSocket");
+};
 
-describe("useWebSocket module", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.resetModules();
+beforeEach(() => {
+  sockets = [];
+  globalThis.WebSocket = MockWebSocket;
+  vi.stubGlobal("location", {
+    protocol: "http:",
+    host: "raspberrypi:1781",
+    hostname: "raspberrypi",
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("connection", () => {
+  it("connects to /ws on the page's own origin", async () => {
+    const { useWebSocket } = await loadModule();
+    renderHook(() => useWebSocket());
+
+    expect(sockets[0].url).toBe("ws://raspberrypi:1781/ws");
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
+  it("uses wss when the page is served over TLS", async () => {
+    vi.stubGlobal("location", {
+      protocol: "https:",
+      host: "home.example.com",
+      hostname: "home.example.com",
+    });
+
+    const { useWebSocket } = await loadModule();
+    renderHook(() => useWebSocket());
+
+    expect(sockets[0].url).toBe("wss://home.example.com/ws");
   });
 
-  it("getWebSocketUrl constructs URL from window.location", async () => {
-    // We test the URL construction logic
-    // Default: ws://localhost:3001
-    const protocol = "ws:";
-    const host = "localhost";
-    const expected = `${protocol}//${host}:3001`;
+  it("reports the connection state", async () => {
+    const { useWebSocket } = await loadModule();
+    const { result } = renderHook(() => useWebSocket());
 
-    // The function reads window.location, so we verify the pattern
-    expect(expected).toBe("ws://localhost:3001");
+    expect(result.current.isConnected).toBe(false);
+    act(() => sockets[0].open());
+    await waitFor(() => expect(result.current.isConnected).toBe(true));
   });
 
-  it("getWebSocketUrl uses wss for https", () => {
-    const protocol = "wss:";
-    const host = "mypi.local";
-    const expected = `${protocol}//${host}:3001`;
-    expect(expected).toBe("wss://mypi.local:3001");
+  it("shares one socket across hook instances", async () => {
+    const { useWebSocket } = await loadModule();
+    renderHook(() => useWebSocket());
+    renderHook(() => useWebSocket());
+
+    expect(sockets).toHaveLength(1);
+  });
+});
+
+describe("subscriptions", () => {
+  it("subscribes on the server when the first listener appears", async () => {
+    const { useWebSocket } = await loadModule();
+    const { result } = renderHook(() => useWebSocket());
+    act(() => sockets[0].open());
+
+    act(() => {
+      result.current.subscribe("node:pi5:metrics:system", vi.fn());
+    });
+
+    expect(sockets[0].subscribed).toContain("node:pi5:metrics:system");
   });
 
-  it("exponential backoff calculation is correct", () => {
-    const INITIAL_DELAY = 1000;
-    const MAX_DELAY = 30000;
+  it("subscribes only once for several listeners on one channel", async () => {
+    const { useWebSocket } = await loadModule();
+    const { result } = renderHook(() => useWebSocket());
+    act(() => sockets[0].open());
 
-    const calcDelay = (attempts) =>
-      Math.min(INITIAL_DELAY * Math.pow(2, attempts), MAX_DELAY);
+    act(() => {
+      result.current.subscribe("node:pi5:metrics:system", vi.fn());
+      result.current.subscribe("node:pi5:metrics:system", vi.fn());
+    });
 
-    expect(calcDelay(0)).toBe(1000);
-    expect(calcDelay(1)).toBe(2000);
-    expect(calcDelay(2)).toBe(4000);
-    expect(calcDelay(3)).toBe(8000);
-    expect(calcDelay(4)).toBe(16000);
-    expect(calcDelay(5)).toBe(30000); // capped at MAX
-    expect(calcDelay(10)).toBe(30000); // still capped
+    const count = sockets[0].subscribed.filter(
+      (c) => c === "node:pi5:metrics:system"
+    ).length;
+    expect(count).toBe(1);
   });
 
-  it("subscribe/unsubscribe pattern works correctly", () => {
-    // Test the subscription data structure logic
-    const subscribers = new Map();
+  it("unsubscribes only when the last listener goes away", async () => {
+    const { useWebSocket } = await loadModule();
+    const { result } = renderHook(() => useWebSocket());
+    act(() => sockets[0].open());
 
-    const subscribe = (channel, callback) => {
-      if (!subscribers.has(channel)) {
-        subscribers.set(channel, new Set());
-      }
-      subscribers.get(channel).add(callback);
+    let releaseA;
+    let releaseB;
+    act(() => {
+      releaseA = result.current.subscribe("node:pi5:metrics:system", vi.fn());
+      releaseB = result.current.subscribe("node:pi5:metrics:system", vi.fn());
+    });
 
-      return () => {
-        const callbacks = subscribers.get(channel);
-        callbacks?.delete(callback);
-        if (callbacks?.size === 0) {
-          subscribers.delete(channel);
-        }
-      };
-    };
+    act(() => releaseA());
+    expect(sockets[0].unsubscribed).not.toContain("node:pi5:metrics:system");
 
-    const cb1 = vi.fn();
-    const cb2 = vi.fn();
-
-    const unsub1 = subscribe("metrics:system", cb1);
-    const unsub2 = subscribe("metrics:system", cb2);
-
-    expect(subscribers.get("metrics:system").size).toBe(2);
-
-    // Dispatch
-    subscribers.get("metrics:system").forEach((cb) => cb("data"));
-    expect(cb1).toHaveBeenCalledWith("data");
-    expect(cb2).toHaveBeenCalledWith("data");
-
-    // Unsubscribe one
-    unsub1();
-    expect(subscribers.get("metrics:system").size).toBe(1);
-
-    // Unsubscribe all
-    unsub2();
-    expect(subscribers.has("metrics:system")).toBe(false);
+    act(() => releaseB());
+    expect(sockets[0].unsubscribed).toContain("node:pi5:metrics:system");
   });
 
-  it("message routing dispatches to correct channel", () => {
-    const subscribers = new Map();
-    const cb1 = vi.fn();
-    const cb2 = vi.fn();
+  it("routes a payload to that channel's listeners only", async () => {
+    const { useWebSocket } = await loadModule();
+    const { result } = renderHook(() => useWebSocket());
+    act(() => sockets[0].open());
 
-    subscribers.set("metrics:system", new Set([cb1]));
-    subscribers.set("metrics:network", new Set([cb2]));
+    const onSystem = vi.fn();
+    const onProcesses = vi.fn();
+    act(() => {
+      result.current.subscribe("node:pi5:metrics:system", onSystem);
+      result.current.subscribe("node:pi5:metrics:processes", onProcesses);
+    });
 
-    // Simulate message handling
-    const message = { type: "data", channel: "metrics:system", data: { cpu: 50 } };
+    act(() => sockets[0].deliver("node:pi5:metrics:system", { cpu: 5 }, 42));
 
-    if (message.type === "data" && message.channel) {
-      const callbacks = subscribers.get(message.channel);
-      callbacks?.forEach((cb) => cb(message.data, message.timestamp));
-    }
+    expect(onSystem).toHaveBeenCalledWith({ cpu: 5 }, 42);
+    expect(onProcesses).not.toHaveBeenCalled();
+  });
 
-    expect(cb1).toHaveBeenCalledWith({ cpu: 50 }, undefined);
-    expect(cb2).not.toHaveBeenCalled();
+  it("replays the last value to a listener that arrives late", async () => {
+    const { useWebSocket } = await loadModule();
+    const { result } = renderHook(() => useWebSocket());
+    act(() => sockets[0].open());
+
+    act(() => result.current.subscribe("node:pi5:metrics:system", vi.fn()));
+    act(() => sockets[0].deliver("node:pi5:metrics:system", { cpu: 7 }));
+
+    const late = vi.fn();
+    act(() => result.current.subscribe("node:pi5:metrics:system", late));
+
+    expect(late).toHaveBeenCalledWith({ cpu: 7 }, expect.any(Number));
+  });
+
+  it("re-subscribes everything after a reconnect", async () => {
+    const { useWebSocket } = await loadModule();
+    const { result } = renderHook(() => useWebSocket());
+    act(() => sockets[0].open());
+    act(() => result.current.subscribe("node:pi5:metrics:system", vi.fn()));
+
+    act(() => sockets[0].close());
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+    });
+
+    expect(sockets.length).toBeGreaterThan(1);
+    act(() => sockets[1].open());
+    expect(sockets[1].subscribed).toContain("node:pi5:metrics:system");
+  });
+
+  it("ignores a malformed frame without tearing down the connection", async () => {
+    const { useWebSocket } = await loadModule();
+    const { result } = renderHook(() => useWebSocket());
+    act(() => sockets[0].open());
+
+    const listener = vi.fn();
+    act(() => result.current.subscribe("node:pi5:metrics:system", listener));
+
+    act(() => sockets[0].onmessage?.({ data: "not json" }));
+
+    expect(listener).not.toHaveBeenCalled();
+    expect(result.current.isConnected).toBe(true);
+  });
+});
+
+describe("useWebSocketChannel", () => {
+  it("exposes the latest payload for its channel", async () => {
+    const { useWebSocket, useWebSocketChannel } = await loadModule();
+    const connection = renderHook(() => useWebSocket());
+    act(() => sockets[0].open());
+    await waitFor(() =>
+      expect(connection.result.current.isConnected).toBe(true)
+    );
+
+    const { result } = renderHook(() =>
+      useWebSocketChannel("node:pi5:metrics:system")
+    );
+
+    act(() => sockets[0].deliver("node:pi5:metrics:system", { cpu: 9 }, 77));
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual({ cpu: 9 });
+      expect(result.current.lastUpdate).toBe(77);
+    });
+  });
+
+  it("does not subscribe while disabled", async () => {
+    const { useWebSocket, useWebSocketChannel } = await loadModule();
+    renderHook(() => useWebSocket());
+    act(() => sockets[0].open());
+
+    renderHook(() => useWebSocketChannel("node:pi5:metrics:system", false));
+
+    expect(sockets[0].subscribed).not.toContain("node:pi5:metrics:system");
   });
 });

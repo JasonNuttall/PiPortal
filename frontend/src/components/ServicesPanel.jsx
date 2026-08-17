@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import {
   Link,
   Plus,
@@ -13,15 +13,15 @@ import BasePanel from "./BasePanel";
 const ServicesPanel = ({
   services,
   onUpdate,
+  nodeId,
   isCollapsed,
   onCollapseChange,
   panelId,
-  dataMode,
-  onModeChange,
-  wsConnected,
 }) => {
   const [editingService, setEditingService] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
+  // A link is either tied to the node in focus or shown for the whole fleet.
+  const [scopeToNode, setScopeToNode] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     url: "",
@@ -32,24 +32,32 @@ const ServicesPanel = ({
   const handleEdit = (service) => {
     setEditingService(service.id);
     setFormData(service);
+    setScopeToNode(Boolean(service.node_id));
     setIsAdding(false);
   };
 
   const handleAdd = () => {
     setIsAdding(true);
     setEditingService(null);
+    setScopeToNode(false);
     setFormData({ name: "", url: "", icon: "", category: "" });
   };
 
   const handleSave = async () => {
     try {
+      // node_id arrives on an edited row; scopeToNode drives a new one.
+      const payload = {
+        ...formData,
+        nodeId: scopeToNode ? nodeId : null,
+      };
       if (editingService) {
-        await updateService(editingService, formData);
+        await updateService(editingService, payload);
       } else {
-        await createService(formData);
+        await createService(payload);
       }
       setEditingService(null);
       setIsAdding(false);
+      setScopeToNode(false);
       setFormData({ name: "", url: "", icon: "", category: "" });
       onUpdate();
     } catch (error) {
@@ -71,6 +79,7 @@ const ServicesPanel = ({
   const handleCancel = () => {
     setEditingService(null);
     setIsAdding(false);
+    setScopeToNode(false);
     setFormData({ name: "", url: "", icon: "", category: "" });
   };
 
@@ -102,9 +111,6 @@ const ServicesPanel = ({
       subtitle={`(${services?.length || 0})`}
       headerActions={addButton}
       panelId={panelId}
-      dataMode={dataMode}
-      onModeChange={onModeChange}
-      wsConnected={wsConnected}
     >
       {(data) => (
         <>
@@ -149,6 +155,15 @@ const ServicesPanel = ({
                     className="glass-input"
                   />
                 </div>
+                <label className="flex items-center gap-2 text-[10px] text-ctext-mid cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={scopeToNode}
+                    onChange={(e) => setScopeToNode(e.target.checked)}
+                    className="accent-crystal-blue"
+                  />
+                  Only show this link on the selected node
+                </label>
                 <div className="flex gap-2">
                   <button
                     onClick={handleSave}
@@ -296,4 +311,4 @@ const ServicesPanel = ({
   );
 };
 
-export default ServicesPanel;
+export default memo(ServicesPanel);

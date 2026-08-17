@@ -9,6 +9,7 @@ vi.mock("../../api/api", () => ({
 import { containerAction } from "../../api/api";
 
 const defaultProps = {
+  nodeId: "jelly",
   isCollapsed: false,
   onCollapseChange: vi.fn(),
   onUpdate: vi.fn(),
@@ -131,7 +132,7 @@ describe("DockerPanel", () => {
     fireEvent.click(screen.getByTitle("Stop"));
 
     await waitFor(() => {
-      expect(containerAction).toHaveBeenCalledWith("abc123", "stop");
+      expect(containerAction).toHaveBeenCalledWith("jelly", "abc123", "stop");
       expect(onUpdate).toHaveBeenCalled();
     });
   });
@@ -146,7 +147,7 @@ describe("DockerPanel", () => {
     fireEvent.click(screen.getByTitle("Start"));
 
     await waitFor(() => {
-      expect(containerAction).toHaveBeenCalledWith("def456", "start");
+      expect(containerAction).toHaveBeenCalledWith("jelly", "def456", "start");
       expect(onUpdate).toHaveBeenCalled();
     });
   });
@@ -161,7 +162,7 @@ describe("DockerPanel", () => {
     fireEvent.click(screen.getByTitle("Restart"));
 
     await waitFor(() => {
-      expect(containerAction).toHaveBeenCalledWith("abc123", "restart");
+      expect(containerAction).toHaveBeenCalledWith("jelly", "abc123", "restart");
       expect(onUpdate).toHaveBeenCalled();
     });
   });
@@ -178,7 +179,7 @@ describe("DockerPanel", () => {
     fireEvent.click(screen.getByTitle("Stop"));
 
     await waitFor(() => {
-      expect(containerAction).toHaveBeenCalledWith("abc123", "stop");
+      expect(containerAction).toHaveBeenCalledWith("jelly", "abc123", "stop");
       expect(onUpdate).not.toHaveBeenCalled();
       expect(consoleSpy).toHaveBeenCalled();
     });

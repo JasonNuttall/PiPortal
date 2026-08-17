@@ -1,3 +1,4 @@
+import { memo } from "react";
 import {
   Cpu,
   HardDrive,
@@ -76,63 +77,60 @@ const formatBytes = (bytes) => {
   return gb;
 };
 
-const MetricsPanel = ({
-  systemMetrics,
-  temperature,
-  diskMetrics,
-  dockerInfo,
-  networkStats,
-}) => {
-  const downloadMbps = networkStats?.downloadSpeed
-    ? ((networkStats.downloadSpeed * 8) / 1000000).toFixed(1)
-    : "0";
-  const uploadMbps = networkStats?.uploadSpeed
-    ? ((networkStats.uploadSpeed * 8) / 1000000).toFixed(1)
-    : "0";
-  const downloadPercent = networkStats?.downloadSpeed
-    ? (parseFloat(downloadMbps) / 1000) * 100
-    : 0;
-  const uploadPercent = networkStats?.uploadSpeed
-    ? (parseFloat(uploadMbps) / 1000) * 100
-    : 0;
+/**
+ * The selected node's headline figures.
+ *
+ * Everything here comes from that node's `summary`, which the fleet strip is
+ * already streaming, so these six cards cost no additional collection.
+ */
+const MetricsPanel = ({ summary }) => {
+  const toMbps = (bytesPerSecond) =>
+    bytesPerSecond ? ((bytesPerSecond * 8) / 1_000_000).toFixed(1) : "0";
+
+  const downloadMbps = toMbps(summary?.rxSec);
+  const uploadMbps = toMbps(summary?.txSec);
+
+  // Scaled against a gigabit link so a saturated LAN fills the bar.
+  const linkPercent = (mbps) => (parseFloat(mbps) / 1000) * 100;
+
+  const round = (value) =>
+    value == null ? null : Number(value).toFixed(1).replace(/\.0$/, "");
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
       <MetricCard
         title="CPU Load"
-        value={systemMetrics?.cpu?.currentLoad || "0"}
+        value={round(summary?.cpuLoad) ?? "0"}
         unit="%"
         icon={Cpu}
         color="blue"
-        percentage={parseFloat(systemMetrics?.cpu?.currentLoad || 0)}
+        percentage={summary?.cpuLoad ?? 0}
       />
 
       <MetricCard
         title="Memory Usage"
-        value={systemMetrics?.memory?.usedPercentage || "0"}
+        value={round(summary?.memoryUsedPercentage) ?? "0"}
         unit="%"
         icon={HardDrive}
         color="green"
-        percentage={parseFloat(systemMetrics?.memory?.usedPercentage || 0)}
+        percentage={summary?.memoryUsedPercentage ?? 0}
       />
 
       <MetricCard
         title="CPU Temperature"
-        value={temperature?.cpu || "N/A"}
-        unit={temperature?.cpu ? "\u00B0C" : ""}
+        value={round(summary?.temperature) ?? "N/A"}
+        unit={summary?.temperature != null ? "\u00B0C" : ""}
         icon={Thermometer}
         color="orange"
         percentage={
-          temperature?.cpu ? (parseFloat(temperature.cpu) / 80) * 100 : 0
+          summary?.temperature != null ? (summary.temperature / 90) * 100 : 0
         }
       />
 
       <MetricCard
         title="Docker Containers"
-        value={dockerInfo?.containersRunning || "0"}
-        unit={`/ ${
-          dockerInfo?.containersRunning + dockerInfo?.containersStopped || "0"
-        }`}
+        value={summary?.containersRunning ?? "0"}
+        unit={`/ ${summary?.containersTotal ?? 0}`}
         icon={Package}
         color="purple"
       />
@@ -143,7 +141,7 @@ const MetricsPanel = ({
         unit="Mb/s"
         icon={ArrowDown}
         color="green"
-        percentage={downloadPercent}
+        percentage={linkPercent(downloadMbps)}
       />
 
       <MetricCard
@@ -152,10 +150,10 @@ const MetricsPanel = ({
         unit="Mb/s"
         icon={ArrowUp}
         color="blue"
-        percentage={uploadPercent}
+        percentage={linkPercent(uploadMbps)}
       />
     </div>
   );
 };
 
-export default MetricsPanel;
+export default memo(MetricsPanel);

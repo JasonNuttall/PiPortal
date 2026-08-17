@@ -1,111 +1,98 @@
+/**
+ * REST client.
+ *
+ * Metric requests are addressed to a node: /api/nodes/<id>/metrics/system.
+ * The hub answers for its own hardware and proxies for every registered agent,
+ * so the browser only ever talks to one origin.
+ */
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
-const TIMEOUT_MS = 5000;
+const TIMEOUT_MS = 8000;
 
-const fetchWithTimeout = async (url, options = {}) => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+const request = async (path, { timeoutMs = TIMEOUT_MS, ...options } = {}) => {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    signal: AbortSignal.timeout(timeoutMs),
+  });
 
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-    return response;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-};
-
-export const fetchSystemMetrics = async () => {
-  const response = await fetchWithTimeout(`${API_BASE_URL}/metrics/system`);
-  if (!response.ok) throw new Error("Failed to fetch system metrics");
-  return response.json();
-};
-
-export const fetchTemperature = async () => {
-  const response = await fetchWithTimeout(`${API_BASE_URL}/metrics/temperature`);
-  if (!response.ok) throw new Error("Failed to fetch temperature");
-  return response.json();
-};
-
-export const fetchDiskMetrics = async () => {
-  const response = await fetchWithTimeout(`${API_BASE_URL}/metrics/disk`);
-  if (!response.ok) throw new Error("Failed to fetch disk metrics");
-  return response.json();
-};
-
-export const fetchDockerContainers = async () => {
-  const response = await fetchWithTimeout(`${API_BASE_URL}/docker/containers`);
-  if (!response.ok) throw new Error("Failed to fetch Docker containers");
-  return response.json();
-};
-
-export const fetchDockerInfo = async () => {
-  const response = await fetchWithTimeout(`${API_BASE_URL}/docker/info`);
-  if (!response.ok) throw new Error("Failed to fetch Docker info");
-  return response.json();
-};
-
-export const containerAction = async (id, action) => {
-  const response = await fetchWithTimeout(
-    `${API_BASE_URL}/docker/containers/${id}/${action}`,
-    { method: "POST" }
-  );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.error || `Failed to ${action} container`);
+    const error = new Error(body.error || `Request failed (${response.status})`);
+    error.status = response.status;
+    throw error;
   }
-  return response.json();
+
+  return response.status === 204 ? null : response.json();
 };
 
-export const fetchServices = async () => {
-  const response = await fetchWithTimeout(`${API_BASE_URL}/services`);
-  if (!response.ok) throw new Error("Failed to fetch services");
-  return response.json();
-};
+const json = (method, body) => ({
+  method,
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(body),
+});
 
-export const createService = async (service) => {
-  const response = await fetchWithTimeout(`${API_BASE_URL}/services`, {
+/* ---------------------------------------------------------------- nodes -- */
+
+export const fetchNodes = () => request("/nodes");
+
+export const fetchFleet = () => request("/nodes/fleet");
+
+export const createNode = (node) => request("/nodes", json("POST", node));
+
+export const updateNode = (id, node) =>
+  request(`/nodes/${id}`, json("PUT", node));
+
+export const deleteNode = (id) => request(`/nodes/${id}`, { method: "DELETE" });
+
+export const testNode = (id) => request(`/nodes/${id}/test`, { method: "POST" });
+
+/* -------------------------------------------------------------- metrics -- */
+
+/**
+ * Fetch any collector channel from a node.
+ * @param {string} nodeId
+ * @param {string} channel - e.g. "metrics:system"
+ */
+export const fetchNodeChannel = (nodeId, channel) =>
+  request(`/nodes/${nodeId}/${channel.replace(/:/g, "/")}`);
+
+export const fetchSystemMetrics = (nodeId) =>
+  fetchNodeChannel(nodeId, "metrics:system");
+
+export const fetchTemperature = (nodeId) =>
+  fetchNodeChannel(nodeId, "metrics:temperature");
+
+export const fetchDiskMetrics = (nodeId) =>
+  fetchNodeChannel(nodeId, "metrics:disk");
+
+export const fetchNetworkMetrics = (nodeId) =>
+  fetchNodeChannel(nodeId, "metrics:network");
+
+export const fetchProcesses = (nodeId) =>
+  fetchNodeChannel(nodeId, "metrics:processes");
+
+export const fetchDockerContainers = (nodeId) =>
+  fetchNodeChannel(nodeId, "docker:containers");
+
+export const fetchDockerInfo = (nodeId) =>
+  fetchNodeChannel(nodeId, "docker:info");
+
+export const containerAction = (nodeId, containerId, action) =>
+  request(`/nodes/${nodeId}/docker/containers/${containerId}/${action}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(service),
   });
-  if (!response.ok) throw new Error("Failed to create service");
-  return response.json();
-};
 
-export const updateService = async (id, service) => {
-  const response = await fetchWithTimeout(`${API_BASE_URL}/services/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(service),
-  });
-  if (!response.ok) throw new Error("Failed to update service");
-  return response.json();
-};
+/* ------------------------------------------------------------- services -- */
 
-export const deleteService = async (id) => {
-  const response = await fetchWithTimeout(`${API_BASE_URL}/services/${id}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) throw new Error("Failed to delete service");
-};
+/** Returns the node's own links plus every fleet-wide one. */
+export const fetchServices = (nodeId) =>
+  request(nodeId ? `/services?nodeId=${encodeURIComponent(nodeId)}` : "/services");
 
-export const fetchDetailedDiskInfo = async () => {
-  const response = await fetchWithTimeout(`${API_BASE_URL}/metrics/disk/detailed`);
-  if (!response.ok) throw new Error("Failed to fetch detailed disk info");
-  return response.json();
-};
+export const createService = (service) =>
+  request("/services", json("POST", service));
 
-export const fetchNetworkMetrics = async () => {
-  const response = await fetchWithTimeout(`${API_BASE_URL}/metrics/network`);
-  if (!response.ok) throw new Error("Failed to fetch network metrics");
-  return response.json();
-};
+export const updateService = (id, service) =>
+  request(`/services/${id}`, json("PUT", service));
 
-export const fetchProcesses = async () => {
-  const response = await fetchWithTimeout(`${API_BASE_URL}/metrics/processes`);
-  if (!response.ok) throw new Error("Failed to fetch processes");
-  return response.json();
-};
+export const deleteService = (id) =>
+  request(`/services/${id}`, { method: "DELETE" });

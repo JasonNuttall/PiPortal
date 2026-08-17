@@ -17,8 +17,7 @@
     "@tanstack/react-virtual": "^3.13.18",
     "lucide-react": "^0.303.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "recharts": "^2.10.3"
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

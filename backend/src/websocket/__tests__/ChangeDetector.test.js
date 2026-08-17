@@ -179,7 +179,7 @@ describe("ChangeDetector", () => {
 
   describe("compareDiskMetrics", () => {
     it("returns true when disk count changes", () => {
-      const result = detector.compare("metrics:disk:detailed",
+      const result = detector.compare("metrics:disk",
         [{ mount: "/", use: 50 }],
         [{ mount: "/", use: 50 }, { mount: "/home", use: 30 }],
         0.05
@@ -188,7 +188,7 @@ describe("ChangeDetector", () => {
     });
 
     it("returns false when usage within threshold", () => {
-      const result = detector.compare("metrics:disk:detailed",
+      const result = detector.compare("metrics:disk",
         [{ mount: "/", use: 50 }],
         [{ mount: "/", use: 52 }],
         0.05
@@ -197,7 +197,7 @@ describe("ChangeDetector", () => {
     });
 
     it("returns true when usage exceeds threshold", () => {
-      const result = detector.compare("metrics:disk:detailed",
+      const result = detector.compare("metrics:disk",
         [{ mount: "/", use: 50 }],
         [{ mount: "/", use: 60 }],
         0.05
@@ -222,13 +222,93 @@ describe("ChangeDetector", () => {
     });
   });
 
-  describe("cloneData", () => {
-    it("creates a deep copy", () => {
-      const original = { a: { b: [1, 2, 3] } };
-      const clone = detector.cloneData(original);
-      expect(clone).toEqual(original);
-      expect(clone).not.toBe(original);
-      expect(clone.a).not.toBe(original.a);
+  describe("retained state", () => {
+    it("stores a projection rather than the whole payload", () => {
+      const list = Array.from({ length: 150 }, (_, i) => ({
+        pid: i,
+        cpu: 1,
+        command: "x".repeat(100),
+      }));
+      detector.hasSignificantChange("metrics:processes", { list }, null);
+
+      const retained = detector.previousValues.get("metrics:processes");
+      expect(retained.top).toHaveLength(5);
+      expect(retained.count).toBe(150);
+      expect(retained.list).toBeUndefined();
+    });
+
+    it("does not hold a reference to the caller's payload", () => {
+      const data = { cpu: { currentLoad: 50 }, memory: { usedPercentage: 10 } };
+      detector.hasSignificantChange("metrics:system", data, 0.05);
+
+      data.cpu.currentLoad = 99;
+
+      // A retained reference would make this look unchanged.
+      expect(
+        detector.hasSignificantChange("metrics:system", data, 0.05)
+      ).toBe(true);
+    });
+  });
+
+  describe("null threshold on projected channels", () => {
+    // Regression: compare() used to return a JSON deep-comparison whenever the
+    // threshold was null, which is how metrics:processes and docker:containers
+    // are configured, so their comparators never ran and every sample pushed.
+    it("uses the process comparator when threshold is null", () => {
+      const base = Array.from({ length: 150 }, (_, i) => ({
+        pid: i,
+        cpu: 5,
+        mem: 1,
+      }));
+      // Same leading processes, jittering CPU on a low-ranked row.
+      const next = base.map((p, i) =>
+        i === 100 ? { ...p, cpu: 5.0001 } : { ...p }
+      );
+
+      detector.hasSignificantChange("metrics:processes", { list: base }, null);
+      expect(
+        detector.hasSignificantChange("metrics:processes", { list: next }, null)
+      ).toBe(false);
+    });
+
+    it("uses the container comparator when threshold is null", () => {
+      const containers = [
+        { id: "abc", state: "running", status: "Up 3 minutes" },
+        { id: "def", state: "running", status: "Up 3 minutes" },
+      ];
+      // "Up N minutes" ticks constantly but is not a state change.
+      const next = containers.map((c) => ({ ...c, status: "Up 4 minutes" }));
+
+      detector.hasSignificantChange("docker:containers", containers, null);
+      expect(
+        detector.hasSignificantChange("docker:containers", next, null)
+      ).toBe(false);
+
+      next[0].state = "exited";
+      expect(
+        detector.hasSignificantChange("docker:containers", next, null)
+      ).toBe(true);
+    });
+  });
+
+  describe("node-namespaced channels", () => {
+    it("resolves the comparator through the node prefix", () => {
+      const result = detector.compare(
+        "node:jelly:metrics:system",
+        { cpu: { currentLoad: 50 }, memory: { usedPercentage: 10 } },
+        { cpu: { currentLoad: 51 }, memory: { usedPercentage: 10 } },
+        0.05
+      );
+      expect(result).toBe(false);
+    });
+
+    it("tracks each node separately", () => {
+      const data = { cpu: { currentLoad: 50 }, memory: { usedPercentage: 10 } };
+      detector.hasSignificantChange("node:pi5:metrics:system", data, 0.05);
+      // A different node has no history yet, so this must push.
+      expect(
+        detector.hasSignificantChange("node:jelly:metrics:system", data, 0.05)
+      ).toBe(true);
     });
   });
 

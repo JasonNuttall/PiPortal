@@ -4,7 +4,50 @@
 
 # Homelab Portal 🏠
 
-A lightweight, containerized dashboard for monitoring and managing your Raspberry Pi homelab. Built with React, Node.js, and Docker.
+A lightweight, containerized dashboard for monitoring a homelab of one or many
+machines. Built with React, Node.js and Docker.
+
+<div align="center">
+
+## Architecture
+
+</div>
+
+One image, two roles.
+
+```
+                    Browser
+                       │  one origin, one URL
+                       ▼
+        ┌──────────────────────────────┐
+        │  HUB  (Raspberry Pi)         │
+        │  dashboard + node registry   │
+        │  + its own metrics           │
+        └──────────────┬───────────────┘
+                       │ WebSocket, REST fallback
+        ┌──────────────┴───────────────┐
+        ▼                              ▼
+  ┌───────────┐                  ┌───────────┐
+  │  AGENT    │                  │  AGENT    │
+  │  Jelly    │                  │  NAS …    │
+  └───────────┘                  └───────────┘
+```
+
+- **Hub** — serves the dashboard, owns the node registry and the service links,
+  collects its own hardware, and aggregates every agent. One per fleet.
+- **Agent** — reports a single machine. No UI, no database.
+
+The browser only ever talks to the hub, so agents need no CORS configuration
+and do not have to be reachable from wherever you happen to be browsing.
+
+**Channels.** Metrics are addressed per node — `node:jelly:metrics:system`.
+Two channels are fleet-level: `fleet` (one summary row per node, driving the
+overview strip) and `nodes` (registry and reachability changes).
+
+**Collection is demand driven.** Nothing is sampled anywhere until a browser
+subscribes to it, and collection stops when the last viewer navigates away,
+collapses the panel or hides the tab. A node nobody is looking at costs
+nothing beyond its summary line.
 
 <div align="center">
 
@@ -12,50 +55,27 @@ A lightweight, containerized dashboard for monitoring and managing your Raspberr
 
 </div>
 
+- **Multi-node monitoring**
+  - Fleet overview strip: CPU, RAM, temperature, disk and container counts for
+    every machine at once
+  - Click any node to focus the detailed panels on it
+  - Per-node reachability with latency testing
+  - Add, test and remove nodes from the UI
 - **Real-time System Monitoring**
-  - CPU load and usage
-  - Memory (RAM) usage
-  - CPU temperature
+  - CPU load and usage, memory, CPU temperature
   - Disk usage per mount point
-  - Process monitor with search, sort, and filtering
-  - Live network traffic (upload/download speeds per interface)
+  - Process monitor with search, sort and filtering
+  - Live network traffic per interface
 - **Docker Container Management**
-
-  - View all containers (running and stopped)
-  - Container status and health
-  - Port mappings
-  - Real-time updates
-
+  - View and control containers (start / stop / restart) on any node
+  - Driven by the Docker event stream rather than polling
 - **Service Quick Links**
-
-  - Add/Edit/Delete custom service links
-  - Organize services by category
-  - One-click access to all your homelab services
-  - SQLite database for persistent storage
-
-- **Auto-refresh Dashboard**
-  - Choose refresh interval for auto refresh dashboard
-  - Responsive design for mobile and desktop
-
-- **Customizable Dashboard Layout**
-
-  - Drag-and-drop panel reordering
-  - Collapsible panels with state persistence
-  - Two-column layout with independent organization
-  - User preferences saved to localStorage
-
-- **Performance Optimizations**
-  - Lazy loading: collapsed panels skip data fetching
-  - Centralized data fetching to minimize API calls
-  - Memoized components and calculations
-  - Backend response caching for system metrics
-  - Efficient process monitoring with UID caching
-
-- **Real-time WebSocket Support**
-  - Per-panel toggle between polling and real-time mode
-  - WebSocket server with change detection (only pushes significant changes)
-  - Auto-reconnection with exponential backoff
-  - User preferences persist in localStorage
+  - Links can be fleet-wide or scoped to a single node
+  - SQLite storage on the hub
+- **Customizable Dashboard**
+  - Drag-and-drop panel reordering, collapsible panels
+  - Per-panel live/poll toggle
+  - Preferences saved to localStorage
 
 <div align="center">
 
@@ -63,22 +83,12 @@ A lightweight, containerized dashboard for monitoring and managing your Raspberr
 
 </div>
 
-- **Frontend**: React 18 + Vite, Tailwind CSS, Recharts, Lucide Icons, dnd-kit
-- **Backend**: Node.js + Express + ws (WebSocket)
-- **Database**: SQLite (better-sqlite3)
-- **Monitoring**: systeminformation, dockerode
+- **Frontend**: React 18 + Vite, Tailwind CSS, Lucide Icons, dnd-kit,
+  TanStack Virtual
+- **Backend**: Node.js + Express + ws
+- **Database**: SQLite (better-sqlite3), migrated on startup
+- **Monitoring**: direct procfs/sysfs reads, systeminformation, dockerode
 - **Deployment**: Docker + Docker Compose
-
-<div align="center">
-
-## Prerequisites
-
-</div>
-
-- Docker and Docker Compose installed on your Raspberry Pi
-- Raspberry Pi running a Linux-based OS (Raspberry Pi OS recommended)
-- Port 1781 available for the frontend
-- Port 3001 available for the backend API
 
 <div align="center">
 
@@ -86,219 +96,167 @@ A lightweight, containerized dashboard for monitoring and managing your Raspberr
 
 </div>
 
-### 1. Clone or Download
+### 1. Deploy the hub
+
+On the machine that should serve the dashboard:
 
 ```bash
 git clone https://github.com/JasonNuttall/PiPortal.git
 cd PiPortal
+docker compose up -d
 ```
 
-### 2. Build and Run with Docker Compose
+Open `http://<that-host>:1781`. It monitors itself out of the box — a
+single-machine install needs no further configuration.
+
+### 2. Add another machine
+
+On each additional machine:
 
 ```bash
-docker-compose up -d
+git clone https://github.com/JasonNuttall/PiPortal.git
+cd PiPortal
+docker compose -f docker-compose.agent.yml up -d
 ```
 
-This will:
+Then in the dashboard choose **Manage nodes**, and add it:
 
-- Build both frontend and backend containers
-- Mount the Docker socket for container monitoring
-- Mount system files for temperature reading
-- Create a persistent database volume
-- Start both services
+| Field | Example |
+| --- | --- |
+| Name | `Jelly` |
+| Id | `jelly` |
+| Agent URL | `http://jelly:3001` |
+| Token | blank on a trusted LAN |
 
-### 3. Access the Dashboard
+Press **Test** to confirm the hub can reach it. The node appears in the fleet
+strip immediately.
 
-Open your browser and navigate to:
-
-```
-http://raspberrypi:1781
-```
-
-or
-
-```
-http://<your-pi-ip-address>:1781
-```
-
-## Development
-
-### Backend Development
-
-```bash
-cd backend
-npm install
-npm run dev
-```
-
-Backend will run on `http://localhost:3001`
-
-**Available API Endpoints:**
-
-- `GET /api/metrics/system` - System CPU and memory metrics (cached)
-- `GET /api/metrics/temperature` - CPU temperature
-- `GET /api/metrics/disk` - Disk usage summary
-- `GET /api/metrics/disk/detailed` - Detailed disk usage per mount
-- `GET /api/metrics/network` - Network interface statistics
-- `GET /api/metrics/processes` - Running processes with CPU/memory usage
-- `GET /api/docker/containers` - List all Docker containers
-- `GET /api/docker/info` - Docker system info
-- `GET /api/services` - Get all service links
-- `POST /api/services` - Create new service link
-- `PUT /api/services/:id` - Update service link
-- `DELETE /api/services/:id` - Delete service link
-- `GET /api/ws/stats` - WebSocket connection statistics
-- `ws://host:3001` - WebSocket endpoint for real-time data
-
-### Frontend Development
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Frontend will run on `http://localhost:3000`
-
-Update the Vite proxy in `vite.config.js` if your backend runs on a different port.
+<div align="center">
 
 ## Configuration
 
-### Environment Variables (Backend)
+</div>
 
-Create a `.env` file in the `backend` directory:
+Both roles read the same variables; see `backend/.env.example`.
 
-```env
-PORT=3001
-NODE_ENV=development
-DB_PATH=./data/homelab.db
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `NODE_ROLE` | `hub` | `hub` or `agent` |
+| `PORT` | `3001` | HTTP + WebSocket port |
+| `NODE_ID` | hostname | Stable id used in channel names |
+| `NODE_NAME` | hostname | Display name in the fleet |
+| `AGENT_TOKEN` | unset | Shared secret; unset disables auth |
+| `DB_PATH` | `./data/homelab.db` | Hub only |
+| `HOST_PROC` | `/proc` | Where the host's procfs is mounted |
+| `HOST_ROOT` | `/host` | Where the host root is mounted |
+| `HOST_SYS` | `/sys` | Where sysfs is mounted |
+| `PROCESS_LIMIT` | `150` | Max processes returned |
+| `AGENT_TIMEOUT_MS` | `8000` | Hub's patience with an agent |
+| `CORS_ORIGIN` | unset | Comma-separated allowlist |
+
+### Authentication
+
+Leaving `AGENT_TOKEN` unset is the right choice on a trusted LAN. Set it on any
+agent reachable more widely, and enter the same value as that node's **Token**
+on the hub. It is checked in constant time on both `/api` requests and
+WebSocket upgrades, and is never returned by the API.
+
+<div align="center">
+
+## API
+
+</div>
+
+### Fleet (hub)
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/nodes` | Registry with live status |
+| `GET` | `/api/nodes/fleet` | Overview strip payload |
+| `POST` | `/api/nodes` | Register an agent |
+| `PUT` | `/api/nodes/:id` | Edit a node |
+| `DELETE` | `/api/nodes/:id` | Remove a node |
+| `POST` | `/api/nodes/:id/test` | Probe reachability |
+
+### Per-node metrics (hub)
+
+`GET /api/nodes/:id/<channel>`, where the channel's colons become slashes:
+
+```
+/api/nodes/jelly/metrics/system
+/api/nodes/jelly/metrics/temperature
+/api/nodes/jelly/metrics/network
+/api/nodes/jelly/metrics/disk
+/api/nodes/jelly/metrics/processes
+/api/nodes/jelly/docker/containers
+/api/nodes/jelly/docker/info
+/api/nodes/jelly/summary
 ```
 
-### Docker Compose Customization
+`POST /api/nodes/:id/docker/containers/:containerId/:action` — `start`,
+`stop` or `restart`.
 
-Edit `docker-compose.yml` to:
+### Local metrics (both roles)
 
-- Change exposed ports
-- Add additional volume mounts
-- Configure restart policies
-- Add environment variables
+The same channels are served for the machine itself under `/api/local/...`,
+which is what a hub calls on its agents. `?fresh=1` bypasses the cache.
+`GET /api/local/info` returns that node's identity.
 
-### Security Considerations
+### Services (hub)
 
-The backend container needs access to:
+`GET|POST /api/services`, `PUT|DELETE /api/services/:id`.
+`GET /api/services?nodeId=jelly` returns that node's links plus fleet-wide ones.
 
-- `/var/run/docker.sock` - To monitor Docker containers (mounted read-only)
-- `/sys/class/thermal` - To read CPU temperature (mounted read-only)
+<div align="center">
 
-**Important**: The Docker socket grants significant access. This setup is designed for private homelab use. Do NOT expose this dashboard to the public internet without proper authentication and security measures.
+## Development
 
-## Customization
+</div>
 
-### Adding Default Services
-
-Edit `backend/src/db/database.js` to add default services that appear on first run:
-
-```javascript
-insert.run("Service Name", "http://url", "🔗", "Category");
+```bash
+cd backend  && npm install && npm run dev    # http://localhost:3001
+cd frontend && npm install && npm run dev    # http://localhost:3000
+npm test                                     # in either directory
 ```
 
-### Modifying UI Colors
+To develop against a second machine without deploying, run a local agent:
 
-The dashboard uses Tailwind CSS. Edit color schemes in component files or customize the theme in `tailwind.config.js`.
+```bash
+cd backend
+NODE_ROLE=agent PORT=3002 NODE_ID=testnode npm start
+```
+
+then register `http://localhost:3002` in the UI.
+
+<div align="center">
 
 ## Troubleshooting
 
-### Docker containers not showing
+</div>
 
-- Ensure Docker socket is properly mounted in `docker-compose.yml`
-- Check container logs: `docker logs homelab-portal-backend`
-- Verify Docker socket permissions
+**A node shows as offline.** Press **Test** under Manage nodes. Check the agent
+is up (`curl http://<host>:3001/health`) and that the URL uses a hostname the
+hub can resolve. If the agent sets `AGENT_TOKEN`, the node's Token must match.
 
-### Temperature reads as N/A
+**No temperature.** Sensors are discovered automatically from
+`/sys/class/thermal` (Pi and most ARM boards) and `/sys/class/hwmon`
+(AMD `k10temp`, Intel `coretemp`). Confirm the container can see them:
+`docker exec homelab-portal-backend ls /sys/class/hwmon`.
 
-- Check if `/sys/class/thermal/thermal_zone0/temp` exists on your Pi
-- Some Pi models may have different thermal paths
-- Check backend logs for temperature reading errors
+**Disks missing.** Universal disk detection needs `/:/host:ro` and `pid: "host"`
+so the host mount table is readable.
 
-### Database errors
+**Processes show only the container's.** `pid: "host"` and `/proc:/host/proc:ro`
+must both be present.
 
-- Ensure `backend/data` directory exists and is writable
-- Check SQLite file permissions
-- Reset database by deleting `backend/data/homelab.db` (will lose custom services)
+**Dashboard loads but nothing streams.** The WebSocket is served at `/ws` on
+the same origin as the page. Behind your own reverse proxy, forward `/ws` with
+`Upgrade` and `Connection` headers set.
 
-### Port conflicts
-
-Change ports in `docker-compose.yml`:
-
-```yaml
-ports:
-  - "1781:80" # Change 1781 to your preferred port
-```
-
-## Project Structure
-
-```
-PiPortal/
-├── backend/
-│   ├── src/
-│   │   ├── db/
-│   │   │   ├── database.js    # SQLite setup
-│   │   │   └── models.js      # Service model
-│   │   ├── routes/
-│   │   │   ├── docker.js      # Docker monitoring endpoints
-│   │   │   ├── metrics.js     # System metrics endpoints (with caching)
-│   │   │   └── services.js    # Service CRUD endpoints
-│   │   ├── websocket/
-│   │   │   ├── WebSocketServer.js  # WebSocket server & subscriptions
-│   │   │   ├── ChangeDetector.js   # Change detection for smart pushing
-│   │   │   └── channels.js         # Channel config & data fetchers
-│   │   └── index.js           # Express + WebSocket server
-│   ├── Dockerfile
-│   └── package.json
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Dashboard.jsx    # Central data fetching & layout
-│   │   │   ├── Header.jsx
-│   │   │   ├── BasePanel.jsx    # Reusable collapsible panel with mode toggle
-│   │   │   ├── MetricsPanel.jsx
-│   │   │   ├── DockerPanel.jsx
-│   │   │   ├── ServicesPanel.jsx
-│   │   │   ├── ProcessPanel.jsx
-│   │   │   ├── DiskPanel.jsx
-│   │   │   └── NetworkPanel.jsx
-│   │   ├── hooks/
-│   │   │   ├── useWebSocket.js  # WebSocket connection & subscriptions
-│   │   │   └── usePanelData.js  # Unified polling/WebSocket data hook
-│   │   ├── api/
-│   │   │   └── api.js         # API client
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── Dockerfile
-│   ├── nginx.conf
-│   └── package.json
-├── docker-compose.yml
-└── README.md
-```
-
-## Future Enhancements
-
-- [ ] Container start/stop controls
-- [ ] Per-panel configurable refresh intervals
-- [ ] Threshold-based alerts (CPU > 90%, disk > 95%, etc.)
-- [ ] Historical data with mini charts
-- [ ] Request deduplication with SWR or React Query
-- [ ] Dark/light theme toggle
+<div align="center">
 
 ## License
 
+</div>
+
 MIT
-
-## Contributing
-
-Feel free to open issues or submit pull requests for improvements!
-
----
-
-**Happy Homelabbing! 🚀**

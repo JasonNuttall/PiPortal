@@ -15,17 +15,17 @@ export function usePanelState() {
     return saved ? JSON.parse(saved) : {};
   });
 
+  // Real time by default: the server now only collects what is subscribed and
+  // only pushes what actually changed, so streaming costs less than polling.
   const [panelModes, setPanelModes] = useState(() => {
     const saved = localStorage.getItem("panelModes");
-    return saved
-      ? JSON.parse(saved)
-      : {
-          network: "polling",
-          disk: "polling",
-          docker: "polling",
-          services: "polling",
-          processes: "polling",
-        };
+    const defaults = {
+      network: "websocket",
+      disk: "websocket",
+      docker: "websocket",
+      processes: "websocket",
+    };
+    return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
   });
 
   const [hiddenPartitions, setHiddenPartitions] = useState(() => {

@@ -28,12 +28,13 @@ describe("usePanelState", () => {
 
     it("returns default panel modes when no localStorage", () => {
       const { result } = renderHook(() => usePanelState());
+      // Streaming is the default now that collection is demand driven and
+      // pushes are change filtered; services are not streamable at all.
       expect(result.current.panelModes).toEqual({
-        network: "polling",
-        disk: "polling",
-        docker: "polling",
-        services: "polling",
-        processes: "polling",
+        network: "websocket",
+        disk: "websocket",
+        docker: "websocket",
+        processes: "websocket",
       });
     });
 
@@ -138,11 +139,12 @@ describe("usePanelState", () => {
       const { result } = renderHook(() => usePanelState());
 
       act(() => {
-        result.current.handleModeChange("network", "websocket");
+        result.current.handleModeChange("network", "polling");
       });
 
-      expect(result.current.panelModes.disk).toBe("polling");
-      expect(result.current.panelModes.docker).toBe("polling");
+      expect(result.current.panelModes.network).toBe("polling");
+      expect(result.current.panelModes.disk).toBe("websocket");
+      expect(result.current.panelModes.docker).toBe("websocket");
     });
   });
 

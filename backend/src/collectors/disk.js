@@ -10,13 +10,11 @@
  *   - /:/host:ro volume mount in docker-compose.yml
  *   - pid: "host" in docker-compose.yml (to read /host/proc/1/mounts)
  */
-const fs = require("fs");
-const { statfs } = require("fs/promises");
+const { statfs, readFile } = require("fs/promises");
 const path = require("path");
-const logger = require("./logger");
+const logger = require("../utils/logger");
 
-const HOST_ROOT = "/host";
-const HOST_PROC_MOUNTS = "/host/proc/1/mounts";
+const DEFAULT_HOST_ROOT = process.env.HOST_ROOT || "/host";
 
 // Physical filesystem types that represent real storage devices
 const PHYSICAL_FS_TYPES = new Set([
@@ -49,9 +47,11 @@ function decodeMountPath(encoded) {
  * Get disk info for all physical drives mounted on the host.
  * Falls back to systeminformation if host mounts aren't accessible.
  */
-async function getHostDiskInfo() {
+async function collectDisk({ hostRoot = DEFAULT_HOST_ROOT } = {}) {
+  const HOST_ROOT = hostRoot;
+  const HOST_PROC_MOUNTS = `${hostRoot}/proc/1/mounts`;
   try {
-    const mountsRaw = fs.readFileSync(HOST_PROC_MOUNTS, "utf8");
+    const mountsRaw = await readFile(HOST_PROC_MOUNTS, "utf8");
     const lines = mountsRaw.trim().split("\n");
 
     const seenDevices = new Set();
@@ -152,4 +152,4 @@ async function getHostDiskInfo() {
   }
 }
 
-module.exports = { getHostDiskInfo };
+module.exports = { collectDisk, decodeMountPath, PHYSICAL_FS_TYPES };

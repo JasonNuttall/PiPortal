@@ -1,224 +1,228 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 
-// WebSocket URL - uses same host as current page, port 3001
+/**
+ * One WebSocket for the whole app, shared by every panel.
+ *
+ * The connection is addressed at the page's own origin under /ws, which nginx
+ * proxies to the backend. The previous version hardcoded port 3001 on the
+ * page's hostname, which broke behind TLS and any reverse proxy.
+ *
+ * Subscriptions are reference counted: the server is told to stop producing a
+ * channel as soon as the last panel interested in it goes away, and everything
+ * is released while the tab is hidden so a backgrounded dashboard costs the
+ * fleet nothing.
+ */
 const getWebSocketUrl = () => {
-  if (import.meta.env.VITE_WS_URL) {
-    return import.meta.env.VITE_WS_URL;
-  }
-  // In production, use same hostname but port 3001
-  // In development with Vite proxy, this still works
+  if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const host = window.location.hostname;
-  return `${protocol}//${host}:3001`;
+  return `${protocol}//${window.location.host}/ws`;
 };
-
-// Singleton WebSocket connection manager
-let globalWs = null;
-let globalSubscribers = new Map(); // channel -> Set<callback>
-let globalConnectionCallbacks = new Set(); // Set<{onConnect, onDisconnect}>
-let reconnectTimeout = null;
-let reconnectAttempts = 0;
-let isConnecting = false;
 
 const MAX_RECONNECT_DELAY = 30000;
 const INITIAL_RECONNECT_DELAY = 1000;
 
-/**
- * Connect to WebSocket server
- */
+let socket = null;
+let connecting = false;
+let reconnectTimer = null;
+let reconnectAttempts = 0;
+let paused = false;
+
+/** channel -> Set<callback> */
+const subscribers = new Map();
+/** Latest payload per channel, so a late subscriber renders immediately. */
+const lastValues = new Map();
+/** Listeners for connection-state changes. */
+const statusListeners = new Set();
+
+const isOpen = () => socket?.readyState === WebSocket.OPEN;
+
+const notifyStatus = () => {
+  for (const listener of statusListeners) listener();
+};
+
+const send = (message) => {
+  if (isOpen()) {
+    socket.send(JSON.stringify(message));
+    return true;
+  }
+  return false;
+};
+
+const activeChannels = () => [...subscribers.keys()];
+
 const connect = () => {
-  if (globalWs?.readyState === WebSocket.OPEN || isConnecting) {
+  if (paused || isOpen() || connecting) return;
+
+  connecting = true;
+  let next;
+  try {
+    next = new WebSocket(getWebSocketUrl());
+  } catch {
+    connecting = false;
+    scheduleReconnect();
     return;
   }
+  socket = next;
 
-  isConnecting = true;
-  const wsUrl = getWebSocketUrl();
+  next.onopen = () => {
+    connecting = false;
+    reconnectAttempts = 0;
+    notifyStatus();
 
-  try {
-    globalWs = new WebSocket(wsUrl);
+    const channels = activeChannels();
+    if (channels.length > 0) {
+      send({ type: "subscribe", channels });
+    }
+  };
 
-    globalWs.onopen = () => {
-      console.log("WebSocket connected");
-      isConnecting = false;
-      reconnectAttempts = 0;
+  next.onmessage = (event) => {
+    let message;
+    try {
+      message = JSON.parse(event.data);
+    } catch {
+      return;
+    }
+    if (message.type !== "data" || !message.channel) return;
 
-      // Notify all connection listeners
-      globalConnectionCallbacks.forEach(({ onConnect }) => {
-        onConnect?.();
-      });
-
-      // Re-subscribe to all channels
-      const channels = Array.from(globalSubscribers.keys());
-      if (channels.length > 0) {
-        globalWs.send(JSON.stringify({ type: "subscribe", channels }));
+    lastValues.set(message.channel, message.data);
+    const callbacks = subscribers.get(message.channel);
+    if (callbacks) {
+      for (const callback of callbacks) {
+        callback(message.data, message.timestamp);
       }
-    };
+    }
+  };
 
-    globalWs.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-
-        if (message.type === "data" && message.channel) {
-          // Dispatch to channel subscribers
-          const callbacks = globalSubscribers.get(message.channel);
-          callbacks?.forEach((cb) => cb(message.data, message.timestamp));
-        }
-      } catch (err) {
-        console.error("WebSocket message parse error:", err);
-      }
-    };
-
-    globalWs.onclose = () => {
-      console.log("WebSocket disconnected");
-      isConnecting = false;
-      globalWs = null;
-
-      // Notify all connection listeners
-      globalConnectionCallbacks.forEach(({ onDisconnect }) => {
-        onDisconnect?.();
-      });
-
-      // Schedule reconnection
-      scheduleReconnect();
-    };
-
-    globalWs.onerror = (err) => {
-      console.error("WebSocket error:", err);
-      isConnecting = false;
-    };
-  } catch (err) {
-    console.error("WebSocket connection failed:", err);
-    isConnecting = false;
+  next.onclose = () => {
+    connecting = false;
+    socket = null;
+    notifyStatus();
     scheduleReconnect();
-  }
+  };
+
+  next.onerror = () => {
+    // onclose always follows, which is where reconnection is handled.
+    connecting = false;
+  };
 };
 
-/**
- * Schedule a reconnection with exponential backoff
- */
 const scheduleReconnect = () => {
-  if (reconnectTimeout) {
-    clearTimeout(reconnectTimeout);
-  }
+  if (paused || reconnectTimer) return;
 
   const delay = Math.min(
-    INITIAL_RECONNECT_DELAY * Math.pow(2, reconnectAttempts),
+    INITIAL_RECONNECT_DELAY * 2 ** reconnectAttempts,
     MAX_RECONNECT_DELAY
   );
-
   reconnectAttempts++;
-  console.log(`WebSocket reconnecting in ${delay}ms (attempt ${reconnectAttempts})`);
 
-  reconnectTimeout = setTimeout(connect, delay);
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    connect();
+  }, delay);
 };
 
 /**
- * Subscribe to a channel
- * @param {string} channel - Channel name
- * @param {Function} callback - Callback function (data, timestamp) => void
- * @returns {Function} Unsubscribe function
+ * Subscribe to a channel.
+ * @returns {() => void} unsubscribe
  */
 const subscribe = (channel, callback) => {
-  if (!globalSubscribers.has(channel)) {
-    globalSubscribers.set(channel, new Set());
+  let callbacks = subscribers.get(channel);
 
-    // Send subscribe message if connected
-    if (globalWs?.readyState === WebSocket.OPEN) {
-      globalWs.send(JSON.stringify({ type: "subscribe", channels: [channel] }));
-    }
+  if (!callbacks) {
+    callbacks = new Set();
+    subscribers.set(channel, callbacks);
+    send({ type: "subscribe", channels: [channel] });
   }
+  callbacks.add(callback);
 
-  globalSubscribers.get(channel).add(callback);
+  // Replay the last known value so a panel opening mid-stream is not blank.
+  const cached = lastValues.get(channel);
+  if (cached !== undefined) callback(cached, Date.now());
 
-  // Return unsubscribe function
   return () => {
-    const callbacks = globalSubscribers.get(channel);
-    callbacks?.delete(callback);
+    const current = subscribers.get(channel);
+    if (!current) return;
+    current.delete(callback);
 
-    // If no more subscribers for this channel, unsubscribe from server
-    if (callbacks?.size === 0) {
-      globalSubscribers.delete(channel);
-
-      if (globalWs?.readyState === WebSocket.OPEN) {
-        globalWs.send(
-          JSON.stringify({ type: "unsubscribe", channels: [channel] })
-        );
-      }
+    if (current.size === 0) {
+      subscribers.delete(channel);
+      lastValues.delete(channel);
+      send({ type: "unsubscribe", channels: [channel] });
     }
   };
 };
 
 /**
- * Check if WebSocket is connected
+ * Release every subscription while the tab is hidden, so the hub and its
+ * agents stop collecting for a dashboard nobody is looking at.
  */
-const isConnected = () => globalWs?.readyState === WebSocket.OPEN;
+const handleVisibilityChange = () => {
+  if (document.visibilityState === "hidden") {
+    paused = true;
+    const channels = activeChannels();
+    if (channels.length > 0) send({ type: "unsubscribe", channels });
+    socket?.close();
+    socket = null;
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    notifyStatus();
+  } else {
+    paused = false;
+    reconnectAttempts = 0;
+    connect();
+  }
+};
 
-/**
- * React hook for WebSocket connection
- * Manages connection lifecycle and provides subscribe function
- */
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+}
+
+const subscribeToStatus = (listener) => {
+  statusListeners.add(listener);
+  return () => statusListeners.delete(listener);
+};
+
 export function useWebSocket() {
-  const [connected, setConnected] = useState(isConnected());
-  const callbackRef = useRef({ onConnect: null, onDisconnect: null });
+  const connected = useSyncExternalStore(
+    subscribeToStatus,
+    isOpen,
+    () => false
+  );
 
   useEffect(() => {
-    // Setup connection callbacks
-    callbackRef.current = {
-      onConnect: () => setConnected(true),
-      onDisconnect: () => setConnected(false),
-    };
-
-    globalConnectionCallbacks.add(callbackRef.current);
-
-    // Initial connection
     connect();
-
-    // Set initial state
-    setConnected(isConnected());
-
-    return () => {
-      globalConnectionCallbacks.delete(callbackRef.current);
-    };
   }, []);
 
-  const subscribeCallback = useCallback((channel, callback) => {
-    return subscribe(channel, callback);
-  }, []);
+  const subscribeCallback = useCallback(
+    (channel, callback) => subscribe(channel, callback),
+    []
+  );
 
-  return {
-    isConnected: connected,
-    subscribe: subscribeCallback,
-  };
+  return { isConnected: connected, subscribe: subscribeCallback };
 }
 
 /**
- * React hook for subscribing to a specific channel
- * @param {string} channel - Channel name
- * @param {boolean} enabled - Whether to subscribe (for lazy loading)
+ * Subscribe to one channel and expose its latest payload.
+ * @param {string|null} channel - null disables the subscription
+ * @param {boolean} enabled - false disables it too (used for collapsed panels)
  */
 export function useWebSocketChannel(channel, enabled = true) {
-  const [data, setData] = useState(null);
-  const [lastUpdate, setLastUpdate] = useState(null);
-  const { isConnected, subscribe } = useWebSocket();
+  const { isConnected, subscribe: subscribeTo } = useWebSocket();
+  const [state, setState] = useState({ data: null, lastUpdate: null });
 
   useEffect(() => {
     if (!enabled || !channel) {
-      return;
+      setState({ data: null, lastUpdate: null });
+      return undefined;
     }
-
-    const unsubscribe = subscribe(channel, (newData, timestamp) => {
-      setData(newData);
-      setLastUpdate(timestamp);
+    return subscribeTo(channel, (data, timestamp) => {
+      setState({ data, lastUpdate: timestamp ?? Date.now() });
     });
+  }, [channel, enabled, subscribeTo]);
 
-    return unsubscribe;
-  }, [channel, enabled, subscribe]);
-
-  return {
-    data,
-    lastUpdate,
-    isConnected,
-  };
+  return { ...state, isConnected };
 }
 
 export default useWebSocket;

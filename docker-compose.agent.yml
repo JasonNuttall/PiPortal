@@ -1,0 +1,43 @@
+# Agent deployment — run this on every machine you want to monitor other than
+# the hub. It exposes that machine's metrics on port 3001 and serves no UI and
+# no database; the hub connects to it and does the aggregating.
+#
+# After starting it, register the machine in the dashboard under Manage nodes
+# using http://<this-host>:3001.
+
+services:
+  agent:
+    build: ./backend
+    container_name: homelab-portal-agent
+    restart: unless-stopped
+    network_mode: host
+    pid: "host"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /sys/class/thermal:/sys/class/thermal:ro
+      - /sys/class/hwmon:/sys/class/hwmon:ro
+      - /sys/class/net:/sys/class/net:ro
+      - /proc:/host/proc:ro
+      - /etc/passwd:/etc/passwd:ro
+      - /:/host:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      - NODE_ENV=production
+      - NODE_ROLE=agent
+      - PORT=3001
+      - HOST_PROC=/host/proc
+      - HOST_ROOT=/host
+      # Identity in the fleet. Defaults to this machine's hostname.
+      # - NODE_ID=jelly
+      # - NODE_NAME=Jelly
+      #
+      # Shared secret. Unset means no authentication, which is fine on a
+      # trusted LAN. If you set it, enter the same value as the node's Token
+      # when registering it on the hub.
+      # - AGENT_TOKEN=change-me
+    privileged: false

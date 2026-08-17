@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import {
   Container,
   Circle,
@@ -47,6 +47,7 @@ const ACTION_CONFIG = {
 const DockerPanel = ({
   containers,
   onUpdate,
+  nodeId,
   isCollapsed,
   onCollapseChange,
   panelId,
@@ -69,10 +70,11 @@ const DockerPanel = ({
     }
   };
 
+  // Actions are addressed to the node in focus, not to the hub's own daemon.
   const handleAction = async (containerId, action) => {
     setActionLoading((prev) => ({ ...prev, [containerId]: action }));
     try {
-      await containerAction(containerId, action);
+      await containerAction(nodeId, containerId, action);
       onUpdate();
     } catch (error) {
       console.error(`Failed to ${action} container ${containerId}:`, error);
@@ -199,4 +201,4 @@ const DockerPanel = ({
   );
 };
 
-export default DockerPanel;
+export default memo(DockerPanel);

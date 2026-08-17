@@ -1,4 +1,9 @@
-version: "3.8"
+# Hub deployment — run this on the machine that serves the dashboard
+# (the Raspberry Pi). It monitors its own hardware and aggregates every agent
+# registered through the UI.
+#
+# To add another machine, deploy docker-compose.agent.yml there and register it
+# at Manage nodes in the dashboard.
 
 services:
   backend:
@@ -6,21 +11,21 @@ services:
     container_name: homelab-portal-backend
     restart: unless-stopped
     network_mode: host
-    pid: "host" # Share host's process namespace to see all Pi processes
+    pid: "host" # see all host processes, not just the container's
     volumes:
-      # Mount Docker socket for container monitoring and management
+      # Container monitoring and control
       - /var/run/docker.sock:/var/run/docker.sock
-      # Mount thermal zone for temperature monitoring
+      # Temperature: thermal zones (Pi / ARM) and hwmon (AMD / Intel)
       - /sys/class/thermal:/sys/class/thermal:ro
-      # Mount network statistics for accurate monitoring
+      - /sys/class/hwmon:/sys/class/hwmon:ro
       - /sys/class/net:/sys/class/net:ro
-      # Mount /proc for process monitoring (read memory/CPU from host)
+      # Host processes
       - /proc:/host/proc:ro
-      # Mount /etc/passwd to resolve usernames
+      # Username resolution for the process list
       - /etc/passwd:/etc/passwd:ro
-      # Mount host root filesystem (read-only) for universal disk monitoring
+      # Host root, read-only, for universal disk detection
       - /:/host:ro
-      # Persist database using named volume (survives container rebuilds)
+      # Node registry and service links
       - backend-data:/app/data
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/health"]
@@ -30,13 +35,15 @@ services:
       start_period: 10s
     environment:
       - NODE_ENV=production
+      - NODE_ROLE=hub
       - PORT=3001
       - DB_PATH=/app/data/homelab.db
       - HOST_PROC=/host/proc
-    # Allow access to host system metrics
+      - HOST_ROOT=/host
+      # Name this machine shows as in the fleet. Defaults to the hostname.
+      # - NODE_ID=pi5
+      # - NODE_NAME=Raspberry Pi 5
     privileged: false
-    # Read-only root filesystem for security (except data volume)
-    # read_only: true  # Uncomment if you want extra security
 
   frontend:
     build: ./frontend

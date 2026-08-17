@@ -1,212 +1,169 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  fetchSystemMetrics,
-  fetchTemperature,
-  fetchDiskMetrics,
-  fetchDockerContainers,
-  fetchDockerInfo,
-  containerAction,
-  fetchServices,
-  createService,
-  updateService,
-  deleteService,
-  fetchDetailedDiskInfo,
-  fetchNetworkMetrics,
-  fetchProcesses,
-} from "../api";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import * as api from "../api";
 
-// Mock global fetch
-const mockFetch = vi.fn();
-globalThis.fetch = mockFetch;
+const okResponse = (body = {}) => ({
+  ok: true,
+  status: 200,
+  json: async () => body,
+});
 
 beforeEach(() => {
-  mockFetch.mockReset();
+  globalThis.fetch = vi.fn().mockResolvedValue(okResponse());
 });
 
-const mockOkResponse = (data) => ({
-  ok: true,
-  json: () => Promise.resolve(data),
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
-const mockErrorResponse = (status = 500) => ({
-  ok: false,
-  status,
-  json: () => Promise.resolve({ error: "Server error" }),
+/** The path fetch was called with, minus the base. */
+const calledPath = () => globalThis.fetch.mock.calls[0][0];
+const calledOptions = () => globalThis.fetch.mock.calls[0][1];
+
+describe("node registry", () => {
+  it("lists nodes", async () => {
+    await api.fetchNodes();
+    expect(calledPath()).toBe("/api/nodes");
+  });
+
+  it("fetches the fleet overview", async () => {
+    await api.fetchFleet();
+    expect(calledPath()).toBe("/api/nodes/fleet");
+  });
+
+  it("creates a node", async () => {
+    await api.createNode({ id: "jelly", name: "Jelly", url: "http://jelly:3001" });
+
+    expect(calledPath()).toBe("/api/nodes");
+    expect(calledOptions().method).toBe("POST");
+    expect(JSON.parse(calledOptions().body)).toMatchObject({ id: "jelly" });
+  });
+
+  it("updates a node", async () => {
+    await api.updateNode("jelly", { name: "Renamed" });
+    expect(calledPath()).toBe("/api/nodes/jelly");
+    expect(calledOptions().method).toBe("PUT");
+  });
+
+  it("deletes a node", async () => {
+    globalThis.fetch.mockResolvedValue({ ok: true, status: 204 });
+    await api.deleteNode("jelly");
+    expect(calledPath()).toBe("/api/nodes/jelly");
+    expect(calledOptions().method).toBe("DELETE");
+  });
+
+  it("tests a node", async () => {
+    await api.testNode("jelly");
+    expect(calledPath()).toBe("/api/nodes/jelly/test");
+    expect(calledOptions().method).toBe("POST");
+  });
 });
 
-describe("API functions", () => {
-  describe("GET endpoints", () => {
-    const getEndpoints = [
-      { fn: fetchSystemMetrics, url: "/api/metrics/system", name: "fetchSystemMetrics" },
-      { fn: fetchTemperature, url: "/api/metrics/temperature", name: "fetchTemperature" },
-      { fn: fetchDiskMetrics, url: "/api/metrics/disk", name: "fetchDiskMetrics" },
-      { fn: fetchDockerContainers, url: "/api/docker/containers", name: "fetchDockerContainers" },
-      { fn: fetchDockerInfo, url: "/api/docker/info", name: "fetchDockerInfo" },
-      { fn: fetchServices, url: "/api/services", name: "fetchServices" },
-      { fn: fetchDetailedDiskInfo, url: "/api/metrics/disk/detailed", name: "fetchDetailedDiskInfo" },
-      { fn: fetchNetworkMetrics, url: "/api/metrics/network", name: "fetchNetworkMetrics" },
-      { fn: fetchProcesses, url: "/api/metrics/processes", name: "fetchProcesses" },
-    ];
-
-    getEndpoints.forEach(({ fn, url, name }) => {
-      it(`${name} calls correct URL`, async () => {
-        const data = { test: true };
-        mockFetch.mockResolvedValue(mockOkResponse(data));
-
-        const result = await fn();
-        expect(mockFetch.mock.calls[0][0]).toBe(url);
-        expect(result).toEqual(data);
-      });
-
-      it(`${name} throws on error response`, async () => {
-        mockFetch.mockResolvedValue(mockErrorResponse());
-        await expect(fn()).rejects.toThrow();
-      });
-    });
+describe("node-scoped metrics", () => {
+  it.each([
+    ["fetchSystemMetrics", "/api/nodes/jelly/metrics/system"],
+    ["fetchTemperature", "/api/nodes/jelly/metrics/temperature"],
+    ["fetchDiskMetrics", "/api/nodes/jelly/metrics/disk"],
+    ["fetchNetworkMetrics", "/api/nodes/jelly/metrics/network"],
+    ["fetchProcesses", "/api/nodes/jelly/metrics/processes"],
+    ["fetchDockerContainers", "/api/nodes/jelly/docker/containers"],
+    ["fetchDockerInfo", "/api/nodes/jelly/docker/info"],
+  ])("%s addresses the given node", async (fn, expected) => {
+    await api[fn]("jelly");
+    expect(calledPath()).toBe(expected);
   });
 
-  describe("createService", () => {
-    it("sends POST with correct body and headers", async () => {
-      const service = { name: "Test", url: "http://test" };
-      mockFetch.mockResolvedValue(mockOkResponse({ ...service, id: 1 }));
-
-      const result = await createService(service);
-
-      expect(mockFetch.mock.calls[0][0]).toBe("/api/services");
-      expect(mockFetch.mock.calls[0][1]).toMatchObject({
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(service),
-      });
-      expect(result.id).toBe(1);
-    });
-
-    it("throws on error response", async () => {
-      mockFetch.mockResolvedValue(mockErrorResponse(400));
-      await expect(createService({})).rejects.toThrow("Failed to create service");
-    });
+  it("translates a channel name into a path", async () => {
+    await api.fetchNodeChannel("pi5", "metrics:disk");
+    expect(calledPath()).toBe("/api/nodes/pi5/metrics/disk");
   });
 
-  describe("updateService", () => {
-    it("sends PUT with correct URL and body", async () => {
-      const service = { name: "Updated", url: "http://updated" };
-      mockFetch.mockResolvedValue(mockOkResponse({ ...service, id: 5 }));
-
-      const result = await updateService(5, service);
-
-      expect(mockFetch.mock.calls[0][0]).toBe("/api/services/5");
-      expect(mockFetch.mock.calls[0][1]).toMatchObject({
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(service),
-      });
-      expect(result.name).toBe("Updated");
-    });
-
-    it("throws on error response", async () => {
-      mockFetch.mockResolvedValue(mockErrorResponse(404));
-      await expect(updateService(999, {})).rejects.toThrow("Failed to update service");
-    });
+  it("targets whichever node is asked for", async () => {
+    await api.fetchSystemMetrics("pi5");
+    expect(calledPath()).toBe("/api/nodes/pi5/metrics/system");
   });
 
-  describe("deleteService", () => {
-    it("sends DELETE with correct URL", async () => {
-      mockFetch.mockResolvedValue({ ok: true });
+  it("posts a container action to the owning node", async () => {
+    await api.containerAction("jelly", "abc123", "restart");
+    expect(calledPath()).toBe(
+      "/api/nodes/jelly/docker/containers/abc123/restart"
+    );
+    expect(calledOptions().method).toBe("POST");
+  });
+});
 
-      await deleteService(3);
-
-      expect(mockFetch).toHaveBeenCalledWith("/api/services/3", expect.objectContaining({
-        method: "DELETE",
-      }));
-    });
-
-    it("throws on error response", async () => {
-      mockFetch.mockResolvedValue(mockErrorResponse());
-      await expect(deleteService(1)).rejects.toThrow("Failed to delete service");
-    });
+describe("services", () => {
+  it("scopes a listing to a node", async () => {
+    await api.fetchServices("jelly");
+    expect(calledPath()).toBe("/api/services?nodeId=jelly");
   });
 
-  describe("containerAction", () => {
-    const actions = ["start", "stop", "restart"];
-
-    actions.forEach((action) => {
-      it(`sends POST to correct URL for ${action}`, async () => {
-        mockFetch.mockResolvedValue(mockOkResponse({ success: true }));
-
-        const result = await containerAction("abc123", action);
-
-        expect(mockFetch.mock.calls[0][0]).toBe(`/api/docker/containers/abc123/${action}`);
-        expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: "POST" });
-        expect(result.success).toBe(true);
-      });
-    });
-
-    it("throws with server error message on failure", async () => {
-      mockFetch.mockResolvedValue(mockErrorResponse(500));
-      await expect(containerAction("abc123", "stop")).rejects.toThrow("Server error");
-    });
-
-    it("throws with fallback message when response body is not JSON", async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 500,
-        json: () => Promise.reject(new Error("not json")),
-      });
-      await expect(containerAction("abc123", "start")).rejects.toThrow("Failed to start container");
-    });
-
-    it("includes AbortSignal in request", async () => {
-      mockFetch.mockResolvedValue(mockOkResponse({ success: true }));
-
-      await containerAction("abc123", "restart");
-
-      const callArgs = mockFetch.mock.calls[0];
-      expect(callArgs[1].signal).toBeInstanceOf(AbortSignal);
-    });
+  it("encodes the node id", async () => {
+    await api.fetchServices("a b");
+    expect(calledPath()).toBe("/api/services?nodeId=a%20b");
   });
 
-  describe("request timeouts", () => {
-    it("passes an AbortSignal to fetch", async () => {
-      mockFetch.mockResolvedValue(mockOkResponse({ test: true }));
+  it("lists every service when no node is given", async () => {
+    await api.fetchServices();
+    expect(calledPath()).toBe("/api/services");
+  });
 
-      await fetchSystemMetrics();
+  it("creates a service", async () => {
+    await api.createService({ name: "X", url: "http://x", nodeId: "jelly" });
+    expect(calledPath()).toBe("/api/services");
+    expect(JSON.parse(calledOptions().body).nodeId).toBe("jelly");
+  });
 
-      const callArgs = mockFetch.mock.calls[0];
-      expect(callArgs[1]).toBeDefined();
-      expect(callArgs[1].signal).toBeInstanceOf(AbortSignal);
+  it("updates and deletes a service", async () => {
+    await api.updateService(7, { name: "X", url: "http://x" });
+    expect(calledPath()).toBe("/api/services/7");
+
+    globalThis.fetch.mockClear();
+    globalThis.fetch.mockResolvedValue({ ok: true, status: 204 });
+    await api.deleteService(7);
+    expect(calledPath()).toBe("/api/services/7");
+  });
+});
+
+describe("error handling", () => {
+  it("throws the server's message", async () => {
+    globalThis.fetch.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: "Name is required" }),
     });
 
-    it("abort signal is not already aborted on call", async () => {
-      mockFetch.mockResolvedValue(mockOkResponse({}));
+    await expect(api.createNode({})).rejects.toThrow("Name is required");
+  });
 
-      await fetchSystemMetrics();
-
-      const signal = mockFetch.mock.calls[0][1].signal;
-      // Signal should have been created fresh (not pre-aborted)
-      expect(signal.aborted).toBe(false);
+  it("falls back to a status message when the body is not JSON", async () => {
+    globalThis.fetch.mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: async () => {
+        throw new Error("not json");
+      },
     });
 
-    it("all fetch functions include signal in options", async () => {
-      mockFetch.mockResolvedValue(mockOkResponse({}));
+    await expect(api.fetchNodes()).rejects.toThrow(/502/);
+  });
 
-      const fns = [
-        () => fetchSystemMetrics(),
-        () => fetchTemperature(),
-        () => fetchDiskMetrics(),
-        () => fetchDockerContainers(),
-        () => fetchDockerInfo(),
-        () => fetchServices(),
-        () => fetchDetailedDiskInfo(),
-        () => fetchNetworkMetrics(),
-        () => fetchProcesses(),
-      ];
-
-      for (const fn of fns) {
-        mockFetch.mockClear();
-        await fn();
-        const callArgs = mockFetch.mock.calls[0];
-        expect(callArgs[1]?.signal).toBeInstanceOf(AbortSignal);
-      }
+  it("exposes the status code on the error", async () => {
+    globalThis.fetch.mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({ error: "Node not found" }),
     });
+
+    await expect(api.fetchNodes()).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("returns null for a 204 rather than parsing an empty body", async () => {
+    globalThis.fetch.mockResolvedValue({ ok: true, status: 204 });
+    await expect(api.deleteService(1)).resolves.toBeNull();
+  });
+
+  it("applies a timeout signal to every request", async () => {
+    await api.fetchNodes();
+    expect(calledOptions().signal).toBeInstanceOf(AbortSignal);
   });
 });

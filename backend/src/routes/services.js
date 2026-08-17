@@ -8,12 +8,13 @@ const MAX_NAME_LENGTH = 100;
 const MAX_URL_LENGTH = 500;
 const MAX_ICON_LENGTH = 10;
 const MAX_CATEGORY_LENGTH = 50;
+const MAX_NODE_ID_LENGTH = 40;
 
 /**
  * Validate and sanitize service input fields.
  * Returns { valid, errors, sanitized } object.
  */
-const validateServiceInput = ({ name, url, icon, category }) => {
+const validateServiceInput = ({ name, url, icon, category, nodeId }) => {
   const errors = [];
 
   // Required fields
@@ -32,6 +33,11 @@ const validateServiceInput = ({ name, url, icon, category }) => {
   const trimmedUrl = url.trim();
   const trimmedIcon = icon ? String(icon).trim() : null;
   const trimmedCategory = category ? String(category).trim() : null;
+  // null / absent means the link is fleet-wide rather than tied to a machine.
+  const trimmedNodeId =
+    nodeId === undefined || nodeId === null || nodeId === ""
+      ? null
+      : String(nodeId).trim();
 
   // Length checks
   if (trimmedName.length > MAX_NAME_LENGTH) {
@@ -45,6 +51,9 @@ const validateServiceInput = ({ name, url, icon, category }) => {
   }
   if (trimmedCategory && trimmedCategory.length > MAX_CATEGORY_LENGTH) {
     errors.push(`Category must be ${MAX_CATEGORY_LENGTH} characters or fewer`);
+  }
+  if (trimmedNodeId && trimmedNodeId.length > MAX_NODE_ID_LENGTH) {
+    errors.push(`Node id must be ${MAX_NODE_ID_LENGTH} characters or fewer`);
   }
 
   // URL format validation - reject dangerous schemes
@@ -69,6 +78,7 @@ const validateServiceInput = ({ name, url, icon, category }) => {
       url: trimmedUrl,
       icon: trimmedIcon,
       category: trimmedCategory,
+      nodeId: trimmedNodeId,
     },
   };
 };
@@ -76,7 +86,10 @@ const validateServiceInput = ({ name, url, icon, category }) => {
 // Get all services
 router.get("/", (req, res) => {
   try {
-    const services = ServiceModel.getAll();
+    // ?nodeId=jelly returns that node's links plus the fleet-wide ones.
+    const services = ServiceModel.getAll(
+      req.query.nodeId ? { nodeId: String(req.query.nodeId) } : {}
+    );
     res.json(services);
   } catch (error) {
     logger.error({ err: error }, "Get services error");

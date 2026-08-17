@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   DndContext,
   closestCenter,
@@ -13,39 +13,24 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
+
 import Header from "./Header";
 import MetricsPanel from "./MetricsPanel";
-import DockerPanel from "./DockerPanel";
-import ServicesPanel from "./ServicesPanel";
-import NetworkPanel from "./NetworkPanel";
-import DiskPanel from "./DiskPanel";
-import ProcessPanel from "./ProcessPanel";
+import FleetStrip from "./FleetStrip";
+import NodesModal from "./NodesModal";
+import NodePanel from "./NodePanel";
+import ServicesPanelContainer from "./ServicesPanelContainer";
 import SortablePanel from "./SortablePanel";
-import ErrorBoundary from "./ErrorBoundary";
-import {
-  fetchSystemMetrics,
-  fetchTemperature,
-  fetchDiskMetrics,
-  fetchDockerContainers,
-  fetchDockerInfo,
-  fetchServices,
-  fetchNetworkMetrics,
-  fetchDetailedDiskInfo,
-  fetchProcesses,
-} from "../api/api";
-import { useWebSocket } from "../hooks/useWebSocket";
-import { usePanelState } from "../hooks/usePanelState";
-import { useWebSocketSubscriptions } from "../hooks/useWebSocketSubscriptions";
-import { useNetworkSpeed } from "../hooks/useNetworkSpeed";
-import { PANEL_TO_CHANNEL } from "../hooks/usePanelData";
 
-// Sentinel value indicating a fetch failed — state should not be overwritten
-const FETCH_FAILED = Symbol("FETCH_FAILED");
+import { useFleet } from "../hooks/useFleet";
+import { useSelectedNode } from "../hooks/useSelectedNode";
+import { usePanelState } from "../hooks/usePanelState";
 
 const Dashboard = () => {
-  const { isConnected: wsConnected, subscribe } = useWebSocket();
+  const { nodes, error: fleetError, loaded, refresh } = useFleet();
+  const { selectedId, selectedNode, selectNode } = useSelectedNode(nodes);
+  const [managingNodes, setManagingNodes] = useState(false);
 
-  // Panel state management (extracted hook)
   const {
     collapsedPanels,
     panelModes,
@@ -57,308 +42,98 @@ const Dashboard = () => {
     handleHiddenPartitionsChange,
   } = usePanelState();
 
-  // Network speed calculation (extracted hook)
-  const { calculateSpeed } = useNetworkSpeed();
-
-  // Core metrics state (always fetched for MetricsPanel)
-  const [systemMetrics, setSystemMetrics] = useState(null);
-  const [temperature, setTemperature] = useState(null);
-  const [diskMetrics, setDiskMetrics] = useState(null);
-  const [dockerInfo, setDockerInfo] = useState(null);
-  const [networkStats, setNetworkStats] = useState({
-    downloadSpeed: 0,
-    uploadSpeed: 0,
-  });
-
-  // Panel-specific data (centralized)
-  const [dockerContainers, setDockerContainers] = useState([]);
-  const [services, setServices] = useState([]);
-  const [networkData, setNetworkData] = useState(null);
-  const [detailedDiskData, setDetailedDiskData] = useState(null);
-  const [processData, setProcessData] = useState(null);
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [refreshInterval, setRefreshInterval] = useState(5000);
-
-  // WebSocket subscriptions (extracted hook)
-  useWebSocketSubscriptions({
-    wsConnected,
-    subscribe,
-    panelModes,
-    collapsedPanels,
-    setNetworkData,
-    setDetailedDiskData,
-    setDockerContainers,
-    setServices,
-    setProcessData,
-    setNetworkStats,
-  });
-
-  // Setup drag sensors
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    })
   );
 
-  // Handle drag end
-  const handleDragEnd = useCallback((event) => {
-    const { active, over } = event;
+  const handleDragEnd = useCallback(
+    (event) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
 
-    if (active.id !== over.id) {
-      setPanelOrder((panelOrder) => {
-        const activeColumn = panelOrder.left.includes(active.id)
-          ? "left"
-          : "right";
-        const overColumn = panelOrder.left.includes(over.id) ? "left" : "right";
+      setPanelOrder((current) => {
+        const activeColumn = current.left.includes(active.id) ? "left" : "right";
+        const overColumn = current.left.includes(over.id) ? "left" : "right";
 
+        let next;
         if (activeColumn === overColumn) {
-          const columnItems = [...panelOrder[activeColumn]];
-          const oldIndex = columnItems.indexOf(active.id);
-          const newIndex = columnItems.indexOf(over.id);
-          const newColumnOrder = arrayMove(columnItems, oldIndex, newIndex);
-
-          const newOrder = {
-            ...panelOrder,
-            [activeColumn]: newColumnOrder,
+          const items = [...current[activeColumn]];
+          next = {
+            ...current,
+            [activeColumn]: arrayMove(
+              items,
+              items.indexOf(active.id),
+              items.indexOf(over.id)
+            ),
           };
-
-          localStorage.setItem("panelOrder", JSON.stringify(newOrder));
-          return newOrder;
         } else {
-          const sourceColumn = [...panelOrder[activeColumn]];
-          const destColumn = [...panelOrder[overColumn]];
-
-          const itemIndex = sourceColumn.indexOf(active.id);
-          sourceColumn.splice(itemIndex, 1);
-
-          const overIndex = destColumn.indexOf(over.id);
-          destColumn.splice(overIndex, 0, active.id);
-
-          const newOrder = {
-            left: activeColumn === "left" ? sourceColumn : destColumn,
-            right: activeColumn === "right" ? sourceColumn : destColumn,
+          const source = [...current[activeColumn]];
+          const destination = [...current[overColumn]];
+          source.splice(source.indexOf(active.id), 1);
+          destination.splice(destination.indexOf(over.id), 0, active.id);
+          next = {
+            left: activeColumn === "left" ? source : destination,
+            right: activeColumn === "right" ? source : destination,
           };
-
-          localStorage.setItem("panelOrder", JSON.stringify(newOrder));
-          return newOrder;
         }
+
+        localStorage.setItem("panelOrder", JSON.stringify(next));
+        return next;
       });
-    }
-  }, [setPanelOrder]);
-
-  // Centralized data loading - only fetches data for expanded panels
-  const loadData = useCallback(async () => {
-    try {
-      setError(null);
-
-      const corePromises = [
-        fetchSystemMetrics().catch(() => FETCH_FAILED),
-        fetchTemperature().catch(() => FETCH_FAILED),
-        fetchDiskMetrics().catch(() => FETCH_FAILED),
-        fetchDockerInfo().catch(() => FETCH_FAILED),
-      ];
-
-      const panelPromises = [];
-      const panelKeys = [];
-
-      const shouldPoll = (panelId) =>
-        !collapsedPanels[panelId] && panelModes[panelId] !== "websocket";
-
-      if (shouldPoll("docker")) {
-        panelPromises.push(fetchDockerContainers().catch(() => FETCH_FAILED));
-        panelKeys.push("docker");
-      }
-
-      if (shouldPoll("services")) {
-        panelPromises.push(fetchServices().catch(() => FETCH_FAILED));
-        panelKeys.push("services");
-      }
-
-      if (shouldPoll("network")) {
-        panelPromises.push(fetchNetworkMetrics().catch(() => FETCH_FAILED));
-        panelKeys.push("network");
-      }
-
-      if (shouldPoll("disk")) {
-        panelPromises.push(fetchDetailedDiskInfo().catch(() => FETCH_FAILED));
-        panelKeys.push("disk");
-      }
-
-      if (shouldPoll("processes")) {
-        panelPromises.push(fetchProcesses().catch(() => FETCH_FAILED));
-        panelKeys.push("processes");
-      }
-
-      const [coreResults, panelResults] = await Promise.all([
-        Promise.all(corePromises),
-        Promise.all(panelPromises),
-      ]);
-
-      const [system, temp, disk, dockerInf] = coreResults;
-      if (system !== FETCH_FAILED) setSystemMetrics(system);
-      if (temp !== FETCH_FAILED) setTemperature(temp);
-      if (disk !== FETCH_FAILED) setDiskMetrics(disk);
-      if (dockerInf !== FETCH_FAILED) setDockerInfo(dockerInf);
-
-      panelKeys.forEach((key, index) => {
-        const data = panelResults[index];
-        if (data === FETCH_FAILED) return;
-        switch (key) {
-          case "docker":
-            setDockerContainers(data);
-            break;
-          case "services":
-            setServices(data);
-            break;
-          case "network":
-            setNetworkData(data);
-            const speeds = calculateSpeed(data);
-            if (speeds) setNetworkStats(speeds);
-            break;
-          case "disk":
-            setDetailedDiskData(data);
-            break;
-          case "processes":
-            setProcessData(data);
-            break;
-        }
-      });
-
-      setLoading(false);
-    } catch (err) {
-      setError(err.message);
-      setLoading(false);
-    }
-  }, [collapsedPanels, panelModes, calculateSpeed]);
-
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, refreshInterval);
-    return () => clearInterval(interval);
-  }, [refreshInterval, loadData]);
-
-  const handleServicesUpdate = useCallback(() => {
-    fetchServices().then(setServices);
-  }, []);
-
-  const handleDockerUpdate = useCallback(() => {
-    fetchDockerContainers().then(setDockerContainers);
-  }, []);
-
-  // Panel components mapping
-  const panelComponents = useMemo(
-    () => ({
-      network: (
-        <ErrorBoundary panelName="Network">
-          <NetworkPanel
-            key="network"
-            data={networkData}
-            isCollapsed={collapsedPanels.network}
-            onCollapseChange={(collapsed) =>
-              handleCollapseChange("network", collapsed)
-            }
-            panelId="network"
-            dataMode={panelModes.network}
-            onModeChange={(mode) => handleModeChange("network", mode)}
-            wsConnected={wsConnected}
-          />
-        </ErrorBoundary>
-      ),
-      disk: (
-        <ErrorBoundary panelName="Disk">
-          <DiskPanel
-            key="disk"
-            data={detailedDiskData}
-            isCollapsed={collapsedPanels.disk}
-            onCollapseChange={(collapsed) =>
-              handleCollapseChange("disk", collapsed)
-            }
-            panelId="disk"
-            dataMode={panelModes.disk}
-            onModeChange={(mode) => handleModeChange("disk", mode)}
-            wsConnected={wsConnected}
-            hiddenPartitions={hiddenPartitions}
-            onHiddenPartitionsChange={handleHiddenPartitionsChange}
-          />
-        </ErrorBoundary>
-      ),
-      docker: (
-        <ErrorBoundary panelName="Docker">
-          <DockerPanel
-            key="docker"
-            containers={dockerContainers}
-            onUpdate={handleDockerUpdate}
-            isCollapsed={collapsedPanels.docker}
-            onCollapseChange={(collapsed) =>
-              handleCollapseChange("docker", collapsed)
-            }
-            panelId="docker"
-            dataMode={panelModes.docker}
-            onModeChange={(mode) => handleModeChange("docker", mode)}
-            wsConnected={wsConnected}
-          />
-        </ErrorBoundary>
-      ),
-      services: (
-        <ErrorBoundary panelName="Services">
-          <ServicesPanel
-            key="services"
-            services={services}
-            onUpdate={handleServicesUpdate}
-            isCollapsed={collapsedPanels.services}
-            onCollapseChange={(collapsed) =>
-              handleCollapseChange("services", collapsed)
-            }
-            panelId="services"
-            dataMode={panelModes.services}
-            onModeChange={(mode) => handleModeChange("services", mode)}
-            wsConnected={wsConnected}
-          />
-        </ErrorBoundary>
-      ),
-      processes: (
-        <ErrorBoundary panelName="Processes">
-          <ProcessPanel
-            key="processes"
-            data={processData}
-            isCollapsed={collapsedPanels.processes}
-            onCollapseChange={(collapsed) =>
-              handleCollapseChange("processes", collapsed)
-            }
-            panelId="processes"
-            dataMode={panelModes.processes}
-            onModeChange={(mode) => handleModeChange("processes", mode)}
-            wsConnected={wsConnected}
-          />
-        </ErrorBoundary>
-      ),
-    }),
-    [
-      networkData,
-      detailedDiskData,
-      dockerContainers,
-      services,
-      processData,
-      collapsedPanels,
-      panelModes,
-      wsConnected,
-      hiddenPartitions,
-      handleServicesUpdate,
-      handleDockerUpdate,
-      handleCollapseChange,
-      handleModeChange,
-      handleHiddenPartitionsChange,
-    ],
+    },
+    [setPanelOrder]
   );
 
-  if (loading) {
+  /**
+   * Per-panel callbacks are memoised so each panel's props stay referentially
+   * stable. Without this the inline arrow functions would change identity on
+   * every render and defeat the memo on NodePanel.
+   */
+  const panelHandlers = useMemo(() => {
+    const build = (panelId) => ({
+      onCollapseChange: (collapsed) => handleCollapseChange(panelId, collapsed),
+      onModeChange: (mode) => handleModeChange(panelId, mode),
+    });
+    return {
+      network: build("network"),
+      disk: build("disk"),
+      processes: build("processes"),
+      docker: build("docker"),
+      services: build("services"),
+    };
+  }, [handleCollapseChange, handleModeChange]);
+
+  const renderPanel = (panelId) => {
+    if (panelId === "services") {
+      return (
+        <ServicesPanelContainer
+          nodeId={selectedId}
+          isCollapsed={collapsedPanels.services}
+          onCollapseChange={panelHandlers.services.onCollapseChange}
+        />
+      );
+    }
+
+    return (
+      <NodePanel
+        panelId={panelId}
+        nodeId={selectedId}
+        isCollapsed={Boolean(collapsedPanels[panelId])}
+        onCollapseChange={panelHandlers[panelId].onCollapseChange}
+        dataMode={panelModes[panelId]}
+        onModeChange={panelHandlers[panelId].onModeChange}
+        hiddenPartitions={panelId === "disk" ? hiddenPartitions : undefined}
+        onHiddenPartitionsChange={
+          panelId === "disk" ? handleHiddenPartitionsChange : undefined
+        }
+      />
+    );
+  };
+
+  if (!loaded) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-xl text-ctext-mid">Loading dashboard...</div>
@@ -368,78 +143,77 @@ const Dashboard = () => {
 
   return (
     <div>
-      <Header
-        systemMetrics={systemMetrics}
-        dockerInfo={dockerInfo}
-        diskMetrics={diskMetrics}
-      />
+      <Header node={selectedNode} summary={selectedNode?.summary} />
 
       <main className="max-w-[1440px] mx-auto px-4 sm:px-8 py-6">
-        <div className="flex justify-end mb-4">
-          <div className="flex items-center gap-2">
-            <label className="text-[10px] tracking-[2px] uppercase text-ctext-dim">Refresh:</label>
-            <select
-              value={refreshInterval}
-              onChange={(e) => setRefreshInterval(Number(e.target.value))}
-              className="glass-input px-3 py-1.5 text-xs"
-            >
-              <option value={2000}>2 seconds</option>
-              <option value={5000}>5 seconds</option>
-              <option value={10000}>10 seconds</option>
-              <option value={30000}>30 seconds</option>
-              <option value={60000}>1 minute</option>
-            </select>
-          </div>
-        </div>
-
-        {error && (
+        {fleetError && (
           <div className="glass-card border-red-500/30 text-red-300 px-4 py-3 mb-6">
-            Error loading data: {error}
+            Could not reach the hub: {fleetError}
           </div>
         )}
 
-        <MetricsPanel
-          systemMetrics={systemMetrics}
-          temperature={temperature}
-          diskMetrics={diskMetrics}
-          dockerInfo={dockerInfo}
-          networkStats={networkStats}
+        <FleetStrip
+          nodes={nodes}
+          selectedId={selectedId}
+          onSelect={selectNode}
+          onManage={() => setManagingNodes(true)}
         />
 
-        {/* Draggable Panels */}
-        <div className="mt-6 pl-0 md:pl-6">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={[...panelOrder.left, ...panelOrder.right]}
-              strategy={rectSortingStrategy}
-            >
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                {/* Left Column */}
-                <div className="flex flex-col gap-6">
-                  {panelOrder.left.map((panelId) => (
-                    <SortablePanel key={panelId} id={panelId}>
-                      {panelComponents[panelId]}
-                    </SortablePanel>
-                  ))}
-                </div>
+        {selectedNode ? (
+          <>
+            <div className="flex items-baseline justify-between mb-3">
+              <h2 className="text-[9px] tracking-[4px] uppercase text-ctext-dim">
+                Viewing{" "}
+                <span className="text-crystal-blue">{selectedNode.name}</span>
+              </h2>
+            </div>
 
-                {/* Right Column */}
-                <div className="flex flex-col gap-6">
-                  {panelOrder.right.map((panelId) => (
-                    <SortablePanel key={panelId} id={panelId}>
-                      {panelComponents[panelId]}
-                    </SortablePanel>
-                  ))}
-                </div>
-              </div>
-            </SortableContext>
-          </DndContext>
-        </div>
+            <MetricsPanel summary={selectedNode.summary} />
+
+            <div className="mt-6 pl-0 md:pl-6">
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={[...panelOrder.left, ...panelOrder.right]}
+                  strategy={rectSortingStrategy}
+                >
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                    <div className="flex flex-col gap-6">
+                      {panelOrder.left.map((panelId) => (
+                        <SortablePanel key={panelId} id={panelId}>
+                          {renderPanel(panelId)}
+                        </SortablePanel>
+                      ))}
+                    </div>
+                    <div className="flex flex-col gap-6">
+                      {panelOrder.right.map((panelId) => (
+                        <SortablePanel key={panelId} id={panelId}>
+                          {renderPanel(panelId)}
+                        </SortablePanel>
+                      ))}
+                    </div>
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </div>
+          </>
+        ) : (
+          <div className="glass-card p-6 text-center text-sm text-ctext-mid">
+            Select a node to view its details.
+          </div>
+        )}
       </main>
+
+      {managingNodes && (
+        <NodesModal
+          nodes={nodes}
+          onClose={() => setManagingNodes(false)}
+          onChanged={refresh}
+        />
+      )}
     </div>
   );
 };

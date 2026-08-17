@@ -12,6 +12,7 @@ vi.mock("../../api/api", () => ({
 import { createService, updateService, deleteService } from "../../api/api";
 
 const defaultProps = {
+  nodeId: "jelly",
   onUpdate: vi.fn(),
   isCollapsed: false,
   onCollapseChange: vi.fn(),
@@ -86,12 +87,37 @@ describe("ServicesPanel", () => {
     fireEvent.click(saveButtons[0]);
 
     await waitFor(() => {
+      // nodeId is null because the link was left fleet-wide.
       expect(createService).toHaveBeenCalledWith({
         name: "New Service",
         url: "http://new",
         icon: "",
         category: "",
+        nodeId: null,
       });
+    });
+  });
+
+  it("scopes a new service to the selected node when asked", async () => {
+    createService.mockResolvedValue({ id: 5, name: "Scoped" });
+    render(<ServicesPanel {...defaultProps} services={mockServices} />);
+
+    fireEvent.click(screen.getByText("Add Service"));
+    fireEvent.change(screen.getByPlaceholderText("Service Name"), {
+      target: { value: "Scoped" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/URL/), {
+      target: { value: "http://scoped" },
+    });
+    fireEvent.click(
+      screen.getByLabelText(/only show this link on the selected node/i)
+    );
+    fireEvent.click(screen.getAllByText("Save")[0]);
+
+    await waitFor(() => {
+      expect(createService).toHaveBeenCalledWith(
+        expect.objectContaining({ nodeId: "jelly" })
+      );
     });
   });
 

@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 const formatUptime = (seconds) => {
   if (!seconds) return null;
   const days = Math.floor(seconds / 86400);
@@ -7,14 +9,12 @@ const formatUptime = (seconds) => {
   return `${Math.floor(seconds / 60)}m up`;
 };
 
-const Header = ({ systemMetrics, dockerInfo, diskMetrics }) => {
-  const hostname =
-    typeof window !== "undefined" ? window.location.hostname : "homelab";
-  const containerCount = dockerInfo?.containersRunning ?? null;
-  const storagePercent = diskMetrics?.usedPercentage ?? null;
-  const uptime = systemMetrics?.uptime
-    ? formatUptime(systemMetrics.uptime)
-    : null;
+/** Status pills describe the node in focus, not the machine serving the page. */
+const Header = ({ node, summary }) => {
+  const nodeName = node?.name ?? "No node selected";
+  const containerCount = summary?.containersRunning ?? null;
+  const storagePercent = summary?.diskUsedPercentage ?? null;
+  const uptime = summary?.uptime ? formatUptime(summary.uptime) : null;
 
   return (
     <header
@@ -41,12 +41,16 @@ const Header = ({ systemMetrics, dockerInfo, diskMetrics }) => {
 
         {/* Right: status pills */}
         <div className="flex gap-2 flex-wrap">
-          {hostname && (
-            <div className="glass-pill">
-              <span className="status-dot status-dot-blue" />
-              <span className="text-ctext-mid">{hostname}</span>
-            </div>
-          )}
+          <div className="glass-pill">
+            <span
+              className={`status-dot ${
+                node?.status === "online"
+                  ? "status-dot-blue"
+                  : "status-dot-white"
+              }`}
+            />
+            <span className="text-ctext-mid">{nodeName}</span>
+          </div>
           {containerCount !== null && (
             <div className="glass-pill">
               <span className="status-dot status-dot-blue" />
@@ -75,4 +79,4 @@ const Header = ({ systemMetrics, dockerInfo, diskMetrics }) => {
   );
 };
 
-export default Header;
+export default memo(Header);

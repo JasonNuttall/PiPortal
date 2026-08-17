@@ -1,112 +1,73 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import MetricsPanel from "../MetricsPanel";
 
-describe("MetricsPanel", () => {
-  it("renders all 6 metric cards", () => {
-    render(
-      <MetricsPanel
-        systemMetrics={{ cpu: { currentLoad: "25.5" }, memory: { usedPercentage: "60.0" } }}
-        temperature={{ cpu: "45" }}
-        diskMetrics={{ use: 50 }}
-        dockerInfo={{ containersRunning: 3, containersStopped: 1 }}
-        networkStats={{ downloadSpeed: 125000, uploadSpeed: 50000 }}
-      />
-    );
+// The header cards read entirely from the selected node's summary, which the
+// fleet strip already streams, so no separate metric props are involved.
+const summary = {
+  cpuLoad: 25.5,
+  memoryUsedPercentage: 60,
+  temperature: 45,
+  containersRunning: 3,
+  containersTotal: 4,
+  rxSec: 125000,
+  txSec: 50000,
+};
 
-    expect(screen.getByText("CPU Load")).toBeInTheDocument();
-    expect(screen.getByText("Memory Usage")).toBeInTheDocument();
-    expect(screen.getByText("CPU Temperature")).toBeInTheDocument();
-    expect(screen.getByText("Docker Containers")).toBeInTheDocument();
-    expect(screen.getByText("Download")).toBeInTheDocument();
-    expect(screen.getByText("Upload")).toBeInTheDocument();
+describe("MetricsPanel", () => {
+  it("renders all six cards", () => {
+    render(<MetricsPanel summary={summary} />);
+
+    for (const label of [
+      "CPU Load",
+      "Memory Usage",
+      "CPU Temperature",
+      "Docker Containers",
+      "Download",
+      "Upload",
+    ]) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
   });
 
-  it("displays CPU load value", () => {
-    render(
-      <MetricsPanel
-        systemMetrics={{ cpu: { currentLoad: "75.3" }, memory: {} }}
-        temperature={{}}
-        diskMetrics={{}}
-        dockerInfo={{}}
-        networkStats={{}}
-      />
-    );
-
+  it("displays the CPU load", () => {
+    render(<MetricsPanel summary={{ ...summary, cpuLoad: 75.3 }} />);
     expect(screen.getByText("75.3")).toBeInTheDocument();
   });
 
-  it("displays temperature with unit", () => {
-    render(
-      <MetricsPanel
-        systemMetrics={{ cpu: {}, memory: {} }}
-        temperature={{ cpu: "52" }}
-        diskMetrics={{}}
-        dockerInfo={{}}
-        networkStats={{}}
-      />
-    );
+  it("drops a trailing zero from a whole percentage", () => {
+    render(<MetricsPanel summary={{ ...summary, cpuLoad: 42 }} />);
+    expect(screen.getByText("42")).toBeInTheDocument();
+  });
 
+  it("displays temperature with a unit", () => {
+    render(<MetricsPanel summary={{ ...summary, temperature: 52 }} />);
     expect(screen.getByText("52")).toBeInTheDocument();
+    expect(screen.getByText("°C")).toBeInTheDocument();
   });
 
-  it("handles null/undefined data gracefully", () => {
-    render(
-      <MetricsPanel
-        systemMetrics={null}
-        temperature={null}
-        diskMetrics={null}
-        dockerInfo={null}
-        networkStats={null}
-      />
-    );
+  it("shows N/A and no unit when the node reports no temperature", () => {
+    render(<MetricsPanel summary={{ ...summary, temperature: null }} />);
+    expect(screen.getByText("N/A")).toBeInTheDocument();
+    expect(screen.queryByText("°C")).not.toBeInTheDocument();
+  });
 
+  it("converts throughput from bytes per second to Mb/s", () => {
+    // 125000 B/s * 8 = 1 Mb/s
+    render(<MetricsPanel summary={summary} />);
+    expect(screen.getByText("1.0")).toBeInTheDocument();
+    expect(screen.getByText("0.4")).toBeInTheDocument();
+  });
+
+  it("shows running against total containers", () => {
+    render(<MetricsPanel summary={summary} />);
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("/ 4")).toBeInTheDocument();
+  });
+
+  it("renders zeroes rather than crashing when no summary has arrived", () => {
+    render(<MetricsPanel summary={null} />);
     expect(screen.getByText("CPU Load")).toBeInTheDocument();
-    // Should show "0" for missing values
     expect(screen.getAllByText("0").length).toBeGreaterThan(0);
-  });
-
-  it("uses static Tailwind color classes instead of dynamic interpolation", () => {
-    const { container } = render(
-      <MetricsPanel
-        systemMetrics={{ cpu: { currentLoad: "25" }, memory: { usedPercentage: "60" } }}
-        temperature={{ cpu: "45" }}
-        diskMetrics={{ use: 50 }}
-        dockerInfo={{ containersRunning: 3, containersStopped: 1 }}
-        networkStats={{ downloadSpeed: 125000, uploadSpeed: 50000 }}
-      />
-    );
-
-    // Icon elements should use full static class names, not dynamic interpolation
-    const svgElements = container.querySelectorAll("svg");
-    const iconClassNames = Array.from(svgElements).map((svg) => svg.className.baseVal || svg.getAttribute("class") || "");
-
-    // Verify none use dynamic template syntax like text-${color}-400
-    iconClassNames.forEach((cls) => {
-      expect(cls).not.toContain("${");
-    });
-
-    // Verify static color classes are present
-    const allClasses = iconClassNames.join(" ");
-    expect(allClasses).toContain("text-blue-400");
-    expect(allClasses).toContain("text-green-400");
-    expect(allClasses).toContain("text-orange-400");
-    expect(allClasses).toContain("text-purple-400");
-  });
-
-  it("calculates network speed in Mb/s", () => {
-    // 125000 bytes/sec = 1.0 Mb/s
-    render(
-      <MetricsPanel
-        systemMetrics={{ cpu: {}, memory: {} }}
-        temperature={{}}
-        diskMetrics={{}}
-        dockerInfo={{}}
-        networkStats={{ downloadSpeed: 125000, uploadSpeed: 62500 }}
-      />
-    );
-
-    expect(screen.getByText("1.0")).toBeInTheDocument(); // download
-    expect(screen.getByText("0.5")).toBeInTheDocument(); // upload
   });
 });
