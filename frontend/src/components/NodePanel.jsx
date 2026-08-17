@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import NetworkPanel from "./NetworkPanel";
 import DiskPanel from "./DiskPanel";
 import ProcessPanel from "./ProcessPanel";
@@ -27,14 +27,15 @@ const PANEL_LABELS = {
 /**
  * Owns the data for exactly one panel on one node.
  *
- * Previously Dashboard held every panel's state and rebuilt all five elements
- * inside a single useMemo, so any one panel's update re-rendered all of them.
- * Giving each panel its own subscription means a process-list tick no longer
- * touches the disk or docker panels.
+ * Each panel holds its own subscription so one panel's update does not
+ * re-render the others, and reports its own connection state so an
+ * unreachable node is visibly unreachable rather than permanently "loading".
  */
 const NodePanel = memo(function NodePanel({
   panelId,
   nodeId,
+  nodeName,
+  nodeStatus,
   isCollapsed,
   onCollapseChange,
   dataMode,
@@ -45,11 +46,34 @@ const NodePanel = memo(function NodePanel({
   const Panel = PANEL_COMPONENTS[panelId];
   const channel = PANEL_TO_CHANNEL[panelId];
 
-  const { data, isLive, refetch } = useNodeChannel(nodeId, channel, {
-    mode: dataMode,
-    enabled: !isCollapsed,
-    interval: DEFAULT_POLLING_INTERVALS[panelId] ?? 5000,
-  });
+  const { data, error, lastUpdate, isForeign, isLive, refetch } = useNodeChannel(
+    nodeId,
+    channel,
+    {
+      mode: dataMode,
+      enabled: !isCollapsed,
+      interval: DEFAULT_POLLING_INTERVALS[panelId] ?? 5000,
+    }
+  );
+
+  const connection = useMemo(() => {
+    // The node being down is a better explanation than any request error, so
+    // it takes precedence in what the panel tells the user.
+    let status;
+    if (nodeStatus === "offline" || nodeStatus === "disabled") {
+      status = "offline";
+    } else if (error) {
+      status = "error";
+    } else if (isForeign) {
+      status = "switching";
+    } else if (data === null) {
+      status = "loading";
+    } else {
+      status = "live";
+    }
+
+    return { status, lastUpdate, error, nodeName, onRetry: refetch };
+  }, [nodeStatus, error, isForeign, data, lastUpdate, nodeName, refetch]);
 
   const shared = {
     isCollapsed,
@@ -58,6 +82,7 @@ const NodePanel = memo(function NodePanel({
     dataMode,
     onModeChange,
     wsConnected: isLive,
+    connection,
   };
 
   return (
@@ -66,7 +91,7 @@ const NodePanel = memo(function NodePanel({
         <DockerPanel
           {...shared}
           nodeId={nodeId}
-          containers={data ?? []}
+          containers={data}
           onUpdate={refetch}
         />
       ) : panelId === "disk" ? (

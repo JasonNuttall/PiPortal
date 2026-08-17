@@ -75,6 +75,9 @@ nothing beyond its summary line.
 - **Customizable Dashboard**
   - Drag-and-drop panel reordering, collapsible panels
   - Per-panel live/poll toggle
+  - Switch nodes with `1`-`9`, or step through them with `[` and `]`
+  - Panels show when data is stale, and say which node is unreachable
+    rather than loading indefinitely
   - Preferences saved to localStorage
 
 <div align="center">
@@ -119,17 +122,50 @@ cd PiPortal
 docker compose -f docker-compose.agent.yml up -d
 ```
 
+An agent serves no dashboard — opening port 3001 in a browser is expected to
+show nothing useful. Confirm it is alive with:
+
+```bash
+curl http://localhost:3001/health
+# {"status":"ok","role":"agent","node":"jelly", ...}
+```
+
 Then in the dashboard choose **Manage nodes**, and add it:
 
-| Field | Example |
-| --- | --- |
-| Name | `Jelly` |
-| Id | `jelly` |
-| Agent URL | `http://jelly:3001` |
-| Token | blank on a trusted LAN |
+| Field | Example | Notes |
+| --- | --- | --- |
+| Name | `Jelly` | Display name, free text |
+| Id | `jelly` | Letters, numbers and hyphens only; used in channel names |
+| Agent URL | `http://jelly:3001` | Must be resolvable **from the hub** |
+| Token | blank | Only if the agent sets `AGENT_TOKEN` |
 
-Press **Test** to confirm the hub can reach it. The node appears in the fleet
-strip immediately.
+The URL is dialled by the hub, not by your browser, so it has to work from the
+hub's network. If the hub cannot resolve the hostname, use the agent's IP
+address instead.
+
+Press **Test** to confirm reachability and see the round-trip latency. The node
+appears in the fleet strip immediately.
+
+Nothing is collected on a node until someone is looking at it, so an idle agent
+costs almost nothing beyond its summary line.
+
+### Upgrading an existing single-machine install
+
+Your existing deployment becomes the hub and keeps working; there is nothing to
+migrate by hand. The database is upgraded in place on first start, and service
+links created before the upgrade become fleet-wide rather than disappearing.
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+The `--build` is required, not optional: the WebSocket moved to `/ws` on the
+page's own origin, so the frontend image carries a new nginx config. Restarting
+without rebuilding leaves the dashboard loading but never streaming.
+
+To roll back, check out the previous commit and rebuild. The schema change is
+additive, so the older code still reads the upgraded database.
 
 <div align="center">
 

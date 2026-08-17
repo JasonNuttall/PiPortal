@@ -6,7 +6,6 @@
  *   nodes - registry and reachability changes
  */
 export const FLEET_CHANNEL = "fleet";
-export const NODES_CHANNEL = "nodes";
 
 /**
  * Panel id -> the node-local channel that feeds it.

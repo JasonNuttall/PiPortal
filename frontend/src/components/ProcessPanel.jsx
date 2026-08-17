@@ -264,6 +264,7 @@ const ProcessPanel = ({
   dataMode,
   onModeChange,
   wsConnected,
+  connection,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("mem");
@@ -296,6 +297,7 @@ const ProcessPanel = ({
       dataMode={dataMode}
       onModeChange={onModeChange}
       wsConnected={wsConnected}
+      connection={connection}
     >
       {(processData) => (
         <ProcessList

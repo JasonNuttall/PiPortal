@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { createService, updateService, deleteService } from "../api/api";
 import BasePanel from "./BasePanel";
+import ConfirmButton from "./ConfirmButton";
 
 const ServicesPanel = ({
   services,
@@ -17,11 +18,13 @@ const ServicesPanel = ({
   isCollapsed,
   onCollapseChange,
   panelId,
+  connection,
 }) => {
   const [editingService, setEditingService] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   // A link is either tied to the node in focus or shown for the whole fleet.
   const [scopeToNode, setScopeToNode] = useState(false);
+  const [actionError, setActionError] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     url: "",
@@ -44,6 +47,7 @@ const ServicesPanel = ({
   };
 
   const handleSave = async () => {
+    setActionError(null);
     try {
       // node_id arrives on an edited row; scopeToNode drives a new one.
       const payload = {
@@ -60,19 +64,18 @@ const ServicesPanel = ({
       setScopeToNode(false);
       setFormData({ name: "", url: "", icon: "", category: "" });
       onUpdate();
-    } catch (error) {
-      console.error("Failed to save service:", error);
+    } catch (err) {
+      setActionError(err.message);
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this service?")) {
-      try {
-        await deleteService(id);
-        onUpdate();
-      } catch (error) {
-        console.error("Failed to delete service:", error);
-      }
+    setActionError(null);
+    try {
+      await deleteService(id);
+      onUpdate();
+    } catch (err) {
+      setActionError(err.message);
     }
   };
 
@@ -111,9 +114,23 @@ const ServicesPanel = ({
       subtitle={`(${services?.length || 0})`}
       headerActions={addButton}
       panelId={panelId}
+      connection={connection}
     >
       {(data) => (
         <>
+          {actionError && (
+            <div className="flex items-start justify-between gap-2 border border-red-500/30 text-red-300 text-[10px] rounded-sm px-3 py-2 mb-3">
+              <span>{actionError}</span>
+              <button
+                type="button"
+                onClick={() => setActionError(null)}
+                className="text-red-300/70 hover:text-red-300"
+                aria-label="Dismiss error"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
           {isAdding && (
             <div className="bg-glass border border-glass-border rounded-sm p-4 mb-4">
               <div className="space-y-3">
@@ -286,15 +303,14 @@ const ServicesPanel = ({
                               >
                                 <Pencil className="w-3 h-3 text-crystal-blue" />
                               </button>
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  handleDelete(service.id);
-                                }}
+                              <ConfirmButton
+                                onConfirm={() => handleDelete(service.id)}
+                                title={`Delete ${service.name}`}
+                                confirmLabel="Delete"
                                 className="p-1 hover:bg-red-900/30 rounded-sm"
                               >
                                 <Trash2 className="w-3 h-3 text-red-400" />
-                              </button>
+                              </ConfirmButton>
                             </div>
                           </div>
                         </a>

@@ -6,10 +6,13 @@ import { nodeChannel } from "../constants/channels";
 /**
  * One panel's data for one node, over either transport.
  *
- * Replaces the previous split between usePanelData (unused) and a central
- * loadData in Dashboard that re-fetched every panel on one shared timer. Each
- * panel now owns its own subscription, so a collapsed or unwatched panel
+ * Each panel owns its own subscription, so a collapsed or unwatched panel
  * causes no work anywhere in the fleet.
+ *
+ * Data is deliberately *not* cleared when the selected node changes. Blanking
+ * every panel on each switch made the dashboard flash; instead the previous
+ * reading is kept and tagged with the node it came from, so the UI can show it
+ * dimmed and clearly labelled while the new node's first sample arrives.
  *
  * @param {string|null} nodeId
  * @param {string|null} channel - node-local channel, e.g. "metrics:network"
@@ -24,45 +27,50 @@ export function useNodeChannel(
   { mode = "polling", enabled = true, interval = 5000 } = {}
 ) {
   const { isConnected, subscribe } = useWebSocket();
-  const [data, setData] = useState(null);
+  const [state, setState] = useState({
+    data: null,
+    // Which node the retained data actually describes.
+    dataNodeId: null,
+    lastUpdate: null,
+  });
   const [error, setError] = useState(null);
-  const [lastUpdate, setLastUpdate] = useState(null);
 
   const live = mode === "websocket" && isConnected;
   const activeRef = useRef(true);
 
-  // Switching node must not leave the previous machine's readings on screen.
-  useEffect(() => {
-    setData(null);
+  const receive = useCallback((data, forNodeId, timestamp) => {
+    setState({
+      data,
+      dataNodeId: forNodeId,
+      lastUpdate: timestamp ?? Date.now(),
+    });
     setError(null);
-    setLastUpdate(null);
-  }, [nodeId, channel]);
+  }, []);
 
   const load = useCallback(async () => {
     if (!nodeId || !channel) return;
     try {
       const result = await fetchNodeChannel(nodeId, channel);
       if (!activeRef.current) return;
-      setData(result);
-      setLastUpdate(Date.now());
-      setError(null);
+      receive(result, nodeId);
     } catch (err) {
       if (activeRef.current) setError(err.message);
     }
-  }, [nodeId, channel]);
+  }, [nodeId, channel, receive]);
 
   useEffect(() => {
     activeRef.current = true;
     if (!enabled || !nodeId || !channel) return undefined;
+
+    // A new target means any existing error belonged to the old one.
+    setError(null);
 
     if (live) {
       const unsubscribe = subscribe(
         nodeChannel(nodeId, channel),
         (payload, timestamp) => {
           if (!activeRef.current) return;
-          setData(payload);
-          setLastUpdate(timestamp ?? Date.now());
-          setError(null);
+          receive(payload, nodeId, timestamp);
         }
       );
       return () => {
@@ -77,9 +85,20 @@ export function useNodeChannel(
       activeRef.current = false;
       clearInterval(timer);
     };
-  }, [live, enabled, nodeId, channel, interval, subscribe, load]);
+  }, [live, enabled, nodeId, channel, interval, subscribe, load, receive]);
 
-  return { data, error, lastUpdate, isLive: live, refetch: load };
+  // True while showing another node's reading during a switch.
+  const isForeign =
+    state.data !== null && state.dataNodeId !== null && state.dataNodeId !== nodeId;
+
+  return {
+    data: state.data,
+    lastUpdate: state.lastUpdate,
+    error,
+    isForeign,
+    isLive: live,
+    refetch: load,
+  };
 }
 
 export default useNodeChannel;

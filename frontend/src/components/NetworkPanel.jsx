@@ -10,6 +10,7 @@ const NetworkPanel = ({
   dataMode,
   onModeChange,
   wsConnected,
+  connection,
 }) => {
   const [calculatedSpeeds, setCalculatedSpeeds] = useState({});
   const previousDataRef = useRef(null);
@@ -85,6 +86,7 @@ const NetworkPanel = ({
       dataMode={dataMode}
       onModeChange={onModeChange}
       wsConnected={wsConnected}
+      connection={connection}
     >
       {(networkData) => (
         <div className="space-y-3">

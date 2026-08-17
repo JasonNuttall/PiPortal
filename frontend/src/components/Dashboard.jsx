@@ -23,6 +23,7 @@ import ServicesPanelContainer from "./ServicesPanelContainer";
 import SortablePanel from "./SortablePanel";
 
 import { useFleet } from "../hooks/useFleet";
+import { useNodeShortcuts } from "../hooks/useNodeShortcuts";
 import { useSelectedNode } from "../hooks/useSelectedNode";
 import { usePanelState } from "../hooks/usePanelState";
 
@@ -30,6 +31,9 @@ const Dashboard = () => {
   const { nodes, error: fleetError, loaded, refresh } = useFleet();
   const { selectedId, selectedNode, selectNode } = useSelectedNode(nodes);
   const [managingNodes, setManagingNodes] = useState(false);
+
+  // Disabled while the modal is open so typing an id does not switch nodes.
+  useNodeShortcuts(nodes, selectedId, selectNode, !managingNodes);
 
   const {
     collapsedPanels,
@@ -121,6 +125,8 @@ const Dashboard = () => {
       <NodePanel
         panelId={panelId}
         nodeId={selectedId}
+        nodeName={selectedNode?.name}
+        nodeStatus={selectedNode?.status}
         isCollapsed={Boolean(collapsedPanels[panelId])}
         onCollapseChange={panelHandlers[panelId].onCollapseChange}
         dataMode={panelModes[panelId]}
@@ -161,11 +167,22 @@ const Dashboard = () => {
 
         {selectedNode ? (
           <>
-            <div className="flex items-baseline justify-between mb-3">
-              <h2 className="text-[9px] tracking-[4px] uppercase text-ctext-dim">
-                Viewing{" "}
+            <div className="flex items-center justify-between mb-3 gap-3">
+              <h2 className="text-[9px] tracking-[4px] uppercase text-ctext-dim flex items-center gap-2">
+                Viewing
                 <span className="text-crystal-blue">{selectedNode.name}</span>
+                {selectedNode.status !== "online" && (
+                  <span className="glass-pill text-[8px] text-yellow-400 border-yellow-500/40 normal-case tracking-normal">
+                    {selectedNode.status}
+                    {selectedNode.error ? ` — ${selectedNode.error}` : ""}
+                  </span>
+                )}
               </h2>
+              {nodes.length > 1 && (
+                <span className="text-[8px] text-ctext-dim hidden sm:block">
+                  press 1-9 or [ ] to switch nodes
+                </span>
+              )}
             </div>
 
             <MetricsPanel summary={selectedNode.summary} />

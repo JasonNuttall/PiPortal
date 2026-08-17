@@ -54,6 +54,7 @@ const DockerPanel = ({
   dataMode,
   onModeChange,
   wsConnected,
+  connection,
 }) => {
   const [actionLoading, setActionLoading] = useState({});
 
@@ -100,6 +101,7 @@ const DockerPanel = ({
       dataMode={dataMode}
       onModeChange={onModeChange}
       wsConnected={wsConnected}
+      connection={connection}
     >
       {(data) => (
         <>

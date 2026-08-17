@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
+  AlertTriangle,
+  WifiOff,
+  Loader2,
+} from "lucide-react";
+import { useRelativeTime } from "../hooks/useRelativeTime";
 
 const BasePanel = ({
   title,
@@ -16,6 +24,11 @@ const BasePanel = ({
   dataMode = "polling",
   onModeChange = null,
   wsConnected = false,
+  /**
+   * How this panel's data is doing.
+   * status: "live" | "loading" | "switching" | "offline" | "error"
+   */
+  connection = null,
 }) => {
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const isCollapsed =
@@ -32,6 +45,21 @@ const BasePanel = ({
 
   const subtitleValue =
     typeof subtitle === "function" ? subtitle(data) : subtitle;
+
+  const status = connection?.status ?? (data === null ? "loading" : "live");
+  const hasData = data !== null && data !== undefined;
+  const isSwitching = status === "switching";
+  const problem = status === "offline" || status === "error";
+
+  // Ages are only rendered when something is wrong, so the timer that keeps
+  // them fresh only runs then.
+  const age = useRelativeTime(connection?.lastUpdate, problem || isSwitching);
+
+  const ProblemIcon = status === "offline" ? WifiOff : AlertTriangle;
+  const problemText =
+    status === "offline"
+      ? `${connection?.nodeName ?? "This node"} is unreachable`
+      : connection?.error || "Could not load this panel";
 
   const ModeToggle = () => {
     if (!panelId || !onModeChange) return null;
@@ -103,6 +131,25 @@ const BasePanel = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {isSwitching && (
+            <span
+              className="flex items-center gap-1 text-[9px] text-ctext-dim"
+              title={`Loading ${connection?.nodeName ?? "node"}`}
+            >
+              <Loader2 className="w-3 h-3 animate-spin" />
+              {connection?.nodeName}
+            </span>
+          )}
+          {problem && hasData && (
+            <span
+              className="flex items-center gap-1 text-[9px] text-yellow-400"
+              title={problemText}
+            >
+              <ProblemIcon className="w-3 h-3" />
+              {age ?? "stale"}
+            </span>
+          )}
+
           <ModeToggle />
 
           {headerActions && !isCollapsed && (
@@ -124,14 +171,39 @@ const BasePanel = ({
       {/* Panel Content */}
       {!isCollapsed && (
         <div className="p-4">
-          {data === null ? (
+          {problem && !hasData ? (
+            // Nothing to show and something is wrong: say so, rather than
+            // leaving a spinner that never resolves.
+            <div className="text-center py-6">
+              <ProblemIcon className="w-5 h-5 mx-auto mb-2 text-yellow-400" />
+              <p className="text-xs text-ctext-mid">{problemText}</p>
+              {age && <p className="text-[9px] text-ctext-dim mt-1">Last update {age}</p>}
+              {connection?.onRetry && (
+                <button
+                  type="button"
+                  onClick={connection.onRetry}
+                  className="glass-pill text-[10px] text-ctext-mid hover:text-ctext transition-colors mt-3"
+                >
+                  Retry
+                </button>
+              )}
+            </div>
+          ) : !hasData ? (
             <div className="text-ctext-mid text-center text-xs tracking-widest uppercase">
               Loading...
             </div>
-          ) : typeof children === "function" ? (
-            children(data)
           ) : (
-            children
+            <div
+              // Data that is not current is shown faded so it cannot be
+              // mistaken for a live reading.
+              className={
+                problem || isSwitching
+                  ? "opacity-40 transition-opacity"
+                  : "transition-opacity"
+              }
+            >
+              {typeof children === "function" ? children(data) : children}
+            </div>
           )}
         </div>
       )}

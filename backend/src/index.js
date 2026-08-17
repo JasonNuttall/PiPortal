@@ -127,6 +127,22 @@ const shutdown = (signal) => {
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 
+// A port clash otherwise surfaces only as a repeating "WebSocket: server
+// error", which says nothing about the actual problem or how to fix it.
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    logger.fatal(
+      { port: config.port },
+      `Port ${config.port} is already in use. Another Homelab Portal process ` +
+        `(hub or agent) is probably already running on this machine. Stop it, ` +
+        `or set PORT to a free port.`
+    );
+  } else {
+    logger.fatal({ err }, "HTTP server failed to start");
+  }
+  process.exit(1);
+});
+
 server.listen(config.port, "0.0.0.0", () => {
   logger.info(
     {

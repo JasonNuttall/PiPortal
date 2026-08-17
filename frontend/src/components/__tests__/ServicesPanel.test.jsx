@@ -132,31 +132,53 @@ describe("ServicesPanel", () => {
     expect(screen.queryByPlaceholderText("Service Name")).not.toBeInTheDocument();
   });
 
-  it("deletes a service with confirmation", async () => {
-    window.confirm = vi.fn(() => true);
-    deleteService.mockResolvedValue();
-
-    render(<ServicesPanel {...defaultProps} services={mockServices} />);
-
-    // Hover to show action buttons - we need to find the delete button
-    // The delete buttons are rendered but hidden with opacity-0
-    const deleteButtons = screen.getAllByRole("button").filter(
-      (btn) => btn.querySelector(".text-red-400")
+  it("deletes a service after an inline confirmation", async () => {
+    deleteService.mockResolvedValue(undefined);
+    const onUpdate = vi.fn();
+    render(
+      <ServicesPanel {...defaultProps} services={mockServices} onUpdate={onUpdate} />
     );
 
-    if (deleteButtons.length > 0) {
-      fireEvent.click(deleteButtons[0]);
+    // First click arms the action; nothing is deleted yet.
+    fireEvent.click(screen.getByTitle("Delete Portainer"));
+    expect(deleteService).not.toHaveBeenCalled();
 
-      await waitFor(() => {
-        expect(window.confirm).toHaveBeenCalled();
-        expect(deleteService).toHaveBeenCalledWith(1);
-      });
-    }
+    fireEvent.click(screen.getByText("Delete"));
+
+    await waitFor(() => {
+      expect(deleteService).toHaveBeenCalledWith(1);
+      expect(onUpdate).toHaveBeenCalled();
+    });
   });
 
-  it("shows loading when services is empty array", () => {
+  it("can back out of a delete", () => {
+    render(<ServicesPanel {...defaultProps} services={mockServices} />);
+
+    fireEvent.click(screen.getByTitle("Delete Portainer"));
+    fireEvent.click(screen.getByText("Cancel"));
+
+    expect(deleteService).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a delete failure instead of only logging it", async () => {
+    deleteService.mockRejectedValue(new Error("Service is in use"));
+    render(<ServicesPanel {...defaultProps} services={mockServices} />);
+
+    fireEvent.click(screen.getByTitle("Delete Portainer"));
+    fireEvent.click(screen.getByText("Delete"));
+
+    expect(await screen.findByText("Service is in use")).toBeInTheDocument();
+  });
+
+  it("shows an empty list as empty, not as loading", () => {
     render(<ServicesPanel {...defaultProps} services={[]} />);
     expect(screen.getByText("(0)")).toBeInTheDocument();
+    expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+  });
+
+  it("shows loading only before the first load completes", () => {
+    render(<ServicesPanel {...defaultProps} services={null} />);
+    expect(screen.getByText("Loading...")).toBeInTheDocument();
   });
 
   it("does not crash when services is null", () => {
