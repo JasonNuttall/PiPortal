@@ -82,17 +82,36 @@ export const containerAction = (nodeId, containerId, action) =>
     method: "POST",
   });
 
-/* ------------------------------------------------------------- services -- */
+/* -------------------------------------------------------------- modules -- */
 
-/** Returns the node's own links plus every fleet-wide one. */
-export const fetchServices = (nodeId) =>
-  request(nodeId ? `/services?nodeId=${encodeURIComponent(nodeId)}` : "/services");
+export const fetchModules = () => request("/modules");
 
-export const createService = (service) =>
-  request("/services", json("POST", service));
+export const createModule = (module) => request("/modules", json("POST", module));
 
-export const updateService = (id, service) =>
-  request(`/services/${id}`, json("PUT", service));
+export const updateModule = (id, module) =>
+  request(`/modules/${id}`, json("PUT", module));
 
-export const deleteService = (id) =>
-  request(`/services/${id}`, { method: "DELETE" });
+export const deleteModule = (id) =>
+  request(`/modules/${id}`, { method: "DELETE" });
+
+export const testModule = (id) =>
+  request(`/modules/${id}/test`, { method: "POST" });
+
+/**
+ * A module's current payload.
+ * @param {{from?: string, to?: string}} [window] - range for schedule datasets
+ */
+export const fetchModuleData = (id, window = {}) => {
+  const params = new URLSearchParams(
+    Object.entries(window).filter(([, value]) => value)
+  );
+  const query = params.toString();
+  return request(`/modules/${id}/data${query ? `?${query}` : ""}`);
+};
+
+/**
+ * Images are served through the hub so the browser talks to one origin and
+ * services on an internal network still show their artwork.
+ */
+export const moduleImageUrl = (id, imageUrl) =>
+  `${API_BASE_URL}/modules/${id}/image?u=${encodeURIComponent(imageUrl)}`;

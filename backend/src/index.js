@@ -52,17 +52,26 @@ app.use("/api/local", require("./routes/local")());
  */
 let source;
 let nodeManager = null;
+let moduleManager = null;
 
 if (config.isHub) {
   const database = require("./db/database");
   database.init(config);
 
   const NodeManager = require("./nodes/NodeManager");
+  const ModuleManager = require("./modules/ModuleManager");
+  const HubSource = require("./websocket/HubSource");
+
   nodeManager = new NodeManager({ timeoutMs: config.agentTimeoutMs });
-  source = nodeManager;
+  moduleManager = new ModuleManager({
+    timeoutMs: config.agentTimeoutMs,
+    // Modules can be fetched by an agent when the hub cannot reach them.
+    getNodeClient: (id) => nodeManager.getClient(id),
+  });
+  source = new HubSource(nodeManager, moduleManager);
 
   app.use("/api/nodes", require("./routes/nodes")(nodeManager));
-  app.use("/api/services", require("./routes/services"));
+  app.use("/api/modules", require("./routes/modules")(moduleManager));
 } else {
   const AgentSource = require("./websocket/AgentSource");
   source = new AgentSource(config.node);
@@ -101,7 +110,6 @@ const shutdown = (signal) => {
   wsManager.wss.clients.forEach((client) => client.close(1001, "Server shutting down"));
   wsManager.wss.close(() => logger.info("WebSocket server closed"));
 
-  nodeManager?.stop();
   collectors.stop();
 
   if (config.isHub) {
@@ -157,7 +165,7 @@ server.listen(config.port, "0.0.0.0", () => {
 
   // Docker's event stream replaces periodic container polling.
   collectors.start();
-  nodeManager?.start();
+  if (!config.isHub) nodeManager?.start();
   wsManager.start();
 });
 

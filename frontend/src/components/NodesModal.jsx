@@ -9,7 +9,15 @@ import {
   XCircle,
   ServerOff,
 } from "lucide-react";
-import { createNode, updateNode, deleteNode, testNode } from "../api/api";
+import {
+  createNode,
+  updateNode,
+  deleteNode,
+  testNode,
+  createModule,
+  deleteModule,
+  testModule,
+} from "../api/api";
 import { useDialog } from "../hooks/useDialog";
 import ConfirmButton from "./ConfirmButton";
 
@@ -144,7 +152,224 @@ const NodeRow = ({ node, onEdit, onDelete, onTest, testResult, busy }) => (
  * Add, edit, test and remove agents. The hub's own machine is always listed
  * but cannot be removed, since it is the process serving this page.
  */
-const NodesModal = ({ nodes, onClose, onChanged }) => {
+const EMPTY_MODULE = { id: "", name: "", kind: "native", url: "", token: "", icon: "" };
+
+/**
+ * Modules and links, managed beside the nodes they run on.
+ *
+ * Kept in the same dialog deliberately: a separate surface for modules would
+ * be the third place to configure the fleet, which is what this is meant to
+ * avoid.
+ */
+const ModulesSection = ({ modules, onChanged }) => {
+  const [form, setForm] = useState(EMPTY_MODULE);
+  const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [results, setResults] = useState({});
+
+  const setField = (field) => (event) => {
+    const value = event.target.value;
+    setForm((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === "name" && slugify(prev.name) === prev.id) {
+        next.id = slugify(value);
+      }
+      if (field === "id") next.id = slugify(value);
+      return next;
+    });
+  };
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      await createModule({
+        id: form.id,
+        name: form.name.trim(),
+        kind: form.kind,
+        url: form.url.trim(),
+        icon: form.icon.trim() || null,
+        token: form.token.trim() || null,
+      });
+      setForm(EMPTY_MODULE);
+      onChanged();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (id) => {
+    try {
+      await deleteModule(id);
+      onChanged();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const probe = async (id) => {
+    try {
+      const result = await testModule(id);
+      setResults((prev) => ({ ...prev, [id]: result }));
+    } catch (err) {
+      setResults((prev) => ({ ...prev, [id]: { ok: false, error: err.message } }));
+    }
+  };
+
+  return (
+    <div className="p-4 border-t border-glass-border space-y-3">
+      <h3 className="text-[9px] tracking-[3px] uppercase text-ctext-dim">
+        Modules and links
+      </h3>
+
+      {modules.length === 0 ? (
+        <p className="text-[10px] text-ctext-dim">
+          Nothing registered yet. A link is just a name and a URL; a module also
+          reports data from a service that exposes a portal endpoint.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {modules.map((module) => (
+            <div
+              key={module.id}
+              className="flex items-center justify-between gap-3 p-2.5 bg-glass border border-glass-border rounded-sm"
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-ctext truncate">{module.name}</span>
+                  <span className="text-[7px] tracking-[1.5px] uppercase text-ctext-dim border border-glass-border px-1 py-0.5 rounded-sm">
+                    {module.kind}
+                  </span>
+                  {module.hasToken && (
+                    <span
+                      title="Authenticates with a stored token"
+                      className="text-[7px] tracking-[1.5px] uppercase text-crystal-blue border border-crystal-blue/30 px-1 py-0.5 rounded-sm"
+                    >
+                      Token
+                    </span>
+                  )}
+                </div>
+                <p className="text-[9px] text-ctext-dim truncate font-source-code">
+                  {module.url}
+                </p>
+                {results[module.id] && (
+                  <p
+                    className={`text-[9px] mt-0.5 ${
+                      results[module.id].ok ? "text-crystal-blue" : "text-red-400"
+                    }`}
+                  >
+                    {results[module.id].ok
+                      ? `Reachable in ${results[module.id].latencyMs}ms`
+                      : results[module.id].error}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                {module.kind !== "link" && (
+                  <button
+                    type="button"
+                    onClick={() => probe(module.id)}
+                    className="glass-pill text-[9px] text-ctext-mid hover:text-ctext transition-colors"
+                  >
+                    Test
+                  </button>
+                )}
+                <ConfirmButton
+                  onConfirm={() => remove(module.id)}
+                  title={`Remove ${module.name}`}
+                  confirmLabel="Remove"
+                  className="p-1.5 rounded-sm text-red-400 hover:text-red-300 hover:bg-red-900/30 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </ConfirmButton>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <form onSubmit={submit} className="space-y-3 pt-1">
+        <div className="grid grid-cols-2 gap-3">
+          <Field
+            label="Name"
+            value={form.name}
+            onChange={setField("name")}
+            placeholder="Missed an Ep"
+          />
+          <label className="block">
+            <span className="text-[9px] text-ctext-dim">Kind</span>
+            <select
+              value={form.kind}
+              onChange={setField("kind")}
+              className="glass-input w-full px-3 py-2 text-xs mt-1"
+            >
+              <option value="native">Module — reports data</option>
+              <option value="link">Link — just a shortcut</option>
+            </select>
+          </label>
+        </div>
+
+        <Field
+          label={form.kind === "link" ? "Link target" : "Service URL"}
+          value={form.url}
+          onChange={setField("url")}
+          placeholder="http://jelly:3014"
+          hint={
+            form.kind === "link"
+              ? "Opened in a new tab"
+              : "The portal appends /portal/module"
+          }
+          className="font-source-code"
+        />
+
+        {form.kind === "link" ? (
+          <Field
+            label="Icon"
+            value={form.icon}
+            onChange={setField("icon")}
+            placeholder="\ud83c\udfac"
+          />
+        ) : (
+          <Field
+            label="Token"
+            type="password"
+            autoComplete="new-password"
+            value={form.token}
+            onChange={setField("token")}
+            placeholder="optional"
+            hint="Issued by the service for this portal"
+            className="font-source-code"
+          />
+        )}
+
+        {error && (
+          <p className="text-[10px] text-red-300 border border-red-500/30 rounded-sm px-3 py-2">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={saving || !form.name.trim() || !form.url.trim()}
+          className="glass-pill text-xs text-crystal-blue border-crystal-blue/40 hover:bg-crystal-blue/15 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+        >
+          {saving ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Plus className="w-3.5 h-3.5" />
+          )}
+          Add {form.kind === "link" ? "link" : "module"}
+        </button>
+      </form>
+    </div>
+  );
+};
+
+const NodesModal = ({ nodes, modules = [], onClose, onChanged }) => {
   const dialogRef = useDialog(onClose);
 
   const [form, setForm] = useState(EMPTY_FORM);
@@ -264,11 +489,11 @@ const NodesModal = ({ nodes, onClose, onChanged }) => {
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Manage nodes"
+        aria-label="Manage fleet"
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-glass-border sticky top-0 bg-glass backdrop-blur z-10">
           <h2 className="font-spectral italic text-base text-ctext">
-            Manage Nodes
+            Manage
           </h2>
           <button
             type="button"
@@ -398,6 +623,8 @@ const NodesModal = ({ nodes, onClose, onChanged }) => {
             {editing ? "Save changes" : "Add node"}
           </button>
         </form>
+
+        <ModulesSection modules={modules} onChanged={onChanged} />
       </div>
     </div>
   );

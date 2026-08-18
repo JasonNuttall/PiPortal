@@ -38,13 +38,6 @@ describe("usePanelState", () => {
       });
     });
 
-    it("returns default panel order when no localStorage", () => {
-      const { result } = renderHook(() => usePanelState());
-      expect(result.current.panelOrder).toEqual({
-        left: ["services", "network"],
-        right: ["disk", "processes", "docker"],
-      });
-    });
 
     it("returns default hidden partitions when no localStorage", () => {
       const { result } = renderHook(() => usePanelState());
@@ -173,23 +166,4 @@ describe("usePanelState", () => {
     });
   });
 
-  describe("setPanelOrder", () => {
-    it("provides setPanelOrder as a function", () => {
-      const { result } = renderHook(() => usePanelState());
-      expect(typeof result.current.setPanelOrder).toBe("function");
-    });
-
-    it("updates panel order", () => {
-      const { result } = renderHook(() => usePanelState());
-
-      act(() => {
-        result.current.setPanelOrder({
-          left: ["network", "services"],
-          right: ["docker", "disk", "processes"],
-        });
-      });
-
-      expect(result.current.panelOrder.left).toEqual(["network", "services"]);
-    });
-  });
 });

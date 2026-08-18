@@ -1,10 +1,5 @@
 import { useState, useCallback } from "react";
 
-const defaultPanelOrder = {
-  left: ["services", "network"],
-  right: ["disk", "processes", "docker"],
-};
-
 /**
  * Hook for managing panel state: collapsed, modes, order, hidden partitions.
  * All state is persisted to localStorage.
@@ -33,9 +28,12 @@ export function usePanelState() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [panelOrder, setPanelOrder] = useState(() => {
-    const saved = localStorage.getItem("panelOrder");
-    return saved ? JSON.parse(saved) : defaultPanelOrder;
+  // Dense packing fills the holes a tall panel leaves beside it. It is the
+  // default because it is what uses the space; the toggle exists because it
+  // also means visual order can differ from list order.
+  const [densePacking, setDensePacking] = useState(() => {
+    const saved = localStorage.getItem("densePacking");
+    return saved === null ? true : saved === "true";
   });
 
   const handleCollapseChange = useCallback((panelId, isCollapsed) => {
@@ -59,12 +57,19 @@ export function usePanelState() {
     localStorage.setItem("hiddenPartitions", JSON.stringify(partitions));
   }, []);
 
+  const toggleDensePacking = useCallback(() => {
+    setDensePacking((prev) => {
+      localStorage.setItem("densePacking", String(!prev));
+      return !prev;
+    });
+  }, []);
+
   return {
     collapsedPanels,
     panelModes,
     hiddenPartitions,
-    panelOrder,
-    setPanelOrder,
+    densePacking,
+    toggleDensePacking,
     handleCollapseChange,
     handleModeChange,
     handleHiddenPartitionsChange,

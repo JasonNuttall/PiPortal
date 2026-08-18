@@ -265,3 +265,41 @@ body {
   background: rgba(56, 189, 248, 0.15);
   border-radius: 4px;
 }
+
+/* ── Panel grid ──────────────────────────────────────────────────────
+   Column count follows the viewport arithmetically rather than through a
+   list of breakpoints, so the same rules serve a phone and an ultrawide.
+   min() keeps a single column from overflowing a narrow screen.          */
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+  gap: 1.5rem;
+  align-items: start; /* panels keep their natural height */
+  container-type: inline-size;
+}
+
+/* Backfill the holes a tall panel leaves beside it. Disabled while dragging
+   so the grid does not rearrange under the cursor mid-drop. */
+.panel-grid[data-dense="true"]:not([data-dragging="true"]) {
+  grid-auto-flow: row dense;
+}
+
+/* A span only applies once the container is wide enough to hold it, so a wide
+   panel can never force an implicit column or overflow a narrow screen. */
+@container (min-width: 44rem) {
+  .panel-grid > [data-size="wide"],
+  .panel-grid > [data-size="full"] {
+    grid-column: span 2;
+  }
+}
+
+@container (min-width: 68rem) {
+  .panel-grid > [data-size="full"] {
+    grid-column: span 3;
+  }
+}
+
+/* Collapsed is just a header bar; it should stop holding a wide slot. */
+.panel-grid > [data-collapsed="true"] {
+  grid-column: span 1 !important;
+}

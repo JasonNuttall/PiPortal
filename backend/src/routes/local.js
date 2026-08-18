@@ -29,6 +29,41 @@ module.exports = function createLocalRouter({
     });
   });
 
+  /**
+   * Fetch a URL on the hub's behalf.
+   *
+   * A module may live on a network only this machine can see. The hub asks the
+   * agent to make the request rather than needing a route to the service
+   * itself. Restricted to http(s) so it cannot be turned into a file reader.
+   */
+  router.post("/proxy", async (req, res) => {
+    const { url: target, token } = req.body ?? {};
+
+    let parsed;
+    try {
+      parsed = new URL(String(target));
+    } catch {
+      return res.status(400).json({ error: "A valid url is required" });
+    }
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      return res.status(400).json({ error: "Only http and https are supported" });
+    }
+
+    try {
+      const upstream = await fetch(parsed.href, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!upstream.ok) {
+        return res.status(502).json({ error: `Upstream responded ${upstream.status}` });
+      }
+      res.json(await upstream.json());
+    } catch (error) {
+      logger.debug({ err: error }, "Agent proxy request failed");
+      res.status(502).json({ error: "Upstream did not respond" });
+    }
+  });
+
   // Container actions must be declared before the catch-all collector route.
   router.post("/docker/containers/:id/:action", async (req, res) => {
     const { id, action } = req.params;

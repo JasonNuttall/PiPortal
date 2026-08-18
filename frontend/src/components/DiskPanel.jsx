@@ -11,6 +11,8 @@ const DiskPanel = ({
   onModeChange,
   wsConnected,
   connection,
+  size,
+  onCycleSize,
   hiddenPartitions = [],
   onHiddenPartitionsChange,
 }) => {
@@ -147,6 +149,8 @@ const DiskPanel = ({
       onModeChange={onModeChange}
       wsConnected={wsConnected}
       connection={connection}
+      size={size}
+      onCycleSize={onCycleSize}
       headerActions={FilterButton}
       subtitle={visibleDisks ? `(${visibleDisks.length}/${allPartitions.length})` : ""}
     >

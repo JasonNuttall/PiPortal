@@ -40,6 +40,8 @@ const NodePanel = memo(function NodePanel({
   onCollapseChange,
   dataMode,
   onModeChange,
+  size,
+  onCycleSize,
   hiddenPartitions,
   onHiddenPartitionsChange,
 }) {
@@ -83,6 +85,8 @@ const NodePanel = memo(function NodePanel({
     onModeChange,
     wsConnected: isLive,
     connection,
+    size,
+    onCycleSize,
   };
 
   return (

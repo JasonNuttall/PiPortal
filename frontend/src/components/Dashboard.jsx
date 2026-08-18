@@ -8,7 +8,6 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   rectSortingStrategy,
@@ -19,13 +18,17 @@ import MetricsPanel from "./MetricsPanel";
 import FleetStrip from "./FleetStrip";
 import NodesModal from "./NodesModal";
 import NodePanel from "./NodePanel";
-import ServicesPanelContainer from "./ServicesPanelContainer";
+import LinksPanel from "./LinksPanel";
+import ModulePanel from "./modules/ModulePanel";
 import SortablePanel from "./SortablePanel";
 
 import { useFleet } from "../hooks/useFleet";
 import { useNodeShortcuts } from "../hooks/useNodeShortcuts";
 import { useSelectedNode } from "../hooks/useSelectedNode";
 import { usePanelState } from "../hooks/usePanelState";
+import { usePanelLayout } from "../hooks/usePanelLayout";
+import { BUILT_IN_PANELS, modulePanel, modulePanelId } from "../constants/panels";
+import { useModules } from "../hooks/useModules";
 
 const Dashboard = () => {
   const { nodes, error: fleetError, loaded, refresh } = useFleet();
@@ -39,12 +42,43 @@ const Dashboard = () => {
     collapsedPanels,
     panelModes,
     hiddenPartitions,
-    panelOrder,
-    setPanelOrder,
+    densePacking,
+    toggleDensePacking,
     handleCollapseChange,
     handleModeChange,
     handleHiddenPartitionsChange,
   } = usePanelState();
+
+  const { modules, loaded: modulesLoaded, refresh: refreshModules } = useModules();
+
+  // A module scoped to a node only appears while that node is in focus.
+  const visibleModules = useMemo(
+    () =>
+      modules.filter(
+        (module) =>
+          module.enabled && (!module.nodeId || module.nodeId === selectedId)
+      ),
+    [modules, selectedId]
+  );
+
+  const links = useMemo(
+    () => visibleModules.filter((module) => module.kind === "link"),
+    [visibleModules]
+  );
+
+  const nativeModules = useMemo(
+    () => visibleModules.filter((module) => module.kind !== "link"),
+    [visibleModules]
+  );
+
+  // Built-ins plus a panel per native module — the layout treats them alike.
+  const panels = useMemo(
+    () => [...BUILT_IN_PANELS, ...nativeModules.map(modulePanel)],
+    [nativeModules]
+  );
+  const { layout, move, cycleSize } = usePanelLayout(selectedId, panels);
+
+  const [isDragging, setIsDragging] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -55,40 +89,13 @@ const Dashboard = () => {
 
   const handleDragEnd = useCallback(
     (event) => {
+      setIsDragging(false);
       const { active, over } = event;
-      if (!over || active.id === over.id) return;
-
-      setPanelOrder((current) => {
-        const activeColumn = current.left.includes(active.id) ? "left" : "right";
-        const overColumn = current.left.includes(over.id) ? "left" : "right";
-
-        let next;
-        if (activeColumn === overColumn) {
-          const items = [...current[activeColumn]];
-          next = {
-            ...current,
-            [activeColumn]: arrayMove(
-              items,
-              items.indexOf(active.id),
-              items.indexOf(over.id)
-            ),
-          };
-        } else {
-          const source = [...current[activeColumn]];
-          const destination = [...current[overColumn]];
-          source.splice(source.indexOf(active.id), 1);
-          destination.splice(destination.indexOf(over.id), 0, active.id);
-          next = {
-            left: activeColumn === "left" ? source : destination,
-            right: activeColumn === "right" ? source : destination,
-          };
-        }
-
-        localStorage.setItem("panelOrder", JSON.stringify(next));
-        return next;
-      });
+      if (over && active.id !== over.id) {
+        move(active.id, over.id);
+      }
     },
-    [setPanelOrder]
+    [move]
   );
 
   /**
@@ -110,13 +117,32 @@ const Dashboard = () => {
     };
   }, [handleCollapseChange, handleModeChange]);
 
-  const renderPanel = (panelId) => {
+  const renderPanel = (panelId, size) => {
+    const sizeProps = { size, onCycleSize: () => cycleSize(panelId) };
+
     if (panelId === "services") {
       return (
-        <ServicesPanelContainer
-          nodeId={selectedId}
+        <LinksPanel
+          links={links}
+          loaded={modulesLoaded}
           isCollapsed={collapsedPanels.services}
           onCollapseChange={panelHandlers.services.onCollapseChange}
+          onManage={() => setManagingNodes(true)}
+          {...sizeProps}
+        />
+      );
+    }
+
+    const module = nativeModules.find(
+      (candidate) => modulePanelId(candidate.id) === panelId
+    );
+    if (module) {
+      return (
+        <ModulePanel
+          module={module}
+          isCollapsed={Boolean(collapsedPanels[panelId])}
+          onCollapseChange={(collapsed) => handleCollapseChange(panelId, collapsed)}
+          {...sizeProps}
         />
       );
     }
@@ -124,6 +150,7 @@ const Dashboard = () => {
     return (
       <NodePanel
         panelId={panelId}
+        {...sizeProps}
         nodeId={selectedId}
         nodeName={selectedNode?.name}
         nodeStatus={selectedNode?.status}
@@ -151,7 +178,7 @@ const Dashboard = () => {
     <div>
       <Header node={selectedNode} summary={selectedNode?.summary} />
 
-      <main className="max-w-[1440px] mx-auto px-4 sm:px-8 py-6">
+      <main className="max-w-[2100px] mx-auto px-4 sm:px-8 py-6">
         {fleetError && (
           <div className="glass-card border-red-500/30 text-red-300 px-4 py-3 mb-6">
             Could not reach the hub: {fleetError}
@@ -178,40 +205,61 @@ const Dashboard = () => {
                   </span>
                 )}
               </h2>
-              {nodes.length > 1 && (
-                <span className="text-[8px] text-ctext-dim hidden sm:block">
-                  press 1-9 or [ ] to switch nodes
-                </span>
-              )}
+              <div className="flex items-center gap-3">
+                {nodes.length > 1 && (
+                  <span className="text-[8px] text-ctext-dim hidden lg:block">
+                    press 1-9 or [ ] to switch nodes
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={toggleDensePacking}
+                  aria-pressed={densePacking}
+                  title={
+                    densePacking
+                      ? "Panels fill gaps. Click to keep them in order."
+                      : "Panels stay in order. Click to let them fill gaps."
+                  }
+                  className={`glass-pill text-[9px] transition-colors ${
+                    densePacking
+                      ? "text-crystal-blue border-crystal-blue/40"
+                      : "text-ctext-mid hover:text-ctext"
+                  }`}
+                >
+                  Compact layout
+                </button>
+              </div>
             </div>
 
             <MetricsPanel summary={selectedNode.summary} />
 
-            <div className="mt-6 pl-0 md:pl-6">
+            <div className="mt-6 pl-0 md:pl-5">
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
+                onDragStart={() => setIsDragging(true)}
+                onDragCancel={() => setIsDragging(false)}
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={[...panelOrder.left, ...panelOrder.right]}
+                  items={layout.map((entry) => entry.id)}
                   strategy={rectSortingStrategy}
                 >
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                    <div className="flex flex-col gap-6">
-                      {panelOrder.left.map((panelId) => (
-                        <SortablePanel key={panelId} id={panelId}>
-                          {renderPanel(panelId)}
-                        </SortablePanel>
-                      ))}
-                    </div>
-                    <div className="flex flex-col gap-6">
-                      {panelOrder.right.map((panelId) => (
-                        <SortablePanel key={panelId} id={panelId}>
-                          {renderPanel(panelId)}
-                        </SortablePanel>
-                      ))}
-                    </div>
+                  <div
+                    className="panel-grid"
+                    data-dense={densePacking ? "true" : "false"}
+                    data-dragging={isDragging ? "true" : "false"}
+                  >
+                    {layout.map((entry) => (
+                      <SortablePanel
+                        key={entry.id}
+                        id={entry.id}
+                        size={entry.size}
+                        isCollapsed={Boolean(collapsedPanels[entry.id])}
+                      >
+                        {renderPanel(entry.id, entry.size)}
+                      </SortablePanel>
+                    ))}
                   </div>
                 </SortableContext>
               </DndContext>
@@ -227,8 +275,12 @@ const Dashboard = () => {
       {managingNodes && (
         <NodesModal
           nodes={nodes}
+          modules={modules}
           onClose={() => setManagingNodes(false)}
-          onChanged={refresh}
+          onChanged={() => {
+            refresh();
+            refreshModules();
+          }}
         />
       )}
     </div>

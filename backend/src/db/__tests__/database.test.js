@@ -40,6 +40,25 @@ describe("migrate", () => {
     expect(columnNames(db, "services")).toContain("node_id");
   });
 
+  it("carries existing quick links into the module registry", () => {
+    const db = new Database(":memory:");
+    db.exec(V1_SCHEMA);
+    db.pragma("user_version = 1");
+    const insert = db.prepare(
+      "INSERT INTO services (name, url, icon, category) VALUES (?, ?, ?, ?)"
+    );
+    insert.run("Pi-hole", "http://pi/admin", "S", "Network");
+    insert.run("Pi-hole", "http://pi2/admin", "S", "Network");
+
+    migrate(db);
+
+    const links = db.prepare("SELECT * FROM modules ORDER BY sort_order").all();
+    expect(links).toHaveLength(2);
+    expect(links[0]).toMatchObject({ id: "pi-hole", kind: "link", url: "http://pi/admin" });
+    // Two links may share a name; ids still have to be unique.
+    expect(links[1].id).toBe("pi-hole-2");
+  });
+
   it("upgrades a v1 database without losing rows", () => {
     const db = new Database(":memory:");
     db.exec(V1_SCHEMA);
@@ -69,14 +88,19 @@ describe("migrate", () => {
 });
 
 describe("initDatabase", () => {
-  it("seeds default service links on a new database", () => {
+  it("seeds default links into the module registry, not the retired table", () => {
+    // Migration v3 runs before seeding, so anything written to `services`
+    // here would never be read again.
     const db = initDatabase(":memory:");
-    expect(db.prepare("SELECT COUNT(*) c FROM services").get().c).toBeGreaterThan(0);
+    expect(db.prepare("SELECT COUNT(*) c FROM modules").get().c).toBeGreaterThan(0);
+    expect(
+      db.prepare("SELECT COUNT(*) c FROM modules WHERE kind = 'link'").get().c
+    ).toBeGreaterThan(0);
   });
 
   it("does not seed when asked not to", () => {
     const db = initDatabase(":memory:", { seed: false });
-    expect(db.prepare("SELECT COUNT(*) c FROM services").get().c).toBe(0);
+    expect(db.prepare("SELECT COUNT(*) c FROM modules").get().c).toBe(0);
   });
 
   it("adopts the supplied machine as the local node", () => {

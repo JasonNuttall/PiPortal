@@ -91,36 +91,51 @@ describe("node-scoped metrics", () => {
   });
 });
 
-describe("services", () => {
-  it("scopes a listing to a node", async () => {
-    await api.fetchServices("jelly");
-    expect(calledPath()).toBe("/api/services?nodeId=jelly");
+
+describe("modules", () => {
+  it("lists modules", async () => {
+    await api.fetchModules();
+    expect(calledPath()).toBe("/api/modules");
   });
 
-  it("encodes the node id", async () => {
-    await api.fetchServices("a b");
-    expect(calledPath()).toBe("/api/services?nodeId=a%20b");
+  it("creates a module", async () => {
+    await api.createModule({ id: "missedanep", name: "Missed an Ep" });
+    expect(calledPath()).toBe("/api/modules");
+    expect(calledOptions().method).toBe("POST");
   });
 
-  it("lists every service when no node is given", async () => {
-    await api.fetchServices();
-    expect(calledPath()).toBe("/api/services");
-  });
-
-  it("creates a service", async () => {
-    await api.createService({ name: "X", url: "http://x", nodeId: "jelly" });
-    expect(calledPath()).toBe("/api/services");
-    expect(JSON.parse(calledOptions().body).nodeId).toBe("jelly");
-  });
-
-  it("updates and deletes a service", async () => {
-    await api.updateService(7, { name: "X", url: "http://x" });
-    expect(calledPath()).toBe("/api/services/7");
+  it("updates and deletes a module", async () => {
+    await api.updateModule("missedanep", { name: "X" });
+    expect(calledPath()).toBe("/api/modules/missedanep");
 
     globalThis.fetch.mockClear();
     globalThis.fetch.mockResolvedValue({ ok: true, status: 204 });
-    await api.deleteService(7);
-    expect(calledPath()).toBe("/api/services/7");
+    await api.deleteModule("missedanep");
+    expect(calledOptions().method).toBe("DELETE");
+  });
+
+  it("fetches a module's payload", async () => {
+    await api.fetchModuleData("missedanep");
+    expect(calledPath()).toBe("/api/modules/missedanep/data");
+  });
+
+  it("passes a schedule window through", async () => {
+    await api.fetchModuleData("missedanep", { from: "2026-08-01", to: "2026-08-31" });
+    expect(calledPath()).toBe(
+      "/api/modules/missedanep/data?from=2026-08-01&to=2026-08-31"
+    );
+  });
+
+  it("omits empty window bounds", async () => {
+    await api.fetchModuleData("missedanep", { from: "", to: undefined });
+    expect(calledPath()).toBe("/api/modules/missedanep/data");
+  });
+
+  it("routes images through the hub, encoded", () => {
+    // Direct hotlinking would fail for services the browser cannot reach.
+    expect(api.moduleImageUrl("missedanep", "https://img/a b.jpg")).toBe(
+      "/api/modules/missedanep/image?u=https%3A%2F%2Fimg%2Fa%20b.jpg"
+    );
   });
 });
 
@@ -159,7 +174,7 @@ describe("error handling", () => {
 
   it("returns null for a 204 rather than parsing an empty body", async () => {
     globalThis.fetch.mockResolvedValue({ ok: true, status: 204 });
-    await expect(api.deleteService(1)).resolves.toBeNull();
+    await expect(api.deleteModule("x")).resolves.toBeNull();
   });
 
   it("applies a timeout signal to every request", async () => {

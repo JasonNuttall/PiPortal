@@ -69,11 +69,15 @@ nothing beyond its summary line.
 - **Docker Container Management**
   - View and control containers (start / stop / restart) on any node
   - Driven by the Docker event stream rather than polling
-- **Service Quick Links**
-  - Links can be fleet-wide or scoped to a single node
-  - SQLite storage on the hub
+- **Modules**
+  - Pull other projects into the dashboard as first-class panels
+  - A module supplies data and what it means; the portal decides how to draw it
+  - Switch a dataset between list, grid and table without touching the service
+  - Quick links are modules that report nothing — one registry, not two
 - **Customizable Dashboard**
-  - Drag-and-drop panel reordering, collapsible panels
+  - Panels flow into as many columns as the screen allows, filling gaps
+  - Each panel can be compact, wide or full width
+  - Drag-and-drop reordering, collapsible panels
   - Per-panel live/poll toggle
   - Switch nodes with `1`-`9`, or step through them with `[` and `]`
   - Panels show when data is stale, and say which node is unreachable
@@ -238,10 +242,79 @@ The same channels are served for the machine itself under `/api/local/...`,
 which is what a hub calls on its agents. `?fresh=1` bypasses the cache.
 `GET /api/local/info` returns that node's identity.
 
-### Services (hub)
+<div align="center">
 
-`GET|POST /api/services`, `PUT|DELETE /api/services/:id`.
-`GET /api/services?nodeId=jelly` returns that node's links plus fleet-wide ones.
+## Writing a module
+
+</div>
+
+A module is one HTTP endpoint on your own service. The portal never runs module
+code and never renders module HTML — it reads data and draws it with its own
+components, which is what lets the same payload be a list, a grid or a table.
+
+Expose `GET /portal/module`:
+
+```json
+{
+  "contract": 1,
+  "id": "missedanep",
+  "title": "Missed an Ep",
+  "href": "http://jelly:3014",
+  "status": "ok",
+  "ttl": 300,
+  "datasets": [
+    { "id": "missing", "label": "Missing episodes",
+      "shape": "metric", "value": 7, "tone": "warn" },
+
+    { "id": "upcoming", "label": "Airing soon",
+      "shape": "schedule", "suggests": "list", "window": true,
+      "items": [
+        { "id": "sev-s02e07", "title": "Severance", "subtitle": "S02E07",
+          "date": "2026-08-21", "image": "https://.../poster.jpg",
+          "href": "http://jelly:3014/series/95396",
+          "detail": [{ "label": "Network", "value": "Apple TV+" }] }
+      ] }
+  ]
+}
+```
+
+### Shapes
+
+| Shape | Data | Views |
+| --- | --- | --- |
+| `metric` | one number, optionally against `max` | stat, gauge |
+| `collection` | items with no inherent order | list, grid, table |
+| `schedule` | items that each carry a `date` | calendar\*, agenda, list, grid, table |
+| `series` | `points` of `{ t, v }` | spark\*, chart\* |
+
+\* not built yet; a dataset asking for one says so rather than drawing
+something else.
+
+### Item fields
+
+`id`, `title`, `subtitle`, `meta`, `date`, `image`, `href`, `tone`
+(`ok`/`warn`/`error`), and `detail[]` of `{ label, value }`. Anything else is
+dropped — a field only one view understands would vanish when the view changes.
+
+### Rules the portal enforces
+
+- Only `http`/`https` URLs survive; `javascript:` and `data:` are stripped
+- A `schedule` item without a parseable `date` is dropped
+- Unknown shapes and unknown fields are ignored, never rendered
+- `ttl` is clamped to 5–3600s — the service decides how often it is worth asking
+- Images are proxied by the hub, and only URLs your payload referenced can be
+  fetched
+- The portal issues `GET` only. Modules report; they cannot be commanded.
+
+### Registering it
+
+**Manage** in the dashboard → add a module with your service's base URL. The
+portal appends `/portal/module`. Add a token if your endpoint requires one; it
+is stored on the hub and never returned by the API. Press **Test** to see the
+datasets it found.
+
+If the service is only reachable from one machine, set that node as the
+module's `via` so the agent fetches on the hub's behalf.
 
 <div align="center">
 

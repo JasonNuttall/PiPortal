@@ -58,6 +58,65 @@ const MIGRATIONS = [
       "CREATE INDEX IF NOT EXISTS idx_services_node ON services(node_id)"
     );
   },
+
+  // v3 - modules: services with something to report, plus the plain links
+  // that used to live in their own table
+  (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS modules (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        kind TEXT NOT NULL DEFAULT 'native',
+        url TEXT,
+        icon TEXT,
+        category TEXT,
+        token TEXT,
+        node_id TEXT,
+        via TEXT NOT NULL DEFAULT 'hub',
+        enabled INTEGER NOT NULL DEFAULT 1,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    db.exec("CREATE INDEX IF NOT EXISTS idx_modules_node ON modules(node_id)");
+
+    // Quick Links become link modules, so there is one registry rather than
+    // two. The services table is left in place, unread, so a rollback still
+    // finds its data.
+    const services = db.prepare("SELECT * FROM services ORDER BY id").all();
+    const insert = db.prepare(
+      `INSERT OR IGNORE INTO modules
+         (id, name, kind, url, icon, category, node_id, via, sort_order)
+       VALUES (?, ?, 'link', ?, ?, ?, ?, 'hub', ?)`
+    );
+
+    const used = new Set();
+    services.forEach((service, index) => {
+      const base =
+        String(service.name)
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 40) || "link";
+
+      // Two links may share a name; ids must stay unique.
+      let id = base;
+      let suffix = 2;
+      while (used.has(id)) id = `${base}-${suffix++}`;
+      used.add(id);
+
+      insert.run(
+        id,
+        service.name,
+        service.url,
+        service.icon || null,
+        service.category || null,
+        service.node_id ?? null,
+        index
+      );
+    });
+  },
 ];
 
 /**
@@ -113,17 +172,17 @@ function initDatabase(dbPath, { seed = true, localNode = null } = {}) {
   }
 
   if (seed) {
-    const { count } = db
-      .prepare("SELECT COUNT(*) as count FROM services")
-      .get();
+    // Seed the registry, not the retired services table — migration v3 has
+    // already run by this point, so anything written there would never be read.
+    const { count } = db.prepare("SELECT COUNT(*) as count FROM modules").get();
     if (count === 0) {
       const insert = db.prepare(
-        `INSERT INTO services (name, url, icon, category, node_id)
-         VALUES (?, ?, ?, ?, NULL)`
+        `INSERT INTO modules (id, name, kind, url, icon, category, sort_order)
+         VALUES (?, ?, 'link', ?, ?, ?, ?)`
       );
-      insert.run("Portainer", "http://raspberrypi:9000", "🐳", "Management");
-      insert.run("Pi-hole", "http://raspberrypi/admin", "🛡️", "Network");
-      insert.run("Grafana", "http://raspberrypi:3000", "📊", "Monitoring");
+      insert.run("portainer", "Portainer", "http://raspberrypi:9000", "🐳", "Management", 0);
+      insert.run("pi-hole", "Pi-hole", "http://raspberrypi/admin", "🛡️", "Network", 1);
+      insert.run("grafana", "Grafana", "http://raspberrypi:3000", "📊", "Monitoring", 2);
     }
   }
 

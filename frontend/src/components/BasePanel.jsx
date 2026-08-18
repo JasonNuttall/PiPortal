@@ -6,6 +6,9 @@ import {
   AlertTriangle,
   WifiOff,
   Loader2,
+  Minimize2,
+  Maximize2,
+  Square,
 } from "lucide-react";
 import { useRelativeTime } from "../hooks/useRelativeTime";
 
@@ -29,6 +32,9 @@ const BasePanel = ({
    * status: "live" | "loading" | "switching" | "offline" | "error"
    */
   connection = null,
+  /** Current grid width, and a callback to cycle it. */
+  size = null,
+  onCycleSize = null,
 }) => {
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const isCollapsed =
@@ -60,6 +66,33 @@ const BasePanel = ({
     status === "offline"
       ? `${connection?.nodeName ?? "This node"} is unreachable`
       : connection?.error || "Could not load this panel";
+
+  const SIZE_META = {
+    compact: { icon: Minimize2, label: "Compact", next: "wide" },
+    wide: { icon: Square, label: "Wide", next: "full" },
+    full: { icon: Maximize2, label: "Full width", next: "compact" },
+  };
+
+  const SizeControl = () => {
+    if (!size || !onCycleSize) return null;
+    const meta = SIZE_META[size] ?? SIZE_META.compact;
+    const Icon = meta.icon;
+
+    return (
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onCycleSize();
+        }}
+        aria-label={`Panel width: ${meta.label}. Click for ${SIZE_META[meta.next].label.toLowerCase()}`}
+        title={`${meta.label} — click for ${SIZE_META[meta.next].label.toLowerCase()}`}
+        className="p-1 rounded-sm text-ctext-dim hover:text-ctext hover:bg-glass-hover transition-colors"
+      >
+        <Icon className="w-3.5 h-3.5" />
+      </button>
+    );
+  };
 
   const ModeToggle = () => {
     if (!panelId || !onModeChange) return null;
@@ -131,6 +164,7 @@ const BasePanel = ({
         </div>
 
         <div className="flex items-center gap-2">
+          <SizeControl />
           {isSwitching && (
             <span
               className="flex items-center gap-1 text-[9px] text-ctext-dim"
