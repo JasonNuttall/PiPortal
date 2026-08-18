@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useState, useCallback, useMemo } from "react";
 import { Boxes, ExternalLink } from "lucide-react";
 import BasePanel from "../BasePanel";
 import ErrorBoundary from "../ErrorBoundary";
@@ -20,8 +20,34 @@ const ModulePanel = memo(function ModulePanel({
   onCycleSize,
 }) {
   const [selected, setSelected] = useState(null);
+  // A window belongs to the module payload rather than one dataset, so the
+  // panel collects whatever its datasets ask for.
+  const [windows, setWindows] = useState({});
+
+  const handleWindowChange = useCallback((datasetId, window) => {
+    setWindows((prev) => {
+      if (prev[datasetId] === window) return prev;
+      if (!window && !(datasetId in prev)) return prev;
+      const next = { ...prev };
+      if (window) next[datasetId] = window;
+      else delete next[datasetId];
+      return next;
+    });
+  }, []);
+
+  // Only one dataset can be paging at a time in practice; take the widest ask.
+  const window = useMemo(() => {
+    const asks = Object.values(windows).filter(Boolean);
+    if (asks.length === 0) return undefined;
+    return {
+      from: asks.map((a) => a.from).sort()[0],
+      to: asks.map((a) => a.to).sort().at(-1),
+    };
+  }, [windows]);
+
   const { data, error, lastUpdate, isLive } = useModuleData(module.id, {
     enabled: !isCollapsed,
+    window,
   });
 
   const connection = {
@@ -74,6 +100,7 @@ const ModulePanel = memo(function ModulePanel({
                   moduleId={module.id}
                   dataset={dataset}
                   onSelectItem={setSelected}
+                  onWindowChange={handleWindowChange}
                 />
               ))}
             </div>

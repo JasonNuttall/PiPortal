@@ -284,11 +284,16 @@ Expose `GET /portal/module`:
 | --- | --- | --- |
 | `metric` | one number, optionally against `max` | stat, gauge |
 | `collection` | items with no inherent order | list, grid, table |
-| `schedule` | items that each carry a `date` | calendar\*, agenda, list, grid, table |
+| `schedule` | items that each carry a `date` | calendar, agenda, list, grid, table |
 | `series` | `points` of `{ t, v }` | spark\*, chart\* |
 
-\* not built yet; a dataset asking for one says so rather than drawing
-something else.
+Set `"window": true` on a `schedule` and the portal will send `?from=` and
+`?to=` when its calendar pages to another month. Without it the calendar draws
+only what it was given and disables navigation, rather than showing empty
+months as though they were genuinely empty.
+
+`spark` and `chart` are not built yet; a dataset asking for one says so rather
+than drawing something else.
 
 ### Item fields
 

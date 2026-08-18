@@ -114,9 +114,39 @@ describe("view selection", () => {
     render(
       <DatasetSection moduleId="missedanep" dataset={schedule} onSelectItem={vi.fn()} />
     );
-    // Calendar is suggested but not built yet, so it says so rather than
-    // silently drawing something else.
-    expect(screen.getByText(/Calendar view isn/)).toBeInTheDocument();
+    // The schedule suggests calendar, so a month grid is drawn.
+    expect(screen.getByLabelText("Next month")).toBeInTheDocument();
+  });
+
+  it("asks for the window a calendar month needs", () => {
+    const onWindowChange = vi.fn();
+    render(
+      <DatasetSection
+        moduleId="missedanep"
+        dataset={{ ...schedule, window: true }}
+        onSelectItem={vi.fn()}
+        onWindowChange={onWindowChange}
+      />
+    );
+
+    // Six weeks are drawn, so the ask spans past the month's own bounds.
+    const [, window] = onWindowChange.mock.calls.at(-1);
+    expect(window.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(window.to > window.from).toBe(true);
+  });
+
+  it("asks for no window when the module cannot page", () => {
+    const onWindowChange = vi.fn();
+    render(
+      <DatasetSection
+        moduleId="missedanep"
+        dataset={{ ...schedule, window: false }}
+        onSelectItem={vi.fn()}
+        onWindowChange={onWindowChange}
+      />
+    );
+
+    expect(onWindowChange.mock.calls.at(-1)[1]).toBeNull();
   });
 
   it("lets the viewer override the suggestion", () => {
@@ -138,9 +168,9 @@ describe("view selection", () => {
     render(
       <DatasetSection moduleId="missedanep" dataset={schedule} onSelectItem={vi.fn()} />
     );
-    // Still grid, not back to the module's suggestion.
+    // Still grid, not back to the module's suggested calendar.
     expect(screen.getAllByText("Severance").length).toBeGreaterThan(0);
-    expect(screen.queryByText(/Calendar view isn/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Next month")).not.toBeInTheDocument();
   });
 
   it("ignores a stored view the shape cannot render", () => {
