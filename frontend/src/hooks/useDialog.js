@@ -11,6 +11,18 @@ export function useDialog(onClose) {
   const ref = useRef(null);
   const previouslyFocused = useRef(null);
 
+  /**
+   * Held in a ref so the effect below can run exactly once.
+   *
+   * Callers pass an inline arrow, so onClose changes identity on every parent
+   * render — and the parent here re-renders whenever fleet data arrives. As a
+   * dependency it re-ran this effect constantly, and each run moved focus to
+   * the first focusable element, yanking the caret out of whatever field was
+   * being typed into and onto the close button.
+   */
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     previouslyFocused.current = document.activeElement;
 
@@ -20,13 +32,16 @@ export function useDialog(onClose) {
     const onKeyDown = (event) => {
       if (event.key === "Escape") {
         event.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== "Tab" || !container) return;
 
+      // Filtering on offsetParent would be a visibility check, but it needs
+      // layout — which makes the trap untestable and buys little here, since
+      // conditional fields are removed from the DOM rather than hidden.
       const focusable = [...container.querySelectorAll(FOCUSABLE)].filter(
-        (el) => el.offsetParent !== null
+        (el) => !el.disabled && el.getAttribute("aria-hidden") !== "true"
       );
       if (focusable.length === 0) return;
 
@@ -47,7 +62,8 @@ export function useDialog(onClose) {
       document.removeEventListener("keydown", onKeyDown, true);
       previouslyFocused.current?.focus?.();
     };
-  }, [onClose]);
+    // Deliberately empty: this must set up once per open, not per render.
+  }, []);
 
   return ref;
 }

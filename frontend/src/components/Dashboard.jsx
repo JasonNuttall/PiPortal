@@ -34,6 +34,8 @@ const Dashboard = () => {
   const { nodes, error: fleetError, loaded, refresh } = useFleet();
   const { selectedId, selectedNode, selectNode } = useSelectedNode(nodes);
   const [managingNodes, setManagingNodes] = useState(false);
+  const closeManage = useCallback(() => setManagingNodes(false), []);
+  const openManage = useCallback(() => setManagingNodes(true), []);
 
   // Disabled while the modal is open so typing an id does not switch nodes.
   useNodeShortcuts(nodes, selectedId, selectNode, !managingNodes);
@@ -127,7 +129,7 @@ const Dashboard = () => {
           loaded={modulesLoaded}
           isCollapsed={collapsedPanels.services}
           onCollapseChange={panelHandlers.services.onCollapseChange}
-          onManage={() => setManagingNodes(true)}
+          onManage={openManage}
           {...sizeProps}
         />
       );
@@ -189,7 +191,7 @@ const Dashboard = () => {
           nodes={nodes}
           selectedId={selectedId}
           onSelect={selectNode}
-          onManage={() => setManagingNodes(true)}
+          onManage={openManage}
         />
 
         {selectedNode ? (
@@ -276,7 +278,7 @@ const Dashboard = () => {
         <NodesModal
           nodes={nodes}
           modules={modules}
-          onClose={() => setManagingNodes(false)}
+          onClose={closeManage}
           onChanged={() => {
             refresh();
             refreshModules();
