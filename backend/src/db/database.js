@@ -117,6 +117,15 @@ const MIGRATIONS = [
       );
     });
   },
+
+  // v4 - adapters: modules for software that cannot be modified to speak the
+  // contract itself, translated portal-side
+  (db) => {
+    const columns = db.prepare("PRAGMA table_info(modules)").all();
+    if (!columns.some((c) => c.name === "adapter")) {
+      db.exec("ALTER TABLE modules ADD COLUMN adapter TEXT");
+    }
+  },
 ];
 
 /**

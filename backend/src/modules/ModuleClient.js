@@ -8,6 +8,7 @@
  */
 const logger = require("../utils/logger");
 const { normalizeModulePayload, collectImageUrls, ContractError } = require("./contract");
+const { getAdapter } = require("./adapters");
 
 const PORTAL_PATH = "/portal/module";
 
@@ -53,7 +54,7 @@ class ModuleClient {
     };
   }
 
-  async request(url, { params } = {}) {
+  async request(url, { params, headers = {} } = {}) {
     const target = new URL(url);
     for (const [key, value] of Object.entries(params ?? {})) {
       if (value !== undefined && value !== null) {
@@ -76,7 +77,11 @@ class ModuleClient {
     }
 
     const response = await fetch(target.href, {
-      headers: this.token ? { Authorization: `Bearer ${this.token}` } : {},
+      headers: {
+        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+        // An adapter may need the scheme its own service expects instead.
+        ...headers,
+      },
       signal: AbortSignal.timeout(this.timeoutMs),
     });
 
@@ -95,7 +100,10 @@ class ModuleClient {
   async fetch(window = {}) {
     if (this.module.kind === "link") return this.linkPayload();
 
-    const raw = await this.request(this.endpoint, { params: window });
+    const raw =
+      this.module.kind === "adapter"
+        ? await this.adapterPayload()
+        : await this.request(this.endpoint, { params: window });
     const payload = normalizeModulePayload(raw, { id: this.module.id });
 
     this.allowedImages = collectImageUrls(payload);
@@ -106,6 +114,22 @@ class ModuleClient {
   /** Only images the module actually referenced may be proxied. */
   isAllowedImage(url) {
     return this.allowedImages.has(url);
+  }
+
+  /**
+   * Run the configured adapter. Its output is validated exactly as a native
+   * module's is — an adapter earns no extra trust for living in this repo.
+   */
+  async adapterPayload() {
+    const adapter = getAdapter(this.module.adapter);
+    if (!adapter) {
+      throw new ContractError(`Unknown adapter: ${this.module.adapter}`);
+    }
+    return adapter.fetch({
+      url: this.module.url,
+      token: this.token,
+      request: (url, options) => this.request(url, options),
+    });
   }
 
   async probe() {

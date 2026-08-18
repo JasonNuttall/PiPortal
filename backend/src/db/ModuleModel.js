@@ -12,6 +12,7 @@ const toModule = (row) =>
     id: row.id,
     name: row.name,
     kind: row.kind,
+    adapter: row.adapter,
     url: row.url,
     icon: row.icon,
     category: row.category,
@@ -59,6 +60,7 @@ class ModuleModel {
     id,
     name,
     kind = "native",
+    adapter = null,
     url,
     icon = null,
     category = null,
@@ -71,10 +73,10 @@ class ModuleModel {
     getDb()
       .prepare(
         `INSERT INTO modules
-           (id, name, kind, url, icon, category, token, node_id, via, enabled, sort_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           (id, name, kind, adapter, url, icon, category, token, node_id, via, enabled, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(id, name, kind, url, icon, category, token, nodeId, via, enabled ? 1 : 0, sortOrder);
+      .run(id, name, kind, adapter, url, icon, category, token, nodeId, via, enabled ? 1 : 0, sortOrder);
     return this.getById(id);
   }
 
@@ -86,6 +88,7 @@ class ModuleModel {
     const next = {
       name: changes.name ?? existing.name,
       kind: changes.kind ?? existing.kind,
+      adapter: changes.adapter === undefined ? existing.adapter : changes.adapter,
       url: changes.url ?? existing.url,
       icon: changes.icon === undefined ? existing.icon : changes.icon,
       category:
@@ -101,13 +104,13 @@ class ModuleModel {
     getDb()
       .prepare(
         `UPDATE modules
-         SET name = ?, kind = ?, url = ?, icon = ?, category = ?, token = ?,
+         SET name = ?, kind = ?, adapter = ?, url = ?, icon = ?, category = ?, token = ?,
              node_id = ?, via = ?, enabled = ?, sort_order = ?,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`
       )
       .run(
-        next.name, next.kind, next.url, next.icon, next.category, next.token,
+        next.name, next.kind, next.adapter, next.url, next.icon, next.category, next.token,
         next.nodeId, next.via, next.enabled, next.sortOrder, id
       );
 

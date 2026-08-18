@@ -311,6 +311,31 @@ dropped — a field only one view understands would vanish when the view changes
   fetched
 - The portal issues `GET` only. Modules report; they cannot be commanded.
 
+### Adapters — services that can't report themselves
+
+Some software will never expose `/portal/module`. For those the portal ships a
+translator that turns the service's own API into the same payload, so panels,
+views and caching work identically.
+
+**Jellyfin** is included. Create a key in Jellyfin under *Dashboard → Advanced →
+API Keys*, then add a module with kind **Adapter**, service **Jellyfin**, the
+server address (`http://jelly:8096`) and that key. It reports:
+
+| Dataset | Shape | Default view |
+| --- | --- | --- |
+| Films | metric | stat |
+| Series | metric | stat |
+| Now playing | metric | stat |
+| Streams | collection | list — only while something is playing |
+| Recently added | schedule | grid — posters, films and shows |
+
+Recently added is a `schedule`, so it can also be read as an agenda grouped by
+day, or a calendar of when things landed. Its calendar arrows are disabled:
+Jellyfin returns a most-recent-N rather than a range that can be paged.
+
+If one call fails — say the key lacks a permission — the adapter reports what
+it could reach and marks itself `warn`, rather than blanking the panel.
+
 ### Registering it
 
 **Manage** in the dashboard → add a module with your service's base URL. The

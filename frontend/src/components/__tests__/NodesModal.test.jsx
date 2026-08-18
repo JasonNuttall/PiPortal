@@ -7,6 +7,10 @@ vi.mock("../../api/api", () => ({
   updateNode: vi.fn().mockResolvedValue({}),
   deleteNode: vi.fn().mockResolvedValue(undefined),
   testNode: vi.fn().mockResolvedValue({ ok: true, latencyMs: 3 }),
+  createModule: vi.fn().mockResolvedValue({}),
+  deleteModule: vi.fn().mockResolvedValue(undefined),
+  testModule: vi.fn().mockResolvedValue({ ok: true, latencyMs: 2 }),
+  fetchAdapters: vi.fn().mockResolvedValue([{ id: "jellyfin", label: "Jellyfin" }]),
 }));
 
 import { createNode, updateNode, deleteNode, testNode } from "../../api/api";

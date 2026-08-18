@@ -86,6 +86,9 @@ export const containerAction = (nodeId, containerId, action) =>
 
 export const fetchModules = () => request("/modules");
 
+/** Adapters this build ships, for the add-module picker. */
+export const fetchAdapters = () => request("/modules/adapters");
+
 export const createModule = (module) => request("/modules", json("POST", module));
 
 export const updateModule = (id, module) =>

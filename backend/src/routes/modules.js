@@ -6,10 +6,11 @@ const logger = require("../utils/logger");
 const ModuleModel = require("../db/ModuleModel");
 const { slugify } = require("../config");
 const { ContractError } = require("../modules/contract");
+const { listAdapters, getAdapter } = require("../modules/adapters");
 
 const MAX_NAME = 60;
 const MAX_URL = 300;
-const KINDS = ["native", "link"];
+const KINDS = ["native", "link", "adapter"];
 
 module.exports = function createModulesRouter(moduleManager) {
   const router = express.Router();
@@ -26,7 +27,10 @@ module.exports = function createModulesRouter(moduleManager) {
       }
     }
 
-    if (!KINDS.includes(kind)) errors.push("Kind must be native or link");
+    if (!KINDS.includes(kind)) errors.push("Kind must be native, adapter or link");
+    if (kind === "adapter" && !getAdapter(body.adapter)) {
+      errors.push("An adapter must name one the portal ships");
+    }
 
     if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
       errors.push("Name is required");
@@ -57,6 +61,7 @@ module.exports = function createModulesRouter(moduleManager) {
         id: body.id ? slugify(body.id) : undefined,
         name: body.name.trim(),
         kind,
+        adapter: kind === "adapter" ? body.adapter : null,
         url: body.url.trim().replace(/\/+$/, ""),
         icon: body.icon ? String(body.icon).trim().slice(0, 10) : null,
         category: body.category ? String(body.category).trim().slice(0, 50) : null,
@@ -66,6 +71,11 @@ module.exports = function createModulesRouter(moduleManager) {
       },
     };
   };
+
+  /** The adapters this build ships, for the add-module picker. */
+  router.get("/adapters", (req, res) => {
+    res.json(listAdapters());
+  });
 
   router.get("/", (req, res) => {
     try {

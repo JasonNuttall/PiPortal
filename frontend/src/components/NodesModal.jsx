@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   X,
   Trash2,
@@ -17,6 +17,7 @@ import {
   createModule,
   deleteModule,
   testModule,
+  fetchAdapters,
 } from "../api/api";
 import { useDialog } from "../hooks/useDialog";
 import ConfirmButton from "./ConfirmButton";
@@ -152,7 +153,15 @@ const NodeRow = ({ node, onEdit, onDelete, onTest, testResult, busy }) => (
  * Add, edit, test and remove agents. The hub's own machine is always listed
  * but cannot be removed, since it is the process serving this page.
  */
-const EMPTY_MODULE = { id: "", name: "", kind: "native", url: "", token: "", icon: "" };
+const EMPTY_MODULE = {
+  id: "",
+  name: "",
+  kind: "native",
+  adapter: "",
+  url: "",
+  token: "",
+  icon: "",
+};
 
 /**
  * Modules and links, managed beside the nodes they run on.
@@ -166,6 +175,13 @@ const ModulesSection = ({ modules, onChanged }) => {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [results, setResults] = useState({});
+  const [adapters, setAdapters] = useState([]);
+
+  useEffect(() => {
+    fetchAdapters()
+      .then(setAdapters)
+      .catch(() => setAdapters([]));
+  }, []);
 
   const setField = (field) => (event) => {
     const value = event.target.value;
@@ -188,6 +204,7 @@ const ModulesSection = ({ modules, onChanged }) => {
         id: form.id,
         name: form.name.trim(),
         kind: form.kind,
+        adapter: form.kind === "adapter" ? form.adapter : null,
         url: form.url.trim(),
         icon: form.icon.trim() || null,
         token: form.token.trim() || null,
@@ -307,21 +324,47 @@ const ModulesSection = ({ modules, onChanged }) => {
               onChange={setField("kind")}
               className="glass-input w-full px-3 py-2 text-xs mt-1"
             >
-              <option value="native">Module — reports data</option>
+              <option value="native">Module — service reports itself</option>
+              <option value="adapter">Adapter — portal translates it</option>
               <option value="link">Link — just a shortcut</option>
             </select>
           </label>
         </div>
 
+        {form.kind === "adapter" && (
+          <label className="block">
+            <span className="text-[9px] text-ctext-dim">Service</span>
+            <select
+              value={form.adapter}
+              onChange={setField("adapter")}
+              className="glass-input w-full px-3 py-2 text-xs mt-1"
+            >
+              <option value="">Choose a service…</option>
+              {adapters.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.label}
+                </option>
+              ))}
+            </select>
+            <span className="text-[9px] text-ctext-dim mt-0.5 block">
+              For software that cannot report itself
+            </span>
+          </label>
+        )}
+
         <Field
           label={form.kind === "link" ? "Link target" : "Service URL"}
           value={form.url}
           onChange={setField("url")}
-          placeholder="http://jelly:3014"
+          placeholder={
+            form.kind === "adapter" ? "http://jelly:8096" : "http://jelly:3014"
+          }
           hint={
             form.kind === "link"
               ? "Opened in a new tab"
-              : "The portal appends /portal/module"
+              : form.kind === "adapter"
+                ? "The service's own address"
+                : "The portal appends /portal/module"
           }
           className="font-source-code"
         />
@@ -341,7 +384,11 @@ const ModulesSection = ({ modules, onChanged }) => {
             value={form.token}
             onChange={setField("token")}
             placeholder="optional"
-            hint="Issued by the service for this portal"
+            hint={
+              form.kind === "adapter"
+                ? "The service's own API key"
+                : "Issued by the service for this portal"
+            }
             className="font-source-code"
           />
         )}
@@ -354,7 +401,12 @@ const ModulesSection = ({ modules, onChanged }) => {
 
         <button
           type="submit"
-          disabled={saving || !form.name.trim() || !form.url.trim()}
+          disabled={
+            saving ||
+            !form.name.trim() ||
+            !form.url.trim() ||
+            (form.kind === "adapter" && !form.adapter)
+          }
           className="glass-pill text-xs text-crystal-blue border-crystal-blue/40 hover:bg-crystal-blue/15 transition-colors flex items-center gap-1.5 disabled:opacity-50"
         >
           {saving ? (
