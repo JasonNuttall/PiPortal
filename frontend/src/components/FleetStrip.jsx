@@ -163,21 +163,31 @@ const NodeCard = memo(function NodeCard({ node, isSelected, onSelect }) {
  * The all-nodes overview. Clicking a card focuses the detail panels on that
  * machine; the strip itself always shows every node at once.
  */
-const FleetStrip = ({ nodes, selectedId, onSelect, onManage }) => (
+const FleetStrip = ({ nodes, selectedId, onSelect, onManage, onAddModule }) => (
   <section className="mb-6">
     <div className="flex items-center justify-between mb-2">
       <h2 className="text-[9px] tracking-[4px] uppercase text-ctext-dim flex items-center gap-2">
         <Server className="w-3 h-3" />
         Fleet
       </h2>
-      <button
-        type="button"
-        onClick={onManage}
-        className="glass-pill text-[9px] text-ctext-mid hover:text-ctext transition-colors flex items-center gap-1"
-      >
-        <Plus className="w-3 h-3" />
-        Manage nodes
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onAddModule}
+          className="glass-pill text-[9px] text-crystal-blue border-crystal-blue/40 hover:bg-crystal-blue/15 transition-colors flex items-center gap-1"
+        >
+          <Plus className="w-3 h-3" />
+          Add module
+        </button>
+        <button
+          type="button"
+          onClick={onManage}
+          className="glass-pill text-[9px] text-ctext-mid hover:text-ctext transition-colors flex items-center gap-1"
+        >
+          <Server className="w-3 h-3" />
+          Manage nodes
+        </button>
+      </div>
     </div>
 
     {nodes.length === 0 ? (

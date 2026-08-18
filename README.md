@@ -76,7 +76,9 @@ nothing beyond its summary line.
   - Quick links are modules that report nothing — one registry, not two
 - **Customizable Dashboard**
   - Panels flow into as many columns as the screen allows, filling gaps
-  - Each panel can be compact, wide or full width
+  - Each panel can be compact, wide, extra wide, or full width — a full-width
+    panel claims the whole row, so a strip of adapters can sit directly under
+    the system stats
   - Drag-and-drop reordering, collapsible panels
   - Per-panel live/poll toggle
   - Switch nodes with `1`-`9`, or step through them with `[` and `]`
@@ -338,7 +340,7 @@ it could reach and marks itself `warn`, rather than blanking the panel.
 
 ### Registering it
 
-**Manage** in the dashboard → add a module with your service's base URL. The
+**Add module** in the fleet header → give it your service's base URL. The
 portal appends `/portal/module`. Add a token if your endpoint requires one; it
 is stored on the hub and never returned by the API. Press **Test** to see the
 datasets it found.

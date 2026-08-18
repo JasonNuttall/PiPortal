@@ -150,7 +150,7 @@ describe("usePanelLayout", () => {
     expect(result.current.layout.map((e) => e.id)).toEqual(before);
   });
 
-  it("cycles a panel's size compact to wide to full and back", () => {
+  it("cycles a panel through every width and back", () => {
     const { result } = renderHook(() => usePanelLayout("pi5", panels));
     const sizeOf = () => result.current.layout.find((e) => e.id === "network").size;
 
@@ -160,7 +160,15 @@ describe("usePanelLayout", () => {
     act(() => result.current.cycleSize("network"));
     expect(sizeOf()).toBe("full");
     act(() => result.current.cycleSize("network"));
+    // banner claims the whole row, whatever the column count happens to be.
+    expect(sizeOf()).toBe("banner");
+    act(() => result.current.cycleSize("network"));
     expect(sizeOf()).toBe("compact");
+  });
+
+  it("accepts banner as a saved size", () => {
+    const layout = reconcileLayout([{ id: "disk", size: "banner" }], panels);
+    expect(layout.find((e) => e.id === "disk").size).toBe("banner");
   });
 
   it("keeps a separate layout per node", () => {

@@ -18,6 +18,7 @@ const ModulePanel = memo(function ModulePanel({
   onCollapseChange,
   size,
   onCycleSize,
+  onEdit,
 }) {
   const [selected, setSelected] = useState(null);
   // A window belongs to the module payload rather than one dataset, so the
@@ -86,6 +87,8 @@ const ModulePanel = memo(function ModulePanel({
         connection={connection}
         size={size}
         onCycleSize={onCycleSize}
+        onEdit={onEdit}
+        editLabel={`Edit ${module.name}`}
       >
         {(datasets) =>
           datasets.length === 0 ? (

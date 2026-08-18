@@ -6,10 +6,16 @@
  * built-ins and modules are the same kind of thing to the layout.
  */
 
-/** Width a panel asks for, in grid columns. */
-export const PANEL_SIZES = ["compact", "wide", "full"];
+/**
+ * Width a panel asks for.
+ *
+ * "banner" is not a column count — it claims the whole row whatever the
+ * viewport is currently showing, which is what makes a strip of adapters
+ * directly under the system stats possible.
+ */
+export const PANEL_SIZES = ["compact", "wide", "full", "banner"];
 
-export const SIZE_SPAN = { compact: 1, wide: 2, full: 3 };
+export const SIZE_SPAN = { compact: 1, wide: 2, full: 3, banner: Infinity };
 
 /** Next size in the cycle, used by the size control in each panel header. */
 export const nextSize = (size) =>

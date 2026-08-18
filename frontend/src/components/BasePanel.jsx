@@ -9,6 +9,8 @@ import {
   Minimize2,
   Maximize2,
   Square,
+  RectangleHorizontal,
+  Pencil,
 } from "lucide-react";
 import { useRelativeTime } from "../hooks/useRelativeTime";
 
@@ -35,6 +37,9 @@ const BasePanel = ({
   /** Current grid width, and a callback to cycle it. */
   size = null,
   onCycleSize = null,
+  /** Present when this panel's source can be edited from its own header. */
+  onEdit = null,
+  editLabel = "Edit",
 }) => {
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const isCollapsed =
@@ -70,7 +75,8 @@ const BasePanel = ({
   const SIZE_META = {
     compact: { icon: Minimize2, label: "Compact", next: "wide" },
     wide: { icon: Square, label: "Wide", next: "full" },
-    full: { icon: Maximize2, label: "Full width", next: "compact" },
+    full: { icon: Maximize2, label: "Extra wide", next: "banner" },
+    banner: { icon: RectangleHorizontal, label: "Full width", next: "compact" },
   };
 
   const SizeControl = () => {
@@ -164,6 +170,20 @@ const BasePanel = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {onEdit && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onEdit();
+              }}
+              title={editLabel}
+              aria-label={editLabel}
+              className="p-1 rounded-sm text-ctext-dim hover:text-crystal-blue hover:bg-glass-hover transition-colors"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
           <SizeControl />
           {isSwitching && (
             <span

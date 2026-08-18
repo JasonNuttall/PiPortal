@@ -320,7 +320,13 @@ body {
   }
 }
 
-/* Collapsed is just a header bar; it should stop holding a wide slot. */
-.panel-grid > [data-collapsed="true"] {
+/* A banner claims the entire row regardless of how many columns there are. */
+.panel-grid > [data-size="banner"] {
+  grid-column: 1 / -1;
+}
+
+/* Collapsed is just a header bar; it should stop holding a wide slot. A
+   banner keeps its width, because its position in the layout is the point. */
+.panel-grid > [data-collapsed="true"]:not([data-size="banner"]) {
   grid-column: span 1 !important;
 }

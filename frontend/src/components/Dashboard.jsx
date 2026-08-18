@@ -20,6 +20,7 @@ import NodesModal from "./NodesModal";
 import NodePanel from "./NodePanel";
 import LinksPanel from "./LinksPanel";
 import ModulePanel from "./modules/ModulePanel";
+import ModuleDialog from "./modules/ModuleDialog";
 import SortablePanel from "./SortablePanel";
 
 import { useFleet } from "../hooks/useFleet";
@@ -36,6 +37,21 @@ const Dashboard = () => {
   const [managingNodes, setManagingNodes] = useState(false);
   const closeManage = useCallback(() => setManagingNodes(false), []);
   const openManage = useCallback(() => setManagingNodes(true), []);
+
+  /**
+   * undefined = closed, null = creating, an object = editing that module.
+   * `kind` locks the dialog when it was opened from somewhere that only makes
+   * one sort, such as the links panel.
+   */
+  const [moduleDialog, setModuleDialog] = useState(undefined);
+
+  const closeModuleDialog = useCallback(() => setModuleDialog(undefined), []);
+  const addModule = useCallback(() => setModuleDialog({ module: null }), []);
+  const addLink = useCallback(
+    () => setModuleDialog({ module: null, kind: "link" }),
+    []
+  );
+  const editModule = useCallback((module) => setModuleDialog({ module }), []);
 
   // Disabled while the modal is open so typing an id does not switch nodes.
   useNodeShortcuts(nodes, selectedId, selectNode, !managingNodes);
@@ -129,7 +145,8 @@ const Dashboard = () => {
           loaded={modulesLoaded}
           isCollapsed={collapsedPanels.services}
           onCollapseChange={panelHandlers.services.onCollapseChange}
-          onManage={openManage}
+          onAddLink={addLink}
+          onEditLink={editModule}
           {...sizeProps}
         />
       );
@@ -144,6 +161,7 @@ const Dashboard = () => {
           module={module}
           isCollapsed={Boolean(collapsedPanels[panelId])}
           onCollapseChange={(collapsed) => handleCollapseChange(panelId, collapsed)}
+          onEdit={() => editModule(module)}
           {...sizeProps}
         />
       );
@@ -192,6 +210,7 @@ const Dashboard = () => {
           selectedId={selectedId}
           onSelect={selectNode}
           onManage={openManage}
+          onAddModule={addModule}
         />
 
         {selectedNode ? (
@@ -277,12 +296,18 @@ const Dashboard = () => {
       {managingNodes && (
         <NodesModal
           nodes={nodes}
-          modules={modules}
           onClose={closeManage}
-          onChanged={() => {
-            refresh();
-            refreshModules();
-          }}
+          onChanged={refresh}
+        />
+      )}
+
+      {moduleDialog && (
+        <ModuleDialog
+          module={moduleDialog.module}
+          fixedKind={moduleDialog.kind}
+          nodes={nodes}
+          onClose={closeModuleDialog}
+          onSaved={refreshModules}
         />
       )}
     </div>

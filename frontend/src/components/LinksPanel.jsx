@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Link as LinkIcon, ExternalLink } from "lucide-react";
+import { Link as LinkIcon, ExternalLink, Plus, Pencil } from "lucide-react";
 import BasePanel from "./BasePanel";
 import ErrorBoundary from "./ErrorBoundary";
 
@@ -15,7 +15,8 @@ const LinksPanel = memo(function LinksPanel({
   loaded,
   isCollapsed,
   onCollapseChange,
-  onManage,
+  onAddLink,
+  onEditLink,
   size,
   onCycleSize,
 }) {
@@ -25,13 +26,16 @@ const LinksPanel = memo(function LinksPanel({
     return acc;
   }, {});
 
-  const manageButton = (
+  // Links are edited here rather than in the fleet dialog: they are content,
+  // not infrastructure, and mixing them in cluttered that surface.
+  const addButton = (
     <button
       type="button"
-      onClick={onManage}
-      className="glass-pill text-[9px] text-ctext-mid hover:text-ctext transition-colors"
+      onClick={onAddLink}
+      className="glass-pill text-[9px] text-ctext-mid hover:text-ctext transition-colors flex items-center gap-1"
     >
-      Manage
+      <Plus className="w-3 h-3" />
+      Add link
     </button>
   );
 
@@ -45,7 +49,7 @@ const LinksPanel = memo(function LinksPanel({
         subtitle={`(${links.length})`}
         isCollapsed={isCollapsed}
         onCollapseChange={onCollapseChange}
-        headerActions={manageButton}
+        headerActions={addButton}
         panelId="services"
         size={size}
         onCycleSize={onCycleSize}
@@ -53,7 +57,7 @@ const LinksPanel = memo(function LinksPanel({
         {(data) =>
           data.length === 0 ? (
             <p className="text-[10px] text-ctext-mid text-center py-4">
-              No links yet. Add one under Manage.
+              No links yet.
             </p>
           ) : (
             <div className="space-y-3">
@@ -64,19 +68,32 @@ const LinksPanel = memo(function LinksPanel({
                   </p>
                   <div className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-1.5">
                     {entries.map((link) => (
-                      <a
+                      <div
                         key={link.id}
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="flex items-center gap-2 px-2 py-1.5 bg-glass border border-glass-border rounded-sm hover:bg-glass-hover hover:border-glass-border-hover transition-colors group/link"
                       >
-                        <span className="text-sm shrink-0">{link.icon || "•"}</span>
-                        <span className="text-[10px] text-ctext truncate flex-1">
-                          {link.name}
-                        </span>
-                        <ExternalLink className="w-3 h-3 text-ctext-dim opacity-0 group-hover/link:opacity-100 transition-opacity shrink-0" />
-                      </a>
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 min-w-0 flex-1"
+                        >
+                          <span className="text-sm shrink-0">{link.icon || "•"}</span>
+                          <span className="text-[10px] text-ctext truncate flex-1">
+                            {link.name}
+                          </span>
+                          <ExternalLink className="w-3 h-3 text-ctext-dim opacity-0 group-hover/link:opacity-100 transition-opacity shrink-0" />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => onEditLink(link)}
+                          title={`Edit ${link.name}`}
+                          aria-label={`Edit ${link.name}`}
+                          className="p-0.5 rounded-sm text-ctext-dim opacity-0 group-hover/link:opacity-100 hover:text-crystal-blue transition-all shrink-0"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
