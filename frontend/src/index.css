@@ -273,9 +273,30 @@ body {
 .panel-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
-  gap: 1.5rem;
-  align-items: start; /* panels keep their natural height */
+  column-gap: 1.5rem;
+  align-items: start;
   container-type: inline-size;
+
+  /* Rows are deliberately tiny and each panel spans as many as it needs.
+     Grid rows are shared across a row of items, so with one row per panel a
+     collapsed panel still sat inside a row sized by its tallest neighbour and
+     left a large hole beneath it. Fine rows let every panel take only the
+     height it actually uses. The row gap is folded into each span instead of
+     being set here, or it would apply between a panel's own rows too. */
+  grid-auto-rows: var(--panel-row, 8px);
+  row-gap: 0;
+}
+
+/* Set by each panel once it has measured itself. */
+.panel-grid > * {
+  grid-row: span var(--row-span, 1);
+}
+
+/* Measurement happens in a layout effect, so this is normally never painted.
+   It errs generously: an unmeasured panel reserves too much room rather than
+   collapsing to an 8px sliver and overlapping its neighbour. */
+.panel-grid > [data-measured="false"] {
+  grid-row: span 40;
 }
 
 /* Backfill the holes a tall panel leaves beside it. Disabled while dragging
