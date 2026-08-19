@@ -1,7 +1,8 @@
 # Architecture Notes
 
-Design decisions behind the multi-node rearchitecture, and the reasoning for
-the performance work that went with it.
+Design decisions behind the multi-node rearchitecture, the module framework
+built on top of it, and the reasoning for the performance work that went with
+both.
 
 ## Why hub + agents
 
@@ -170,3 +171,89 @@ Exactly one node row carries `is_local = 1`: the hub's own machine, collected
 in process. It cannot be deleted and never has a URL. Node tokens are stored
 alongside the registry but read through a separate accessor and never returned
 by the API.
+
+
+## Modules
+
+A module is another producer for the pipeline above, not a second pipeline. It
+is a channel — `module:<id>` — so it inherits demand-driven collection, change
+detection, caching and the panel connection states unchanged.
+
+### Data and meaning, not presentation
+
+A module says *what it has and what kind of thing it is*; the portal decides
+how to draw it. The first draft had modules declare widgets, which would have
+meant every service dictating its own look, and `upcoming episodes` could
+never have become a calendar without the service shipping one.
+
+Four shapes — `metric`, `collection`, `schedule`, `series` — each with the
+views the portal knows how to draw for it. A module may *suggest* a view but
+cannot demand one, and a viewer's choice persists per dataset.
+
+Item fields are fixed rather than free-form. A field only one view understands
+is a field that disappears when the view changes, which is why `detail[]`
+exists: it absorbs the pressure to add an escape hatch that would quietly kill
+the split.
+
+Detail is not a view. Browsing and inspecting are different activities, so
+list, grid, table and calendar all open the same sheet.
+
+### Three kinds, one registry
+
+`native` modules live in the service's own repo. `adapter` modules are
+portal-side translators for software that cannot be changed. `link` modules
+report nothing at all — which is what Quick Links became, collapsing two
+features into one concept.
+
+An adapter's output goes through exactly the same validation a third party's
+does. Living in this repo earns it no extra trust.
+
+### The trust boundary
+
+Everything arriving from a module is treated as hostile input: unknown shapes
+and fields dropped, sizes bounded, `ttl` clamped, and `javascript:`/`data:`/
+`file:` URLs stripped before anything reaches a browser. Images are proxied by
+the hub and allowlisted to URLs the module's own last payload referenced, so
+the proxy cannot be turned into a relay into the network.
+
+Loading module JavaScript was rejected outright. It is the obvious route to
+unlimited UI, and it would let any service on the network run code in a page
+that holds Docker socket access on every machine in the fleet.
+
+The portal issues `GET` to modules and nothing else. Read-only is a property of
+the system rather than a policy, and adding writes later is a contract version
+bump rather than an unpicking.
+
+### In memory, not on disk
+
+Payloads are cached for the life of the hub process and nothing is written to
+disk. No retention policy, and no reconciling stored items against a fresh
+fetch — a cancelled episode simply stops appearing.
+
+Two consequences follow. Calendar paging depends entirely on the module
+supporting `window`, since there is no stored history to page through. And a
+`series` must arrive complete, because the portal cannot accumulate one by
+sampling.
+
+## The grid
+
+Panels were two hardcoded buckets rendered as one or two columns. That has no
+place for a panel discovered at runtime, so the module work and the grid rebuild
+were the same change.
+
+`{ left, right }` became a single ordered list of `{ id, size }`. The state got
+simpler while the layout got more capable, which is usually the sign the old
+model was wrong rather than merely incomplete.
+
+Columns follow the viewport arithmetically through `auto-fill` rather than a
+list of breakpoints, so the same rules serve a phone and an ultrawide.
+
+Rows are 8px and each panel spans as many as its measured content needs. One
+row per panel meant a collapsed panel still sat in a row sized by its tallest
+neighbour, leaving a large hole beneath it; grid cannot reflow that on its own
+because masonry has not shipped. Measured spans let panels pack to their real
+height, which is what makes collapsing actually reclaim space.
+
+Layouts reconcile against the panels that currently exist — unknown ids
+dropped, new ones appended — so registering or removing a module never leaves a
+hole or throws.

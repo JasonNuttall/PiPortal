@@ -348,6 +348,42 @@ datasets it found.
 If the service is only reachable from one machine, set that node as the
 module's `via` so the agent fetches on the hub's behalf.
 
+Note the hub dials that URL **server-side**, from inside the backend
+container. An address that works in your browser is not necessarily one the
+hub can resolve — if Test fails while the link works for you, that is why.
+
+<div align="center">
+
+## Where things are managed
+
+</div>
+
+Three surfaces, each next to the thing it changes.
+
+| To change | Go to |
+| --- | --- |
+| Machines — add, edit, test, remove a node | **Manage nodes**, in the fleet header |
+| A module or adapter — name, address, token, which node it appears on, or remove it | the **pencil in that panel's own header** |
+| Quick links — add or edit | the **Quick Links panel** itself |
+
+A module's **id and kind are fixed after creation**, and the dialog says so.
+Both are baked into its channel name and your saved layout, so changing them
+would orphan the panel's position and view preferences. Renaming is free.
+
+Editing never clears a stored token: one is only sent when you actually type
+one, so leaving the field blank keeps what is already there.
+
+### Panel widths
+
+Every panel header has a width control that cycles **compact → wide → extra
+wide → full width**. Full width claims the whole row whatever the viewport is
+showing, which is how you get a strip of adapters sitting directly under the
+system stats. Drag panels by the handle on their left edge to reorder; the
+arrangement is remembered per node.
+
+**Compact layout** in the header lets panels move up into gaps left by taller
+neighbours. Turn it off if you would rather they stayed in list order.
+
 <div align="center">
 
 ## Development
